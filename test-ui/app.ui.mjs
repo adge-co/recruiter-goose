@@ -138,7 +138,8 @@ for (const dark of [false, true]) {
     await page.waitForSelector("#mBody .job");
     const pills = await page.$$eval("#mBody .job .pills", els => els.map(e => e.textContent));
     assert.ok(pills.some(p => p.includes("Looks Real") || p.includes("Check First")), pills.join(" / "));
-    assert.ok(pills.some(p => /Open \d+ Days|Open 1 Day|Since Today/.test(p)));
+    const metas = await page.$$eval("#mBody .job .meta", els => els.map(e => e.textContent));
+    assert.ok(metas.some(m => /Open (\d+ days|1 day|since today)/.test(m) && /\$\d+k/.test(m)), metas.join(" / "));
     await noSideScroll(page);
     await shot(page, `phone-${tag}-matches`);
   });
@@ -147,7 +148,7 @@ for (const dark of [false, true]) {
     await card.locator("button.more").click();
     await page.waitForSelector("#sheet:not(.hidden)");
     const text = await page.textContent("#sheetBody");
-    for (const want of ["Posting Check", "First Posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working as a Counter Sales"])
+    for (const want of ["Posting Check", "Looks Real", "Nothing here says stale", "First Posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working as a Counter Sales"])
       assert.ok(text.includes(want), "sheet is missing: " + want);
     await page.waitForTimeout(400);
     await shot(page, `phone-${tag}-sheet`);

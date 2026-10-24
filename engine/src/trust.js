@@ -106,8 +106,8 @@ export function insiderMoves(job, profile = {}) {
   moves.push({ key: "referral", title: `Who Do You Know at ${job.company}?`,
     text: "In hiring data from Ashby, referred applicants got interviews 40% of the time and cold applicants 3%. Past vendors, customers, subs and old coworkers all count.",
     note: [`Hey, I saw ${job.company} is hiring ${a} ${job.title}.`, past ? `I've been working as ${/^[aeiou]/i.test(past || "") ? "an" : "a"} ${past} and it lines up well.` : "It lines up well with what I've been doing.",
-      "Would you be up for passing my name to the hiring manager, or telling me who that is?", `Thanks either way${name ? ", " + name : ""}.`].join(" "),
+      "Would you be up for putting me in through your referral system, or passing my name to the hiring manager?", `Thanks either way${name ? ", " + name : ""}.`].join(" "),
     search: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(job.company)}` });
-  moves.push({ key: "follow", title: "One Follow-Up After a Week", text: "If you hear nothing in 7 days, one short note to the recruiter or hiring manager. If nothing after 21 days, close it out and move on." });
+  moves.push({ key: "follow", title: "Follow Up, Then Let It Go", text: "Recruiters are swamped, so silence isn't a no. Send one short note after a week and one more the week after. Nothing by day 21, close it out and move on." });
   return moves;
 }

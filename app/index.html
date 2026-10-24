@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Recruiter Goose</title>
 <meta name="description" content="Tell the goose what you've done and what you want. He brings back real job postings that fit, and tracks each one with you until you're hired.">
-<meta name="theme-color" content="#1f3a6b">
+<meta name="theme-color" content="#1b3556">
 <link rel="icon" href="img/favicon.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -14,44 +14,52 @@
 <meta property="og:title" content="Recruiter Goose">
 <meta property="og:description" content="Real job postings matched to your background, checked for legit, tracked until you're hired.">
 <meta property="og:image" content="img/icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
+/* Premium pass 10-24-2026: stone and ink, navy as the one color, verdict colors only on pills and dots, brass once per screen. */
 :root{
-  --bg:#f3f1ee; --card:#fff; --ink:#1c1c1e; --ink2:#3a3a3c; --muted:#56565c; --line:#e2dfda;
-  --navy:#1f3a6b; --navy-ink:#fff; --navy-soft:#e6ecf6;
-  --green:#1e7a46; --green-soft:#e3f3e9; --amber:#9a6200; --amber-soft:#fbf0d9; --red:#b3261e; --red-soft:#fbe4e2;
-  --shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);
+  --bg:#f4f3ef; --card:#fff; --ink:#0e1a2b; --ink2:#3d4858; --muted:#5f6979; --line:#e4e2db;
+  --navy:#1b3556; --navy-ink:#fff; --navy-soft:#e8edf4; --brass:#a47e3b;
+  --green:#1e6b45; --green-soft:#e7f2eb; --amber:#7a5200; --amber-soft:#faf0d9; --red:#9a3324; --red-soft:#f8e6e2;
+  --shadow:0 1px 2px rgba(14,26,43,.05);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif; --body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#141416; --card:#1f1f22; --ink:#f4f4f5; --ink2:#d6d6da; --muted:#a1a1a8; --line:#34343a;
-  --navy:#7da2e8; --navy-ink:#0f1a30; --navy-soft:#1d2a44;
-  --green:#5cc98a; --green-soft:#16301f; --amber:#e6b04f; --amber-soft:#33280f; --red:#f08b83; --red-soft:#3a1b19;
+  --bg:#0f1319; --card:#171c24; --ink:#eef1f5; --ink2:#c3cbd6; --muted:#939dac; --line:#29303b;
+  --navy:#9db6e0; --navy-ink:#0e1a2b; --navy-soft:#1c2839; --brass:#c9a15a;
+  --green:#74cb9a; --green-soft:#13271c; --amber:#e2b65c; --amber-soft:#2d2410; --red:#ee9488; --red-soft:#331a1a;
   --shadow:none;
 }}
 :root[data-theme="dark"]{
-  --bg:#141416; --card:#1f1f22; --ink:#f4f4f5; --ink2:#d6d6da; --muted:#a1a1a8; --line:#34343a;
-  --navy:#7da2e8; --navy-ink:#0f1a30; --navy-soft:#1d2a44;
-  --green:#5cc98a; --green-soft:#16301f; --amber:#e6b04f; --amber-soft:#33280f; --red:#f08b83; --red-soft:#3a1b19;
+  --bg:#0f1319; --card:#171c24; --ink:#eef1f5; --ink2:#c3cbd6; --muted:#939dac; --line:#29303b;
+  --navy:#9db6e0; --navy-ink:#0e1a2b; --navy-soft:#1c2839; --brass:#c9a15a;
+  --green:#74cb9a; --green-soft:#13271c; --amber:#e2b65c; --amber-soft:#2d2410; --red:#ee9488; --red-soft:#331a1a;
   --shadow:none;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--navy)}
 .wrap{max-width:760px;margin:0 auto;padding:0 16px 96px}
 .hidden{display:none!important}
-h1{font-size:28px;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
-h2{font-size:20px;margin:0 0 4px}
-.label{display:block;font-size:15px;font-weight:700;color:var(--ink);margin:18px 0 6px}
+h1,h2,.brand,.job .title,.section-h,.stat b,.party .big{font-family:var(--display);font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+h1{font-size:28px;line-height:1.15;margin:0 0 6px}
+h2{font-size:20px;line-height:1.25;margin:0 0 4px}
+.label{display:block;font-size:15px;font-weight:600;color:var(--ink);margin:18px 0 6px}
 .hint{font-size:14px;color:var(--muted);margin:0 0 6px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
-.btn{appearance:none;border:0;border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer;background:var(--navy);color:var(--navy-ink);min-height:46px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+.btn{appearance:none;border:0;border-radius:10px;padding:12px 18px;font-weight:600;cursor:pointer;background:var(--navy);color:var(--navy-ink);min-height:46px;transition:transform .1s var(--ease),background .15s var(--ease)}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.more:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
 .btn:disabled{opacity:.55;cursor:default}
-.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
 .btn.small{padding:8px 12px;min-height:38px;font-size:15px}
 .btn.wide{width:100%}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .spacer{flex:1}
-input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],select,textarea{width:100%;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;min-height:46px;outline:none}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],select,textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 12px;min-height:46px;outline:none}
 input:focus,select:focus,textarea:focus{border-color:var(--navy)}
 textarea{min-height:140px;resize:vertical}
 .err{color:var(--red);font-weight:600;font-size:15px;margin-top:10px}
@@ -59,10 +67,10 @@ textarea{min-height:140px;resize:vertical}
 /* top bar */
 .top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
 .top .in{max-width:760px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
-.top img{width:38px;height:38px;border-radius:10px}
-.brand{font-weight:800;font-size:18px}
+.top img{width:34px;height:34px;border-radius:9px}
+.brand{font-size:19px}
 .tabs{display:flex;gap:6px;max-width:760px;margin:0 auto;padding:0 16px 10px}
-.tab{flex:1;border:0;background:transparent;border-radius:12px;padding:10px 6px;font-weight:700;cursor:pointer;font-size:15px;color:var(--muted)}
+.tab{flex:1;border:0;background:transparent;border-radius:10px;padding:10px 6px;font-weight:600;cursor:pointer;font-size:15px;color:var(--muted)}
 .tab.on{background:var(--navy-soft);color:var(--ink)}
 .tab .n{font-weight:600;opacity:.8}
 
@@ -76,7 +84,7 @@ textarea{min-height:140px;resize:vertical}
 
 /* chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font-weight:600;font-size:15px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font-weight:500;font-size:15px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
 .chip.on{background:var(--navy-soft);border-color:transparent;color:var(--ink)}
 .chip .x{font-weight:800;opacity:.6}
 .chipin{display:flex;gap:8px;margin-top:8px}
@@ -89,41 +97,44 @@ textarea{min-height:140px;resize:vertical}
 
 /* results */
 .summary{display:flex;gap:14px;align-items:center}
-.summary img{width:84px;flex:none}
+.summary img{width:64px;flex:none}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
-.stat{background:var(--bg);border-radius:12px;padding:10px;text-align:center}
-.stat b{display:block;font-size:22px}
-.stat span{font-size:13px;font-weight:600;color:var(--ink2)}
+.stat{border-top:1px solid var(--line);padding:10px 2px 0}
+.stat b{display:block;font-size:26px;line-height:1.1}
+.stat span{font-size:13px;color:var(--muted)}
 .filters{display:flex;gap:8px;overflow-x:auto;padding:14px 0 4px;scrollbar-width:none}
 .filters .chip{white-space:nowrap;flex:none}
 .job{margin-top:12px}
 .job .head{display:flex;gap:12px;align-items:flex-start}
-.job .title{font-size:18px;font-weight:800;line-height:1.25;margin:0}
-.job .co{font-size:16px;font-weight:600;color:var(--ink2);margin-top:2px}
-.pay{flex:none;text-align:right;min-width:92px}
-.pay b{display:block;font-size:16px;white-space:nowrap}
-.pay span{font-size:13px;color:var(--muted);font-weight:600}
+.job .co{font-size:14px;font-weight:500;color:var(--muted);margin:0 0 3px;letter-spacing:.01em}
+.job .title{font-size:18px;line-height:1.25;margin:0}
+.meta{font-size:14px;color:var(--ink2);margin-top:6px;display:flex;flex-wrap:wrap;gap:4px 12px}
+.meta b{font-weight:600;color:var(--ink)}
+.meta .na{color:var(--muted)}
 .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.pill{font-size:13px;font-weight:700;border-radius:999px;padding:4px 10px;background:var(--bg);color:var(--ink2)}
+.pill{font-size:13px;font-weight:500;border-radius:999px;padding:3px 10px;background:var(--bg);color:var(--ink2);display:inline-flex;align-items:center;gap:6px}
+.pill.real::before,.pill.checkfirst::before,.pill.pipeline::before,.pill.stale::before,.pill.gone::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .pill.strong{background:var(--green-soft);color:var(--green)}
 .pill.good{background:var(--navy-soft);color:var(--navy)}
 .pill.reach,.pill.sales,.pill.flag{background:var(--amber-soft);color:var(--amber)}
 .pill.remote{background:var(--navy-soft);color:var(--navy)}
-.why{margin:10px 0 0;padding-left:20px;color:var(--ink2);font-size:15px}
+.why{margin:10px 0 0;padding-left:18px;color:var(--ink2);font-size:15px}
+.why li.heads{color:var(--amber);list-style:none;margin-left:-18px}
 .why li{margin:2px 0}
 .snip{font-size:14px;color:var(--muted);margin-top:8px}
 .acts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-.acts .btn{flex:1;min-width:90px}
+.acts .btn{flex:1;min-width:84px;white-space:nowrap;padding-inline:12px}
+.acts .btn:first-child{flex:1.5}
 .empty{text-align:center;padding:28px 12px}
-.empty img{width:150px}
+.empty img{width:104px}
 .loading{text-align:center;padding:36px 12px}
-.loading img{width:170px;animation:bob 1.6s ease-in-out infinite}
+.loading img{width:112px;animation:bob 1.6s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-8px) rotate(-2deg)}}
 details.filtered{margin-top:14px}
 details.filtered summary{font-weight:700;cursor:pointer;padding:8px 0}
 details.filtered li{color:var(--ink2)}
-.section-h{font-size:17px;font-weight:800;margin:22px 0 2px;display:flex;gap:8px;align-items:center}
-.section-h .count{font-size:14px;font-weight:700;background:var(--line);border-radius:999px;padding:1px 9px}
+.section-h{font-size:18px;margin:26px 0 2px;display:flex;gap:8px;align-items:center}
+.section-h .count{font-family:var(--body);font-size:13px;font-weight:500;color:var(--muted);background:none;padding:0}
 .drop{margin-top:14px;border-style:dashed;border-width:2px}
 .drop.over{border-color:var(--navy);background:var(--navy-soft)}
 .ok{color:var(--green);font-weight:700}
@@ -132,14 +143,14 @@ details.filtered li{color:var(--ink2)}
 .faded{opacity:.6}
 
 /* toast + celebration */
-.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;z-index:30;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:500;z-index:30;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25)}
 .party{position:fixed;inset:0;z-index:40;background:rgba(10,20,40,.72);display:grid;place-items:center;padding:16px}
 .party .card{max-width:420px;text-align:center}
 .party img{width:220px}
-.party .big{font-size:44px;font-weight:900;color:var(--green)}
+.party .big{font-size:48px;color:var(--brass)}
 canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:41}
 .moment{display:flex;gap:12px;align-items:center}
-.moment img{width:76px}
+.moment img{width:64px}
 footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
 
 /* posting check */
@@ -147,23 +158,30 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
 .pill.checkfirst,.pill.pipeline{background:var(--amber-soft);color:var(--amber)}
 .pill.stale,.pill.gone{background:var(--red-soft);color:var(--red)}
 .job .open{cursor:pointer}
-.more{appearance:none;border:0;background:none;color:var(--navy);font-weight:700;padding:8px 0 0;cursor:pointer;font-size:15px}
+.more{appearance:none;border:0;background:none;color:var(--navy);font-weight:600;padding:8px 0 0;cursor:pointer;font-size:15px}
 
 /* job detail sheet */
-.sheet{position:fixed;inset:0;z-index:20;background:rgba(10,20,40,.45);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s ease}
-.sheet .panel{background:var(--bg);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:0 16px 24px;animation:up .28s cubic-bezier(.2,.9,.3,1.1)}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(14,26,43,.42);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s ease}
+.sheet .panel{background:var(--bg);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:0 16px 24px;animation:up .28s var(--ease)}
 .sheet .grab{position:sticky;top:0;background:var(--bg);padding:12px 0 10px;display:flex;align-items:center;gap:10px;z-index:1}
-.sheet h3{font-size:17px;font-weight:800;margin:20px 0 8px}
+.sheet h3{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px;padding-top:14px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.verdict{border-radius:12px;padding:12px 14px;background:var(--bg);margin-bottom:6px}
+.verdict b{font-family:var(--display);font-weight:600;font-size:18px;display:flex;align-items:center;gap:8px}
+.verdict b::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.verdict p{margin:2px 0 0;font-size:14px;color:var(--ink2)}
+.verdict.real{background:var(--green-soft)} .verdict.real b{color:var(--green)}
+.verdict.checkfirst,.verdict.pipeline{background:var(--amber-soft)} .verdict.checkfirst b,.verdict.pipeline b{color:var(--amber)}
+.verdict.stale,.verdict.gone{background:var(--red-soft)} .verdict.stale b,.verdict.gone b{color:var(--red)}
 .ev{list-style:none;margin:0;padding:0}
 .ev li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line);font-size:15px}
 .ev li:first-child{border-top:0}
-.dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--muted)}
+.dot{flex:none;width:7px;height:7px;border-radius:50%;margin-top:8px;background:var(--muted)}
 .dot.ok{background:var(--green)} .dot.check{background:var(--amber)} .dot.miss{background:var(--red)}
 .ko{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:baseline}
 .ko .n{font-size:14px;color:var(--muted);text-align:right}
 .move{padding:12px 0;border-top:1px solid var(--line)}
 .move:first-of-type{border-top:0}
-.move b{display:block;font-size:16px}
+.move b{display:block;font-size:16px;font-weight:600}
 .move p{margin:4px 0 0;color:var(--ink2);font-size:15px}
 .note{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px;font-size:15px;color:var(--ink)}
 .desc{white-space:pre-line;font-size:15px;color:var(--ink2)}
@@ -179,16 +197,16 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
 .say{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:8px;font-size:15px}
 .say .was{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
 .say .now{color:var(--ink);font-weight:600}
-.lbl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:10px}
+.lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:10px}
 
 /* today */
 .today .item{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
 .today .item:first-of-type{border-top:0}
 .today .item div{flex:1;min-width:0}
-.today .item b{display:block;font-size:15px}
+.today .item b{display:block;font-size:15px;font-weight:600}
 .today .item span{font-size:14px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.sheet,.sheet .panel,.loading img{animation:none}}
-@media (max-width:420px){ .pay{min-width:80px} .job .title{font-size:17px} h1{font-size:25px} }
+@media (max-width:420px){ .job .title{font-size:17px} h1{font-size:25px} }
 </style>
 </head>
 <body>
@@ -522,27 +540,27 @@ async function runSearch() {
 $("#rerun").onclick = () => { openApp("matches"); runSearch(); };
 
 const savedKeys = () => new Map(saved.map(s => [s.job_key, s]));
-function payBox(j) {
-  if (!j.payMax && !j.payMin) return `<div class="pay"><b>Not Listed</b><span>Pay</span></div>`;
+function payText(j) {
+  if (!j.payMax && !j.payMin) return `<span class="na">Pay not listed</span>`;
   const lo = j.payMin || j.payMax, hi = j.payMax || j.payMin;
-  return `<div class="pay"><b>${lo === hi ? k(hi) : k(lo) + "–" + k(hi)}</b><span>Per Year</span></div>`;
+  return `<span><b>${lo === hi ? k(hi) : k(lo) + "–" + k(hi)}</b> a year</span>`;
 }
-function placePill(j) {
-  const loc = String(j.location || "");
-  if (j.remote) return `<span class="pill remote">Remote</span>`;
-  if (/hybrid/i.test(loc)) return `<span class="pill">Hybrid</span>`;
-  return `<span class="pill">On-Site</span>`;
+function placeText(j) {
+  const loc = String(j.location || ""), plain = /^[\s,]*(remote|usa?|united states|anywhere|[\s,-])*$/i.test(loc);
+  const kind = j.remote ? "Remote" : /hybrid/i.test(loc) ? "Hybrid" : "On-Site";
+  return esc(j.remote && plain ? kind : `${kind} · ${loc}`);
 }
+const openText = j => { const d = openDays(j); return d == null ? "" : `<span>Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}</span>`; };
+const meta = j => `<div class="meta">${payText(j)}<span>${placeText(j)}</span>${openText(j)}</div>`;
 const openDays = j => { const t = Date.parse(j.firstPublished || j.postedAt); return Number.isFinite(t) ? Math.max(0, Math.floor((Date.now() - t) / 864e5)) : j.check?.openDays ?? null; };
-const openPill = j => openDays(j) != null ? `<span class="pill">Open ${openDays(j) === 0 ? "Since Today" : openDays(j) === 1 ? "1 Day" : openDays(j) + " Days"}</span>` : j.postedAt ? `<span class="pill">Posted ${mdy(j.postedAt)}</span>` : "";
 const checkPill = (j, s) => s?.job?.goneAt ? `<span class="pill gone">Taken Down ${mdy(s.job.goneAt)}</span>` : j.check ? `<span class="pill ${CHECK[j.check.label]}">${esc(j.check.label)}</span>` : "";
 function jobCard(j, s, inMine) {
   const st = s?.status;
-  const flags = (j.flags || []).map(f => `<span class="pill flag">${esc(f)}</span>`).join("");
+  const flags = (j.flags || []).map(f => `<li class="heads">Heads up: ${esc(f)}</li>`).join("");
   return `<div class="card job ${st === "passed" || st === "closed" ? "faded" : ""}">
-    <div class="head open" data-open="${esc(j.id)}"><div style="flex:1;min-width:0"><p class="title">${esc(j.title)}</p><div class="co">${esc(j.company)}</div></div>${payBox(j)}</div>
-    <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${checkPill(j, s)}${placePill(j)}${j.remote && /^[\s,]*(remote|usa?|united states|anywhere|[\s,-])*$/i.test(j.location || "") ? "" : `<span class="pill">${esc(j.location)}</span>`}${openPill(j)}${flags}</div>
-    ${j.reasons?.filter(r => r !== "Remote").length ? `<ul class="why">${j.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+    <div class="head open" data-open="${esc(j.id)}"><div style="flex:1;min-width:0"><div class="co">${esc(j.company)}</div><p class="title">${esc(j.title)}</p>${meta(j)}</div></div>
+    <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${checkPill(j, s)}</div>
+    ${j.reasons?.filter(r => r !== "Remote").length || flags ? `<ul class="why">${(j.reasons || []).filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}${flags}</ul>` : ""}
     <button class="more" data-open="${esc(j.id)}">Posting Check and Insider Moves ›</button>
     ${s && inMine ? trackBox(s) : ""}
     <div class="acts">
@@ -785,6 +803,12 @@ $("#cGo").onclick = async () => {
 
 // ---------- One job, up close: posting check, knockouts, insider moves, the saved posting ----------
 const KO_WORD = { ok: "Fine", check: "Check", miss: "Missing" };
+const VERDICT = {
+  "Looks Real": "Nothing here says stale or fake. It's still a good idea to apply soon.",
+  "Check First": "Mostly fine. Read the amber lines below before you spend time on it.",
+  "Pipeline": "They may be collecting resumes for later, not filling a seat now.",
+  "Likely Stale": "Several signs say this one may already be filled. Apply only if it's a great fit.",
+};
 const jobById = id => result?.jobs.find(j => j.id === id) || saved.find(s => s.job_key === id)?.job;
 function insider(j) {   // same moves the engine makes, built here so a saved job works offline
   const days = j.check?.openDays, a = /^[aeiou]/i.test(j.title || "") ? "an" : "a";
@@ -792,11 +816,11 @@ function insider(j) {   // same moves the engine makes, built here so a saved jo
   const out = [];
   if (j.check?.fresh) out.push(`<div class="move"><b>Apply While It's New</b><p>Open ${days === 0 ? "since today" : days + (days === 1 ? " day" : " days")}. Most applications on a posting come in its first four days.</p></div>`);
   const note = [`Hey, I saw ${j.company} is hiring ${a} ${j.title}.`, past ? `I've been working as ${/^[aeiou]/i.test(past) ? "an" : "a"} ${past} and it lines up well.` : "It lines up well with what I've been doing.",
-    "Would you be up for passing my name to the hiring manager, or telling me who that is?", `Thanks either way${name ? ", " + name : ""}.`].join(" ");
+    "Would you be up for putting me in through your referral system, or passing my name to the hiring manager?", `Thanks either way${name ? ", " + name : ""}.`].join(" ");
   out.push(`<div class="move"><b>Who Do You Know at ${esc(j.company)}?</b><p>In hiring data from Ashby, referred applicants got interviews 40% of the time and cold applicants 3%. Past vendors, customers, subs and old coworkers all count.</p>
     <div class="note" id="refNote">${esc(note)}</div>
     <div class="row" style="margin-top:8px"><button class="btn small" data-copy="refNote">Copy Note</button><a class="btn ghost small" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(j.company)}">Find People There</a></div></div>`);
-  out.push(`<div class="move"><b>One Follow-Up After a Week</b><p>If you hear nothing in 7 days, one short note to the recruiter or hiring manager. Nothing after 21 days, close it out and move on.</p></div>`);
+  out.push(`<div class="move"><b>Follow Up, Then Let It Go</b><p>Recruiters are swamped, so silence isn't a no. Send one short note after a week and one more the week after. Nothing by day 21, close it out and move on.</p></div>`);
   return out.join("");
 }
 function openSheet(id) {
@@ -804,9 +828,11 @@ function openSheet(id) {
   const s = saved.find(x => x.job_key === id), c = j.check || { label: "", good: [], warn: [] }, ko = j.knockouts || [];
   const gone = s?.job?.goneAt;
   $("#sheetBody").innerHTML = `
-    <div class="grab"><div style="flex:1;min-width:0"><p class="title" style="font-size:19px;font-weight:800;margin:0">${esc(j.title)}</p><div class="co">${esc(j.company)}</div></div>${payBox(j)}<button class="btn ghost small" data-close aria-label="Close">Close</button></div>
-    <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${placePill(j)}${openPill(j)}</div>
-    <h3>Posting Check ${gone ? `<span class="pill gone">Taken Down ${mdy(gone)}</span>` : c.label ? `<span class="pill ${CHECK[c.label]}">${esc(c.label)}</span>` : ""}</h3>
+    <div class="grab job"><div style="flex:1;min-width:0"><div class="co">${esc(j.company)}</div><p class="title" style="font-size:20px">${esc(j.title)}</p></div><button class="btn ghost small" data-close aria-label="Close">Close</button></div>
+    ${meta(j)}
+    <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}</div>
+    <h3>Posting Check</h3>
+    ${gone ? `<div class="verdict gone"><b>Taken Down</b><p>${esc(j.company)} took it off their job board. Close it out and move on.</p></div>` : c.label ? `<div class="verdict ${CHECK[c.label]}"><b>${esc(c.label)}</b><p>${VERDICT[c.label]}</p></div>` : ""}
     <ul class="ev">${gone ? `<li><span class="dot miss"></span>No longer on ${esc(j.company)}'s job board as of ${mdy(gone)}.</li>` : ""}${c.warn.map(w => `<li><span class="dot check"></span>${esc(w)}</li>`).join("")}${c.good.map(g => `<li><span class="dot ok"></span>${esc(g)}</li>`).join("")}</ul>
     ${ko.length ? `<h3>Check Before You Apply</h3><ul class="ev">${ko.map(k => `<li><span class="dot ${k.status}"></span><div style="flex:1" class="ko"><span><b>${esc(k.need)}</b></span><span class="n">${KO_WORD[k.status]} · ${esc(k.note)}</span></div></li>`).join("")}</ul>` : ""}
     ${j.reasons?.length ? `<h3>Why It Fits</h3><ul class="why" style="margin-top:0">${j.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
