@@ -225,6 +225,10 @@ for (const dark of [false, true]) {
     assert.ok(out.includes("Check Before You Apply") && out.includes("CDL") && out.includes("Missing"), out);
     await noSideScroll(page);
     await shot(page, `phone-${tag}-me`);
+    await page.click('[data-theme-pick="dark"]');
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
+    await page.click('[data-theme-pick="system"]');
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), undefined);
   });
   await step(`[${tag}] no page errors`, async () => assert.deepEqual(errors, []));
   await ctx.close();
