@@ -249,12 +249,14 @@ details>summary.section-h{cursor:pointer;list-style:none}
 /* Job sheet */
 .sheet{position:fixed;inset:0;z-index:20;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center;animation:fade .25s ease}
 .sheet .panel{background:rgba(var(--panel-rgb),.92);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);border-top:var(--glass-b);box-shadow:var(--hl),0 -10px 40px rgba(0,0,0,.4);width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:28px 28px 0 0;padding:0 20px 0;animation:up .42s var(--ease)}
-.sheet .grab{position:sticky;top:0;z-index:2;padding:16px 0 10px;display:flex;align-items:center;gap:12px;background:linear-gradient(to bottom,rgba(var(--panel-rgb),.98) 80%,rgba(var(--panel-rgb),0))}
+.sheet .grab{position:sticky;top:0;z-index:2;padding:16px 0 10px;display:flex;align-items:center;gap:12px;background:rgb(var(--panel-rgb));border-bottom:1px solid transparent;transition:border-color .2s}
+.sheet .scrolled .grab{border-bottom-color:var(--line)}
 .sheet .grab::before{content:"";position:absolute;top:7px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:3px;background:var(--muted);opacity:.4}
 .sheet .x{margin-left:auto}
 .sheet .grab .gt{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:0;opacity:0;transition:opacity .2s,max-height .2s}
 .sheet .scrolled .grab .gt{max-height:22px;opacity:1}
 .stick .btn svg{width:18px;height:18px}
+.trail.rp svg{color:var(--brass-text)}
 .paysrc{font-size:13px;color:var(--muted);margin-top:4px}
 .mailnudge{align-items:flex-start}
 .mailnudge > div:nth-child(2){min-width:0;flex:1}
@@ -333,6 +335,10 @@ button.pill{border:0;cursor:pointer;font-family:inherit}
 .paper ul{margin:4px 0 0;padding-left:18px}
 .paper li{margin:2px 0}
 .paper p{margin:0}
+.paper li.up::marker{color:var(--brass)}
+.changes{margin:10px 0 0;font-size:14px;color:var(--ink2)}
+#printOnly{display:none}
+@media print{body > *:not(#printOnly){display:none !important} #printOnly{display:block} #printOnly .paper{border:0;box-shadow:none;background:#fff;color:#000;font-size:11pt}}
 .mail{margin-top:12px;display:grid;gap:8px}
 .mail textarea{min-height:220px;font-size:14.5px;line-height:1.5}
 .jobedit{border-top:1px solid var(--line);padding-top:6px;margin-top:16px}
@@ -786,7 +792,8 @@ const checkPill = (j, s) => s?.job?.goneAt ? `<span class="pill gone">Taken Down
 const trail = j => {
   const t = Date.parse(j.firstPublished || j.postedAt);
   const d = openDays(j);
-  return `<div class="trail">${I.check}<span>${d == null ? "Still up" : `Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}, still up`} on ${esc(j.company)}'s own board</span></div>`;
+  const rp = j.reposts ? ` · reposted ${j.reposts === 1 ? "once" : j.reposts + " times"}` : "";   // a repost is the most-asked-for warning sign
+  return `<div class="trail ${rp ? "rp" : ""}">${rp ? I.clock : I.check}<span>${d == null ? "Still up" : `Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}, still up`} on ${esc(j.company)}'s own board${rp}</span></div>`;
 };
 function jobCard(j, s) {
   const st = s?.status;
@@ -933,6 +940,7 @@ function statusLine(s) {
   if (s.status === "offer") return "Offer in hand";
   if (s.status === "closed") return `Closed ${shortDay(s.updated_at)}`;
   if (s.follow_up && ["applied", "interview"].includes(s.status)) return `Follow up ${shortDay(s.follow_up)}`;
+  if (s.status === "applied" && daysAgo(s.updated_at) >= 14) return `Gone quiet · applied ${shortDay(s.updated_at)}`;
   if (s.status === "applied") return `Applied ${shortDay(s.updated_at)}`;
   if (s.status === "interview") return "Interviewing";
   return `Saved ${shortDay(s.created_at)}`;
@@ -953,7 +961,7 @@ function renderMine() {
   const active = live.length - c("closed");
   $("#mineSub").textContent = [`${active} active`, c("applied") + c("interview") + c("offer") ? `${c("applied") + c("interview") + c("offer")} applied` : "", c("interview") ? `${c("interview")} interviewing` : "", c("offer") ? `${c("offer")} ${c("offer") === 1 ? "offer" : "offers"}` : ""].filter(Boolean).join(" · ");
   const bar = active ? `<div class="facts" aria-hidden="true">${["offer", "interview", "applied", "saved"].filter(c).map(st => `<i class="f-${st}" style="flex:${c(st)}"></i>`).join("")}</div>` : "";
-  $("#mineBody").innerHTML = bar + mailCards() + todayCard() +
+  $("#mineBody").innerHTML = bar + mailCards() + todayCard() + `<div class="btnrow" style="margin-top:2px"><button class="linkbtn" data-pastereply>Got a reply? Paste it here</button></div>` +
     groups.map(([st, label]) => {
       const list = live.filter(s => s.status === st).sort(by);
       if (!list.length) return "";
@@ -1174,13 +1182,16 @@ function madeFor(j) {
     <div class="btnrow"><button class="btn small" data-resume-edit="${esc(j.id)}">Add My Resume</button></div></div>`;
   const t = Tailor.tailor(r, j, profile.data), m = Tailor.email(t, j);
   const lines = t.jobs.reduce((n, x) => n + x.bullets.length, 0);
+  const moved = t.jobs.reduce((n, x) => n + x.bullets.filter((b, i) => (r.jobs.find(o => o.title === x.title && o.company === x.company)?.bullets || []).indexOf(b) !== i).length, 0);
+  const left = t.jobs.reduce((n, x) => n + (x.dropped || 0), 0);
   const g = gmail.ready();
   return `${t.words ? `<div class="fitline"><span class="big">${t.matched.length} of ${t.words}</span><span>words from this posting are already on your resume</span></div>` : ""}
     ${t.matched.length ? `<div class="pills">${t.matched.map(w => `<button type="button" class="pill strong" data-kw="${esc(w)}">${esc(/^[a-z]/.test(w) ? tc(w) : w)}</button>`).join("")}</div>` : ""}
     ${t.missing.length ? `<div class="lbl">Not on Your Resume Yet, Add Only If You've Done It</div><div class="pills">${t.missing.map(w => `<button type="button" class="pill miss" data-kw="${esc(w)}">${esc(/^[a-z]/.test(w) ? tc(w) : w)}</button>`).join("")}</div>` : ""}
     <div class="kwctx hidden" id="kwCtx"></div>
-    <details style="margin-top:6px"><summary class="section-h">Your Lines, Best Fit First: ${t.jobs.length} ${t.jobs.length === 1 ? "Job" : "Jobs"}, ${lines} Lines, ${t.skills.length} Skills</summary>${paperHtml(t)}</details>
-    <div class="btnrow"><button class="btn ghost small" data-pdf="${esc(j.id)}">Download PDF</button><button class="btn ghost small" data-mail="${esc(j.id)}">${mailOpen.has(j.id) ? "Hide the Email" : "Write the Email"}</button><div class="spacer"></div><button class="linkbtn" data-resume-edit="${esc(j.id)}">Edit My Resume</button></div>
+    <details style="margin-top:6px"><summary class="section-h">Your Lines, Best Fit First: ${t.jobs.length} ${t.jobs.length === 1 ? "Job" : "Jobs"}, ${lines} Lines, ${t.skills.length} Skills</summary>
+      <p class="changes">What changed for this job: ${moved ? `${moved} ${moved === 1 ? "line" : "lines"} moved up` : "nothing moved"}${left ? `, ${left} left off` : ""}. Nothing was added.</p>${paperHtml(t, r)}</details>
+    <div class="btnrow"><button class="btn ghost small" data-pdf="${esc(j.id)}">Download PDF</button><button class="btn ghost small" data-print="${esc(j.id)}">Print It</button><button class="btn ghost small" data-mail="${esc(j.id)}">${mailOpen.has(j.id) ? "Hide the Email" : "Write the Email"}</button><div class="spacer"></div><button class="linkbtn" data-resume-edit="${esc(j.id)}">Edit My Resume</button></div>
     ${mailOpen.has(j.id) ? `<div class="mail">
       <label class="label" for="mailTo" style="margin:6px 0 0">To</label><input type="email" id="mailTo" value="${esc(m.to)}" placeholder="${m.to ? "" : "Recruiter's email, if you have it"}">
       <label class="label" for="mailSubj" style="margin:6px 0 0">Subject</label><input type="text" id="mailSubj" value="${esc(m.subject)}">
@@ -1189,12 +1200,13 @@ function madeFor(j) {
       ${g ? "" : `<p style="margin:2px 0 0;font-size:14px;color:var(--ink2)">Gmail opens with this email filled in. Attach the PDF you downloaded.${gmail.id() ? ` Or <button class="linkbtn" data-gconnect>connect Gmail</button> and the draft comes with the PDF attached.` : ""}</p>`}
     </div>` : ""}`;
 }
-function paperHtml(t) {
+function paperHtml(t, r) {
+  const was = x => (r?.jobs || []).find(o => o.title === x.title && o.company === x.company)?.bullets || [];
   return `<div class="paper"><div class="nm">${esc(t.name || "Your Name")}</div>
     <div class="ct">${esc([t.city, t.phone, t.email].filter(Boolean).join(" · "))}</div>${t.headline ? `<div class="hd">${esc(t.headline)}</div>` : ""}
     <div class="sec">Summary</div><p>${esc(t.summary)}</p>
     ${t.skills.length ? `<div class="sec">Skills</div><p>${t.skills.map(esc).join(" · ")}</p>` : ""}
-    <div class="sec">Work Experience</div>${t.jobs.map(x => `<div class="jt">${esc(x.title)}<span>${esc(x.dates)}</span></div>${x.company ? `<div class="jc">${esc(x.company)}</div>` : ""}<ul>${x.bullets.map(b => `<li>${esc(b)}</li>`).join("")}</ul>`).join("")}
+    <div class="sec">Work Experience</div>${t.jobs.map(x => `<div class="jt">${esc(x.title)}<span>${esc(x.dates)}</span></div>${x.company ? `<div class="jc">${esc(x.company)}</div>` : ""}<ul>${x.bullets.map((b, i) => `<li${was(x).indexOf(b) > i ? ' class="up" title="Moved up for this job"' : ""}>${esc(b)}</li>`).join("")}</ul>`).join("")}
     ${t.education.length ? `<div class="sec">Education and Certifications</div>${t.education.map(e => `<p>${esc(e)}</p>`).join("")}` : ""}</div>`;
 }
 const loadPdf = async () => { if (!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"); return window.jspdf.jsPDF; };
@@ -1202,6 +1214,12 @@ async function pdfFor(j) { const t = Tailor.tailor(myResume(), j, profile.data);
 const mailNow = () => ({ to: $("#mailTo")?.value.trim() || "", subject: $("#mailSubj")?.value || "", body: $("#mailBody")?.value || "" });
 document.addEventListener("click", async e => {
   const pdf = e.target.closest("[data-pdf]"), mail = e.target.closest("[data-mail]"), comp = e.target.closest("[data-compose]"), cm = e.target.closest("[data-copymail]"), gd = e.target.closest("[data-gdraft]");
+  const pr = e.target.closest("[data-print]");
+  if (pr) {   // for walking it into a jobsite trailer or a branch: the same version, printed
+    const t = Tailor.tailor(myResume(), jobById(pr.dataset.print), profile.data);
+    const box = document.createElement("div"); box.id = "printOnly"; box.innerHTML = paperHtml(t); document.body.appendChild(box);
+    print(); box.remove();
+  }
   if (pdf) { pdf.disabled = true; try { const { doc, name } = await pdfFor(jobById(pdf.dataset.pdf)); doc.save(name); toast("Downloaded. It's in your Downloads."); } catch (x) { toast(x.message); } pdf.disabled = false; }
   if (mail) { const id = mail.dataset.mail; mailOpen.has(id) ? mailOpen.delete(id) : mailOpen.add(id); openSheet(id, true); }
   if (comp) { const m = mailNow(); open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m.to)}&su=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`, "_blank", "noopener"); }
@@ -1217,6 +1235,29 @@ document.addEventListener("click", async e => {
     } catch (x) { toast(x.message); }
     gd.disabled = false;
   }
+});
+
+// No Gmail needed: paste a company's email and it becomes the same one-tap suggestion. Read here, never sent anywhere.
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-pastereply]")) return;
+  const live = saved.filter(s => ["saved", "applied", "interview"].includes(s.status));
+  $("#sheetBody").dataset.job = "";
+  $("#sheetBody").innerHTML = `<div class="grab"><div style="min-width:0"><div class="co">My Jobs</div></div>${X_BTN}</div>
+    <div class="sh-ttl">Paste a Reply</div>
+    <label class="label" for="prJob">Which Job</label><div class="chips" id="prJob">${live.map((s, i) => `<button type="button" class="chip ${i ? "" : "on"}" data-prjob="${esc(s.id)}">${esc(s.job.title)} · ${esc(s.job.company)}</button>`).join("")}</div>
+    <label class="label" for="prText">The Email</label><textarea id="prText" placeholder="Paste the whole email, subject line too"></textarea>
+    <div class="stick"><button class="btn" id="prGo">Read It</button></div>`;
+  $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
+  document.querySelectorAll("[data-prjob]").forEach(b => b.onclick = () => document.querySelectorAll("[data-prjob]").forEach(x => x.classList.toggle("on", x === b)));
+  $("#prGo").onclick = () => {
+    const text = $("#prText").value.trim(), pick = document.querySelector("[data-prjob].on");
+    if (!pick || text.length < 20) { toast(live.length ? "Pick the job and paste the email." : "Save a job first."); return; }
+    const s = saved.find(x => x.id === pick.dataset.prjob), kind = Tailor.readReply("", text), to = Tailor.nextStatus(s.status, kind);
+    if (!to) { toast(kind ? "That doesn't change where this job stands." : "I couldn't tell what that email means. Move it yourself in the job."); return; }
+    const subject = (text.match(/^subject:\s*(.+)$/im) || [])[1] || MAIL_WORD[kind];
+    mailSuggest = [{ sid: s.id, msgId: "paste-" + Date.now(), to, kind, from: s.job.company, subject, snippet: text.replace(/^subject:.*$/im, "").replace(/\s+/g, " ").trim().slice(0, 160), at: new Date().toISOString() }, ...mailSuggest];
+    closeSheet(); renderMine();
+  };
 });
 
 // ---------- Gmail: drafts with the PDF, and replies that move a job along ----------
@@ -1255,7 +1296,7 @@ function renderGmailCard() {
   $("#gmailBody").innerHTML = gmail.ready() || gmail.wanted()
     ? `<p style="margin:6px 0 0;color:var(--ink2)">Replies from companies in My Jobs move them along, and each job's email can be saved as a draft with its PDF.${checked ? ` Last checked ${shortDay(checked)}.` : ""}</p>
        <div class="btnrow"><button class="btn small" data-gcheck>Check for Replies</button><button class="btn ghost small" data-gdisconnect>Disconnect</button></div>`
-    : `<p style="margin:6px 0 0;color:var(--ink2)">Connect it and replies from companies in My Jobs move them to Applied, Interviewing, Offer or Closed. Each job's email can be saved as a draft with its PDF attached. Only emails that name a company you saved are read.</p>
+    : `<p style="margin:6px 0 0;color:var(--ink2)">Connect it and replies from companies in My Jobs move them to Applied, Interviewing, Offer or Closed. Each job's email can be saved as a draft with its PDF attached. Only emails that name a company you saved are read, right here in your browser. Nothing moves until you tap. Rather not connect it? Paste a reply in My Jobs instead.</p>
        <div class="btnrow"><button class="btn small" data-gconnect>Connect Gmail</button></div>`;
 }
 // One Gmail search per job that's in play. A reply becomes a suggestion with the email beside it; one tap moves the job.
@@ -1438,6 +1479,8 @@ const PAGES = {
     <p>If you add a resume, it's read in your browser. Its text is sent once to fill in your answers, and the parts you can edit (your jobs, lines, skills and contact details) are kept with your answers: in this browser without an account, or in your account if you have one. The file itself is not kept. Resumes made for each job are built in your browser.</p>
     <h2>Gmail</h2>
     <p>If you connect Gmail, your browser talks to Google directly. Recruiter Goose looks only for emails that name a company in My Jobs, to move that job to Applied, Interviewing, Offer or Closed, and it saves drafts only when you tap Save as Gmail Draft. Your email never passes through our server, and nothing is sent without you. Disconnect any time in Me, or at myaccount.google.com/permissions.</p>
+    <h2>No Phone Number</h2>
+    <p>Recruiter Goose never asks for your phone number, so nobody can call or text you from it. A phone number only goes on your resume if you type it there.</p>
     <h2>What We Never Do</h2>
     <p>We never sell or share your information, never send it to employers or recruiters, and never email you marketing.</p>
     <h2>Deleting Your Data</h2>

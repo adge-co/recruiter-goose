@@ -10,9 +10,9 @@ export const ROLE_WORDS = {
   onboarding: ["onboarding", "implementation", "customer training"],
   training: ["trainer", "training", "enablement", "instructional"],
   "customer success": ["customer success", "account manager", "client success", "customer experience"],
-  coordinator: ["coordinator", "project coordinator", "operations coordinator", "scheduler"],
-  "project manager": ["project manager", "project management", "program manager"],
-  purchasing: ["purchasing", "procurement", "buyer", "sourcing"],
+  coordinator: ["coordinator", "project coordinator", "operations coordinator", "scheduler", "supply chain coordinator", "logistics coordinator"],
+  "project manager": ["project manager", "project management", "program manager", "assistant project manager", "project engineer"],
+  purchasing: ["purchasing", "procurement", "buyer", "assistant buyer", "sourcing"],
   pricing: ["pricing analyst", "pricing", "revenue analyst"],
   estimating: ["estimator", "estimating", "preconstruction", "takeoff"],
   operations: ["operations manager", "operations analyst", "operations", "process improvement"],
@@ -31,7 +31,9 @@ const SCAM = /\b(telegram|whatsapp|wire transfer|check deposit|upfront fee|pay (
 const AVOID_WORDS = {
   sales: ["sales", "account executive", "business development", "sales development", "sdr", "bdr", "inside sales"],
 };
-const ENTRY = /\b(graduate|intern|internship|entry[- ]level|junior|jr\.?|trainee|apprentice)\b/i;
+// Junior and assistant office titles (Jr Estimator, Assistant Buyer, APM) are the usual first step for people coming
+// in from the field, so they aren't marked down; internships and graduate programs are.
+const ENTRY = /\b(graduate|intern|internship|trainee|apprentice)\b/i;
 const SALESY = /\b(quota|commission|cold call|outbound prospecting|book of business|ote\b|on-target earnings)\b/i;
 
 // What work in each field sounds like. A job's own duties naming these is what makes it fit someone's background,
@@ -342,7 +344,7 @@ export async function match(profile, env = {}, sources = S, store = null) {
   let seen = {};
   if (store) { try { seen = await store.record(vetted.filter(j => j.source === "Company Site").map(j => ({ id: j.id, sig: signature(j) }))); } catch (e) { report.push({ name: "Posting history", ok: false, count: 0, error: String(e.message || e) }); } }
   const jobs = scored.slice(0, 100).map(({ description, raw, ...j }) => ({ ...j, snippet: description.slice(0, 280), description: description.slice(0, 4000),
-    check: postingCheck({ ...j, description }, seen[j.id] || null), knockouts: knockouts({ ...j, description }, p) }));
+    check: postingCheck({ ...j, description }, seen[j.id] || null), knockouts: knockouts({ ...j, description }, p), reposts: seen[j.id]?.reposts || 0 }));
   return {
     ranAt: new Date().toISOString(), tookMs: Date.now() - started,
     counts: { found: raw.length, legit: vetted.length, matched: scored.length, shown: jobs.length,
