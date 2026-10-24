@@ -195,3 +195,48 @@ Associate's degree, 2012`, new Date("2026-10-23"));
   assert.ok(!r.pastTitles.some(t => /OPERATIONS/.test(t)), "an all-caps headline isn't a past job");
   assert.ok(!r.pastCompanies.includes("Present"), "the end of a date range isn't a company");
 });
+
+// ---------- Job index ----------
+import { crawl, probe, toRow, fromRow, indexWords } from "../src/crawl.js";
+import { fetchAll as fetchAll2 } from "../src/match.js";
+
+test("crawl reads every board and keyword source, drops rows without a real apply link, and dedupes", async () => {
+  const src = {
+    readBoard: async b => b.token === "bad" ? Promise.reject(new Error("HTTP 404")) : [{ id: `gh:${b.token}:1`, title: "Purchasing Coordinator", company: b.name, applyUrl: "https://x.test/1" }, { id: `gh:${b.token}:2`, title: "No Link", company: b.name, applyUrl: "" }],
+    remotive: async () => [{ id: "remotive:9", title: "Implementation Specialist", company: "R", applyUrl: "https://r.test/9" }],
+    jobicy: async () => [], themuse: async () => [],
+  };
+  const out = await crawl([{ ats: "greenhouse", token: "a", name: "A", industries: ["construction-tech"] }, { ats: "greenhouse", token: "bad", name: "Bad" }], src);
+  assert.deepEqual(out.jobs.map(j => j.id).sort(), ["gh:a:1", "remotive:9"]);
+  assert.equal(out.jobs.find(j => j.id === "gh:a:1").boardKey, "greenhouse:a");
+  assert.deepEqual(out.jobs.find(j => j.id === "gh:a:1").industries, ["construction-tech"]);
+  assert.ok(out.report.some(r => r.key === "greenhouse:bad" && !r.ok));
+});
+
+test("probe keeps only names with open jobs", async () => {
+  const src = { readBoard: async c => c.token === "real" ? [{ title: "Estimator", applyUrl: "https://x.test" }] : Promise.reject(new Error("404")) };
+  const out = await probe([{ ats: "lever", token: "real" }, { ats: "lever", token: "nope" }], src);
+  assert.deepEqual(out.map(o => o.token), ["real"]);
+});
+
+test("a posting survives the trip into the index and back", () => {
+  const j = { id: "gh:a:1", boardKey: "greenhouse:a", title: "Estimator", company: "A", location: "Remote", remote: true, payMin: 70000, payMax: 90000, postedAt: "2026-10-20T00:00:00Z", firstPublished: "2026-10-20T00:00:00Z", applyUrl: "https://x.test", description: "d", source: "Company Site", industries: ["construction-tech"] };
+  const back = fromRow({ ...toRow(j, "2026-10-24T00:00:00Z"), first_seen: "2026-10-21T00:00:00Z" });
+  for (const k of ["id", "title", "company", "remote", "payMin", "payMax", "applyUrl", "source"]) assert.equal(back[k], j[k]);
+});
+
+test("index words come from wanted roles and past titles", () => {
+  const w = indexWords({ wants: { roles: ["estimating"] }, pastTitles: ["Senior Counter Sales"] });
+  assert.ok(w.includes("estimator") && w.includes("counter sales"));
+});
+
+test("a search reads the index first and skips the live sites when it has jobs", async () => {
+  const calls = [];
+  const src = { index: async () => [{ id: "gh:a:1", title: "Estimator", company: "A", applyUrl: "https://x.test" }], remotive: async () => { calls.push("remotive"); return []; }, jobicy: async () => [], themuse: async () => [], companyBoards: async () => { calls.push("boards"); return { jobs: [] }; } };
+  const out = await fetchAll2({ wants: { roles: ["estimating"], remote: true, cities: [] }, industries: [] }, {}, src);
+  assert.equal(out.jobs.length, 1);
+  assert.deepEqual(calls, []);
+  const empty = { ...src, index: async () => [] };
+  await fetchAll2({ wants: { roles: ["estimating"], remote: true, cities: [] }, industries: [] }, {}, empty);
+  assert.ok(calls.includes("boards"), "falls back to live sites when the index is empty");
+});

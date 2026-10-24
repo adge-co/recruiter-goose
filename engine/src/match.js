@@ -119,6 +119,16 @@ export async function fetchAll(p, env = {}, sources = S) {
     catch (e) { report.push({ name, ok: false, count: 0, error: String(e.message || e) }); }
   };
   const tasks = [];
+  // The job index (filled on a schedule) answers in one read; live sources are the fallback when it's empty or down.
+  if (sources.index) {
+    let n = 0;
+    await run("Job index", async () => { const list = await sources.index(p); n = list.length; return list; });
+    if (n) {
+      for (const pl of places) if (pl.city) tasks.push(run(`The Muse: ${pl.city}`, () => sources.themuse(pl)));
+      await Promise.all(tasks);
+      return { jobs, report };
+    }
+  }
   for (const role of roles) {
     if (p.wants.remote) {
       tasks.push(run(`Remotive: ${role}`, () => sources.remotive({ keyword: role })));
