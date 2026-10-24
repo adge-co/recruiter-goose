@@ -285,7 +285,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
       <p class="hint">Your next move. You can change all of this later.</p>
       <div class="card hidden" id="bgSetup" style="margin-top:14px"></div>
       <label class="label">Kinds Of Roles</label>
-      <p class="hint">Tap the ones you want. Add your own below.</p>
+      <p class="hint" id="rolesHint">Tap the ones you want. Add your own below.</p>
       <div class="chips" id="cRoles"></div>
       <div class="chipin"><input type="text" id="iRoles" placeholder="Another role"><button class="btn small" data-add="roles">Add</button></div>
       <label class="label">Where</label>
@@ -410,10 +410,21 @@ function renderToggleChips(key, el, all, labels) {
   const extra = draft[key].filter(v => !all.includes(v));
   el.innerHTML = [...all, ...extra].map(v => `<button type="button" class="chip ${draft[key].includes(v) ? "on" : ""}" data-tog="${key}:${esc(v)}">${esc(labels ? labels[v] || tc(v) : tc(v))}</button>`).join("");
 }
+// Role choices come from the person's own past jobs first; the full list sits behind More Roles.
+let allRoles = false;
+function renderRoleChips() {
+  const bg = backgrounds && bgFor === draft.titles.join("|") ? backgrounds : [];
+  const pointed = [...new Set(bg.flatMap(b => b.roles))];
+  const narrow = pointed.length && !allRoles;
+  renderToggleChips("roles", $("#cRoles"), narrow ? [...new Set([...pointed, ...draft.roles.filter(r => ROLES.includes(r))])] : ROLES);
+  if (narrow) $("#cRoles").insertAdjacentHTML("beforeend", `<button type="button" class="chip" id="moreRoles">More Roles</button>`);
+  $("#rolesHint").textContent = narrow ? "These are the roles your past jobs point to. Tap the ones you want, or add your own below." : "Tap the ones you want. Add your own below.";
+}
+document.addEventListener("click", e => { if (e.target.closest("#moreRoles")) { allRoles = true; renderRoleChips(); } });
 function renderSetup() {
   renderChips("titles", $("#cTitles")); renderChips("skills", $("#cSkills")); renderChips("cities", $("#cCities"));
   renderToggleChips("industries", $("#cInd"), Object.keys(INDUSTRIES), INDUSTRIES);
-  renderToggleChips("roles", $("#cRoles"), ROLES);
+  renderRoleChips();
   if (!$("#setup2").classList.contains("hidden")) renderBgSetup();
 }
 document.addEventListener("click", e => {
@@ -434,6 +445,7 @@ Object.entries(inputFor).forEach(([key, sel]) => $(sel).addEventListener("keydow
 function startSetup() {
   const p = profile?.data || {}, w = p.wants || {};
   draft.titles = [...(p.pastTitles || [])]; draft.skills = [...(p.skills || [])]; draft.industries = [...(p.industries || [])];
+  allRoles = false;
   draft.roles = [...(w.roles || [])]; draft.cities = [...(w.cities || [])]; draft.companies = [...(p.pastCompanies || [])];
   $("#rMsg").textContent = ""; $("#rPasteBox").classList.add("hidden");
   $("#iYears").value = p.years ?? ""; $("#iFloor").value = w.payFloor || "";
@@ -872,8 +884,10 @@ function bgHtml(list, compact) {
 }
 async function renderBgSetup() {
   const el = $("#bgSetup"), list = await loadBackground(draft.titles);
-  el.classList.toggle("hidden", !list.length);
-  if (list.length) el.innerHTML = `<div class="moment" style="margin-bottom:4px"><img src="img/papers.webp" alt="" style="width:56px"><b style="font-size:17px">Your Background Points To</b></div>${bgHtml(list, true)}`;
+  renderRoleChips();
+  el.classList.toggle("hidden", !draft.titles.length);
+  if (!list.length) el.innerHTML = `<b style="font-size:17px">I don't have a read on that background yet</b><p class="hint" style="margin:6px 0 0">Recruiter Goose is built for people coming from the trades, counter sales, purchasing, warehouses and the jobsite. You can still pick roles below or type the exact title you want, and I'll search for it.</p>`;
+  else el.innerHTML = `<div class="moment" style="margin-bottom:4px"><img src="img/papers.webp" alt="" style="width:56px"><b style="font-size:17px">Your Background Points To</b></div>${bgHtml(list, true)}`;
 }
 async function renderBg() {
   const list = await loadBackground(profile?.data?.pastTitles || []);

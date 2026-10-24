@@ -130,8 +130,22 @@ for (const dark of [false, true]) {
     await page.click('#bgSetup [data-tog="roles:purchasing"]');
     assert.ok(await page.$('#cRoles .chip.on[data-tog="roles:purchasing"]'), "role picked from the background card shows as picked");
     assert.ok(await page.$('#bgSetup .chip.on[data-tog="roles:purchasing"]'));
+    const offered = await page.$$eval('#cRoles [data-tog]', els => els.map(e => e.dataset.tog.slice(6)));
+    assert.ok(offered.includes("customer success") && !offered.includes("safety"), "roles come from the background: " + offered);
+    await page.click("#moreRoles");
+    assert.ok(await page.$('#cRoles [data-tog="roles:safety"]'), "More Roles shows the full list");
     await noSideScroll(page);
     await shot(page, `phone-${tag}-setup-background`);
+  });
+  await step(`[${tag}] an unknown background says so and shows every role`, async () => {
+    await page.click("#back2"); await page.fill("#iTitles", "Financial Analyst"); await page.press("#iTitles", "Enter");
+    await page.click('#cTitles [data-del="titles:0"]'); await page.click('#cTitles [data-del="titles:0"]');
+    await page.click("#next1");
+    await page.waitForFunction(() => document.querySelector("#bgSetup")?.textContent.includes("don't have a read"));
+    assert.ok(await page.$('#cRoles [data-tog="roles:safety"]') && !(await page.$("#moreRoles")));
+    await page.click("#back2"); await page.click('#cTitles [data-del="titles:0"]');
+    for (const x of ["Counter Sales", "Purchasing Agent"]) { await page.fill("#iTitles", x); await page.press("#iTitles", "Enter"); }
+    await page.click("#next1"); await page.waitForSelector("#bgSetup .bg");
   });
   await step(`[${tag}] search shows matches with a posting check on each`, async () => {
     await page.click("#next2");
