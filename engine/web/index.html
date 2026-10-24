@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recruiter Goose Test</title>
+<style>
+:root{--bg:#f6f5f3;--card:#fff;--line:#e8e6e3;--ink:#16181c;--muted:#6b6f76;--faint:#9a9ea5;--soft:#f1efec;--green:#15803d;--navy:#1f2f4f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.wrap{max-width:1100px;margin:0 auto;padding:24px 16px 60px;display:grid;grid-template-columns:360px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.wrap{grid-template-columns:1fr}}
+h1{font-size:28px;font-weight:800;letter-spacing:-.6px;margin:0 0 4px}
+h2{font-size:15px;margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:grid;gap:14px}
+label{display:grid;gap:6px;font-weight:600;font-size:13.5px}
+input[type=text],input[type=number]{font:15px inherit;font-family:inherit;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:#fff;color:var(--ink);width:100%}
+.hint{font-weight:400;color:var(--muted);font-size:12.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:0;background:var(--soft);border-radius:9px;padding:7px 11px;font:500 13.5px inherit;font-family:inherit;cursor:pointer}
+.chips button[aria-pressed=true]{background:var(--ink);color:#fff}
+.btn{border:0;border-radius:10px;padding:12px 16px;font:600 15px inherit;font-family:inherit;background:var(--navy);color:#fff;cursor:pointer}
+.btn:disabled{opacity:.6}
+.row{display:flex;gap:10px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.stat span{font-size:12.5px;color:var(--muted)} .stat b{display:block;font-size:24px;font-weight:800}
+.job{border-top:1px solid var(--line);padding:12px 0;display:grid;gap:4px}
+.job:first-child{border-top:0}
+.top{display:flex;justify-content:space-between;gap:12px}
+.t{font-weight:600} .t a{color:inherit}
+.c{color:var(--muted);font-size:13.5px}
+.fit{font-size:12px;font-weight:700;color:var(--muted)}
+.fit.strong{color:var(--green)}
+.why{font-size:13.5px} .flag{font-size:13px;color:var(--faint)}
+.score{font-weight:700;white-space:nowrap}
+details{font-size:13px;color:var(--muted)} summary{cursor:pointer}
+.err{color:#b42318}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <form class="card" id="f">
+    <div><h1>Recruiter Goose</h1><span class="hint">Engine test. Your info in, matched postings out.</span></div>
+    <label>Name<input type="text" name="name" value="Gus"></label>
+    <label>Past Job Titles <span class="hint">Comma between each</span><input type="text" name="pastTitles" value="Project Manager, Purchasing Agent, Store Manager, Window Operations Manager"></label>
+    <label>Years of Work<input type="number" name="years" value="7" min="0" max="50"></label>
+    <label>Skills and Tools <span class="hint">Comma between each</span><input type="text" name="skills" value="quoting, purchasing, ERP, Microsoft Dynamics, lumber, windows and doors, vendor management, training"></label>
+    <label>Industries<div class="chips" id="ind"></div></label>
+    <label>Roles You Want <span class="hint">Comma between each</span><input type="text" name="roles" value="implementation, onboarding, customer success, coordinator"></label>
+    <label>Where<div class="chips"><button type="button" id="remote" aria-pressed="true">Remote</button></div><input type="text" name="cities" value="Dallas, TX" placeholder="Cities, like Dallas, TX; Charlotte, NC"><span class="hint">Separate cities with a semicolon</span></label>
+    <label>Pay Floor<input type="number" name="payFloor" value="90000" step="5000"></label>
+    <label>Rule Out <span class="hint">Roles you don't want</span><input type="text" name="avoid" value="sales"></label>
+    <button class="btn" id="go">Find Jobs</button>
+    <span class="hint" id="keys"></span>
+  </form>
+  <div style="display:grid;gap:14px;min-width:0">
+    <div class="stats" id="stats"></div>
+    <div class="card" id="out"><span class="hint">Results show here.</span></div>
+    <details class="card" id="src" hidden><summary>Sources Checked</summary><div id="srclist"></div></details>
+  </div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const list = s => s.split(",").map(x => x.trim()).filter(Boolean);
+const k = n => "$" + Math.round(n/1000) + "k";
+const picked = new Set(["construction-tech","building-materials"]);
+fetch("/api/options").then(r => r.json()).then(o => {
+  $("#ind").innerHTML = Object.entries(o.industries).map(([v,l]) => `<button type="button" data-v="${v}" aria-pressed="${picked.has(v)}">${esc(l)}</button>`).join("");
+  $("#ind").querySelectorAll("button").forEach(b => b.onclick = () => { picked.has(b.dataset.v) ? picked.delete(b.dataset.v) : picked.add(b.dataset.v); b.setAttribute("aria-pressed", picked.has(b.dataset.v)); });
+  $("#keys").textContent = o.keys.jsearch ? "Google for Jobs is on (LinkedIn, Indeed, ZipRecruiter)." : "Google for Jobs is off until a JSearch key is added.";
+});
+$("#remote").onclick = e => e.target.setAttribute("aria-pressed", e.target.getAttribute("aria-pressed") !== "true");
+$("#f").onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData($("#f"));
+  const profile = { name: f.get("name"), pastTitles: list(f.get("pastTitles")), years: +f.get("years"), skills: list(f.get("skills")),
+    industries: [...picked], wants: { roles: list(f.get("roles")), remote: $("#remote").getAttribute("aria-pressed") === "true",
+    cities: f.get("cities").split(";").map(x => x.trim()).filter(Boolean), payFloor: +f.get("payFloor"), avoid: list(f.get("avoid")) } };
+  $("#go").disabled = true; $("#go").textContent = "Searching…"; $("#out").innerHTML = `<span class="hint">Checking the job sources…</span>`;
+  try {
+    const r = await (await fetch("/api/match", { method: "POST", body: JSON.stringify(profile) })).json();
+    if (r.error) throw new Error(r.error);
+    const c = r.counts;
+    $("#stats").innerHTML = [["Found",c.found],["Legit",c.legit],["Matched",c.matched],["Strong Fits",c.strong]].map(([l,v]) => `<div class="stat"><span>${l}</span><b>${v}</b></div>`).join("");
+    $("#out").innerHTML = r.jobs.length ? r.jobs.map(j => `<div class="job">
+      <div class="top"><div class="t"><a href="${esc(j.applyUrl)}" target="_blank" rel="noopener">${esc(j.title)}</a></div><span class="score">${j.payMax ? k(j.payMin||j.payMax)+"–"+k(j.payMax) : ""}</span></div>
+      <div class="c">${esc(j.company)} · ${esc(j.location)} · ${esc(j.source)}${j.ageDays!=null ? " · " + j.ageDays + "d ago" : ""}</div>
+      <div><span class="fit ${j.fit}">${({strong:"Strong Fit",good:"Good Fit",reach:"Reach",sales:"Partly Sales"})[j.fit]} · ${j.score}</span></div>
+      <div class="why">${esc(j.reasons.join(" · "))}</div>${j.flags.length ? `<div class="flag">${esc(j.flags.join(" · "))}</div>` : ""}
+    </div>`).join("") : `<span class="hint">Nothing matched. Try more roles or another city.</span>`;
+    const d = r.dropped;
+    $("#srclist").innerHTML = r.sources.map(s => `<div>${s.ok ? "✓" : "✗"} ${esc(s.name)}: ${s.ok ? s.count : esc(s.error)}${s.notes ? `<br><span class="hint">${esc(s.notes.join("; "))}</span>` : ""}</div>`).join("") +
+      `<p>Dropped: ${d.duplicate} duplicates, ${d.tooOld} too old, ${d.looksLikeScam} look like scams, ${d.noApplyLink} with no apply link, ${d.wrongPlace} in the wrong place. Took ${(r.tookMs/1000).toFixed(1)}s.</p>`;
+    $("#src").hidden = false;
+  } catch (err) { $("#out").innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+  $("#go").disabled = false; $("#go").textContent = "Find Jobs";
+};
+</script>
+</body>
+</html>

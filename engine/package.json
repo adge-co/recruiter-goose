@@ -1,0 +1,12 @@
+{
+  "name": "recruiter-goose-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node web/server.js",
+    "check-directory": "node scripts/check-directory.js"
+  },
+  "engines": { "node": ">=18" }
+}
