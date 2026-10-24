@@ -35,7 +35,7 @@ Deno.serve(async req => {
     const body = await req.json();
     if (typeof body.resume === "string") return Response.json(parseResume(body.resume.slice(0, 60000)), { headers: cors });
     if (Array.isArray(body.background)) return Response.json({ backgrounds: readBackground(body.background.slice(0, 12)) }, { headers: cors });
-    if (Array.isArray(body.verify)) return Response.json(await verify(body.verify, S), { headers: cors });
+    if (Array.isArray(body.verify)) return Response.json(await verify(body.verify.slice(0, 60), S), { headers: cors });
     if (body.check) return Response.json(checkJob(body.check, body.profile || {}), { headers: cors });
     const out = await match(body.profile || body, {
       JSEARCH_KEY: Deno.env.get("JSEARCH_KEY"), ADZUNA_ID: Deno.env.get("ADZUNA_ID"), ADZUNA_KEY: Deno.env.get("ADZUNA_KEY"),

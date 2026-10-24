@@ -62,8 +62,8 @@ textarea{min-height:140px;resize:vertical}
 .top img{width:38px;height:38px;border-radius:10px}
 .brand{font-weight:800;font-size:18px}
 .tabs{display:flex;gap:6px;max-width:760px;margin:0 auto;padding:0 16px 10px}
-.tab{flex:1;border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:10px 6px;font-weight:700;cursor:pointer;font-size:15px}
-.tab.on{background:var(--navy);color:var(--navy-ink);border-color:var(--navy)}
+.tab{flex:1;border:0;background:transparent;border-radius:12px;padding:10px 6px;font-weight:700;cursor:pointer;font-size:15px;color:var(--muted)}
+.tab.on{background:var(--navy-soft);color:var(--ink)}
 .tab .n{font-weight:600;opacity:.8}
 
 /* welcome */
@@ -77,7 +77,7 @@ textarea{min-height:140px;resize:vertical}
 /* chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font-weight:600;font-size:15px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
-.chip.on{background:var(--navy-soft);border-color:var(--navy);color:var(--ink)}
+.chip.on{background:var(--navy-soft);border-color:transparent;color:var(--ink)}
 .chip .x{font-weight:800;opacity:.6}
 .chipin{display:flex;gap:8px;margin-top:8px}
 .chipin input{flex:1}
@@ -141,6 +141,53 @@ canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:41}
 .moment{display:flex;gap:12px;align-items:center}
 .moment img{width:76px}
 footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
+
+/* posting check */
+.pill.real{background:var(--green-soft);color:var(--green)}
+.pill.checkfirst,.pill.pipeline{background:var(--amber-soft);color:var(--amber)}
+.pill.stale,.pill.gone{background:var(--red-soft);color:var(--red)}
+.job .open{cursor:pointer}
+.more{appearance:none;border:0;background:none;color:var(--navy);font-weight:700;padding:8px 0 0;cursor:pointer;font-size:15px}
+
+/* job detail sheet */
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(10,20,40,.45);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s ease}
+.sheet .panel{background:var(--bg);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:0 16px 24px;animation:up .28s cubic-bezier(.2,.9,.3,1.1)}
+.sheet .grab{position:sticky;top:0;background:var(--bg);padding:12px 0 10px;display:flex;align-items:center;gap:10px;z-index:1}
+.sheet h3{font-size:17px;font-weight:800;margin:20px 0 8px}
+.ev{list-style:none;margin:0;padding:0}
+.ev li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line);font-size:15px}
+.ev li:first-child{border-top:0}
+.dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--muted)}
+.dot.ok{background:var(--green)} .dot.check{background:var(--amber)} .dot.miss{background:var(--red)}
+.ko{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:baseline}
+.ko .n{font-size:14px;color:var(--muted);text-align:right}
+.move{padding:12px 0;border-top:1px solid var(--line)}
+.move:first-of-type{border-top:0}
+.move b{display:block;font-size:16px}
+.move p{margin:4px 0 0;color:var(--ink2);font-size:15px}
+.note{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px;font-size:15px;color:var(--ink)}
+.desc{white-space:pre-line;font-size:15px;color:var(--ink2)}
+.stick{position:sticky;bottom:0;background:var(--bg);padding:12px 0 4px;display:flex;gap:8px;border-top:1px solid var(--line);margin-top:16px}
+.stick .btn{flex:1}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+@keyframes fade{from{opacity:0}}
+
+/* background reader */
+.bg{padding:14px 0;border-top:1px solid var(--line)}
+.bg:first-child{border-top:0;padding-top:4px}
+.bg .from{font-size:14px;color:var(--muted);font-weight:600}
+.say{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:8px;font-size:15px}
+.say .was{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+.say .now{color:var(--ink);font-weight:600}
+.lbl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:10px}
+
+/* today */
+.today .item{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.today .item:first-of-type{border-top:0}
+.today .item div{flex:1;min-width:0}
+.today .item b{display:block;font-size:15px}
+.today .item span{font-size:14px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.sheet,.sheet .panel,.loading img{animation:none}}
 @media (max-width:420px){ .pay{min-width:80px} .job .title{font-size:17px} h1{font-size:25px} }
 </style>
 </head>
@@ -203,7 +250,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
       <p class="hint">Type one and press Add. Example: Purchasing Agent</p>
       <div class="chips" id="cTitles"></div>
       <div class="chipin"><input type="text" id="iTitles" placeholder="Job title"><button class="btn small" data-add="titles">Add</button></div>
-      <label class="label" for="iYears">Years Of Work Experience</label>
+      <label class="label" for="iYears">Years of Work Experience</label>
       <input type="number" id="iYears" min="0" max="60" inputmode="numeric" placeholder="7">
       <label class="label">Industries You Know</label>
       <p class="hint">Pick every one you've worked in or sold to.</p>
@@ -218,6 +265,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
     <div id="setup2" class="hidden">
       <h1>What You Want</h1>
       <p class="hint">Your next move. You can change all of this later.</p>
+      <div class="card hidden" id="bgSetup" style="margin-top:14px"></div>
       <label class="label">Kinds Of Roles</label>
       <p class="hint">Tap the ones you want. Add your own below.</p>
       <div class="chips" id="cRoles"></div>
@@ -255,6 +303,10 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
       <div class="row"><h2>What Goose Knows About You</h2><div class="spacer"></div><button class="btn ghost small" id="editMe">Edit</button></div>
       <div id="meBody"></div>
     </div>
+    <div class="card" style="margin-top:16px" id="bgCard">
+      <h2>How a Recruiter Reads Your Background</h2>
+      <div id="bgBody"></div>
+    </div>
     <div class="card" style="margin-top:16px">
       <h2>Check A Job</h2>
       <p class="hint">Found a posting somewhere else? Paste it here and I'll tell you how it fits you.</p>
@@ -275,6 +327,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
   <footer>Recruiter Goose · Built by Gus Johnson with Claude</footer>
 </main>
 
+<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true"><div class="panel" id="sheetBody"></div></div>
 <div id="toast" class="toast hidden"></div>
 <canvas id="confetti" class="hidden"></canvas>
 
@@ -286,9 +339,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 const INDUSTRIES = {
   "construction-tech": "Construction Tech", "building-materials": "Building Materials", "trades-software": "Software for the Trades",
-  "proptech": "Homebuilding and Property Tech", "logistics": "Logistics and Supply Chain", "energy": "Energy and Battery Storage", "saas": "General Software",
+  "proptech": "Homebuilding and Property Tech", "logistics": "Logistics and Supply Chain", "energy": "Energy and Battery Storage", "hospitality": "Hospitality Tech", "saas": "General Software",
 };
-const ROLES = ["implementation", "onboarding", "training", "customer success", "coordinator", "project manager", "purchasing", "pricing", "estimating", "operations", "support", "product manager"];
+const ROLES = ["purchasing", "estimating", "implementation", "project manager", "coordinator", "operations", "customer success", "onboarding", "training", "scheduling", "inventory", "safety", "quality", "pricing", "support", "product manager"];
+const CHECK = { "Looks Real": "real", "Check First": "checkfirst", "Pipeline": "pipeline", "Likely Stale": "stale" };
 const FIT = { strong: "Strong Fit", good: "Good Fit", reach: "A Reach", sales: "Partly Sales" };
 const STATUS = [["saved", "Saved"], ["applied", "Applied"], ["interview", "Interviewing"], ["offer", "Offer"], ["closed", "Closed Out"]];
 
@@ -342,6 +396,7 @@ function renderSetup() {
   renderChips("titles", $("#cTitles")); renderChips("skills", $("#cSkills")); renderChips("cities", $("#cCities"));
   renderToggleChips("industries", $("#cInd"), Object.keys(INDUSTRIES), INDUSTRIES);
   renderToggleChips("roles", $("#cRoles"), ROLES);
+  if (!$("#setup2").classList.contains("hidden")) renderBgSetup();
 }
 document.addEventListener("click", e => {
   const del = e.target.closest("[data-del]"), tog = e.target.closest("[data-tog]"), add = e.target.closest("[data-add]");
@@ -426,6 +481,7 @@ $("#next1").onclick = () => {
   if (!draft.titles.length) { err.textContent = "Add at least one job you've held."; err.classList.remove("hidden"); return; }
   err.classList.add("hidden");
   $("#setup1").classList.add("hidden"); $("#setup2").classList.remove("hidden"); $("#st2").classList.add("on"); scrollTo(0, 0);
+  renderBgSetup();
 };
 $("#back2").onclick = () => { $("#setup2").classList.add("hidden"); $("#setup1").classList.remove("hidden"); $("#st2").classList.remove("on"); };
 $("#next2").onclick = async () => {
@@ -477,13 +533,17 @@ function placePill(j) {
   if (/hybrid/i.test(loc)) return `<span class="pill">Hybrid</span>`;
   return `<span class="pill">On-Site</span>`;
 }
+const openDays = j => { const t = Date.parse(j.firstPublished || j.postedAt); return Number.isFinite(t) ? Math.max(0, Math.floor((Date.now() - t) / 864e5)) : j.check?.openDays ?? null; };
+const openPill = j => openDays(j) != null ? `<span class="pill">Open ${openDays(j) === 0 ? "Since Today" : openDays(j) === 1 ? "1 Day" : openDays(j) + " Days"}</span>` : j.postedAt ? `<span class="pill">Posted ${mdy(j.postedAt)}</span>` : "";
+const checkPill = (j, s) => s?.job?.goneAt ? `<span class="pill gone">Taken Down ${mdy(s.job.goneAt)}</span>` : j.check ? `<span class="pill ${CHECK[j.check.label]}">${esc(j.check.label)}</span>` : "";
 function jobCard(j, s, inMine) {
   const st = s?.status;
   const flags = (j.flags || []).map(f => `<span class="pill flag">${esc(f)}</span>`).join("");
   return `<div class="card job ${st === "passed" || st === "closed" ? "faded" : ""}">
-    <div class="head"><div style="flex:1;min-width:0"><p class="title">${esc(j.title)}</p><div class="co">${esc(j.company)}</div></div>${payBox(j)}</div>
-    <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${placePill(j)}${j.remote && /^[\s,]*(remote|usa?|united states|anywhere|[\s,-])*$/i.test(j.location || "") ? "" : `<span class="pill">${esc(j.location)}</span>`}${j.postedAt ? `<span class="pill">Posted ${mdy(j.postedAt)}</span>` : ""}${flags}</div>
+    <div class="head open" data-open="${esc(j.id)}"><div style="flex:1;min-width:0"><p class="title">${esc(j.title)}</p><div class="co">${esc(j.company)}</div></div>${payBox(j)}</div>
+    <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${checkPill(j, s)}${placePill(j)}${j.remote && /^[\s,]*(remote|usa?|united states|anywhere|[\s,-])*$/i.test(j.location || "") ? "" : `<span class="pill">${esc(j.location)}</span>`}${openPill(j)}${flags}</div>
     ${j.reasons?.filter(r => r !== "Remote").length ? `<ul class="why">${j.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+    <button class="more" data-open="${esc(j.id)}">Posting Check and Insider Moves ›</button>
     ${s && inMine ? trackBox(s) : ""}
     <div class="acts">
       <a class="btn small" href="${esc(j.applyUrl)}" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center">Open Posting</a>
@@ -583,13 +643,14 @@ document.addEventListener("click", async e => {
   const sv = e.target.closest("[data-save]"), pw = e.target.closest("[data-passwhy]");
   if (sv || pw) {
     const id = sv ? sv.dataset.save : pw.dataset.passwhy;
-    const job = result.jobs.find(j => j.id === id); if (!job) return;
+    const job = jobById(id); if (!job) return;
     (sv || pw).disabled = true;
     const row = { user_id: user.id, job_key: id, job, status: sv ? "saved" : "passed", updated_at: new Date().toISOString(), ...(pw ? { note: "Passed: " + pw.dataset.why } : {}) };
     const { data, error } = await sb.from("saved_jobs").upsert(row, { onConflict: "user_id,job_key" }).select().single();
     if (error) { toast(error.message); (sv || pw).disabled = false; return; }
     saved = saved.filter(s => s.job_key !== id).concat(data);
     toast(sv ? "Saved to My Jobs" : "Passed. I won't show it again.");
+    if (sv && sv.closest("#sheet")) openSheet(id);
     renderMatches(); renderMine();
   }
 });
@@ -597,13 +658,14 @@ document.addEventListener("change", async e => {
   const st = e.target.closest("[data-status]"), fu = e.target.closest("[data-follow]");
   if (!st && !fu) return;
   const id = (st || fu).dataset.status || (st || fu).dataset.follow;
-  const patch = st ? { status: st.value } : { follow_up: fu.value || null };
   const before = saved.find(s => s.id === id);
+  const patch = st ? { status: st.value } : { follow_up: fu.value || null };
+  if (st?.value === "applied" && before.status !== "applied" && !before.follow_up) patch.follow_up = isoDay(7);
   const { data, error } = await sb.from("saved_jobs").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select().single();
   if (error) { toast(error.message); return; }
   saved = saved.map(s => s.id === id ? data : s);
   if (st) {
-    if (st.value === "applied" && before.status !== "applied") toast("Applied. Nice. Set a follow-up date so we don't lose it.");
+    if (st.value === "applied" && before.status !== "applied") toast(patch.follow_up ? `Applied. Nice. I set a follow-up for ${mdy(patch.follow_up + "T12:00:00")}.` : "Applied. Nice.");
     if (st.value === "interview") celebrate("interview", data);
     if (st.value === "offer") celebrate("offer", data);
   }
@@ -618,7 +680,7 @@ function renderMine() {
   const by = s => (a, b) => (a.follow_up || "9999").localeCompare(b.follow_up || "9999");
   if (!live.length) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img src="img/papers.webp" alt=""><h2>Nothing saved yet</h2><p class="hint">Tap Save on a match and it lands here. Then mark it Applied, Interviewing or Offer as it moves.</p></div>`; return; }
   const applied = live.filter(s => s.status !== "saved").length;
-  $("#mineBody").innerHTML = `<div class="card moment" style="margin-top:16px"><img src="img/${applied ? "cheer" : "wave"}.webp" alt=""><div><h2>${applied} ${applied === 1 ? "application" : "applications"} out</h2><p class="hint" style="margin:0">${live.filter(s => s.status === "interview").length} interviewing · ${live.filter(s => s.status === "saved").length} saved to apply</p></div></div>` +
+  $("#mineBody").innerHTML = `<div class="card moment" style="margin-top:16px"><img src="img/${applied ? "cheer" : "wave"}.webp" alt=""><div><h2>${applied} ${applied === 1 ? "application" : "applications"} out</h2><p class="hint" style="margin:0">${live.filter(s => s.status === "interview").length} interviewing · ${live.filter(s => s.status === "saved").length} saved to apply</p></div></div>` + todayCard() +
     groups.map(([st, label]) => {
       const list = live.filter(s => s.status === st).sort(by());
       if (!list.length) return "";
@@ -627,6 +689,40 @@ function renderMine() {
         : `<div class="section-h">${label} <span class="count">${list.length}</span></div>${body}`;
     }).join("");
 }
+
+// The few things worth doing today, quietly. Nothing turns red and nothing nags.
+const isoDay = (n = 0) => new Date(Date.now() + n * 864e5 - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+const daysAgo = iso => Math.floor((Date.now() - Date.parse(iso)) / 864e5);
+function todayItems() {
+  const today = isoDay(), items = [], keys = savedKeys();
+  for (const s of saved) {
+    const j = s.job || {};
+    if (["saved", "applied", "interview"].includes(s.status) && j.goneAt)
+      items.push({ id: s.job_key, s, b: j.title, t: `No longer on ${j.company}'s job board as of ${mdy(j.goneAt)}. Close it out and move on.`, act: "closeout" });
+    else if (["applied", "interview"].includes(s.status) && s.follow_up && s.follow_up <= today)
+      items.push({ id: s.job_key, s, b: j.title, t: `Follow-up day. One short note to the recruiter or hiring manager at ${j.company}.` });
+    else if (s.status === "applied" && daysAgo(s.updated_at) >= 21)
+      items.push({ id: s.job_key, s, b: j.title, t: `Applied ${daysAgo(s.updated_at)} days ago with no word from ${j.company}. Time to close it out.`, act: "closeout" });
+    else if (s.status === "saved" && daysAgo(s.created_at) >= 10)
+      items.push({ id: s.job_key, s, b: j.title, t: `Saved ${daysAgo(s.created_at)} days ago. Apply or let it go; ${j.company} may be close to picking someone.` });
+  }
+  const fresh = (result?.jobs || []).filter(j => j.fit === "strong" && openDays(j) != null && openDays(j) <= 4 && !keys.get(j.id)).slice(0, 3);
+  for (const j of fresh) items.push({ id: j.id, b: j.title, t: `Strong fit at ${j.company}, open ${openDays(j) === 0 ? "since today" : openDays(j) === 1 ? "1 day" : openDays(j) + " days"}, so you'd be early.` });
+  return items;
+}
+function todayCard() {
+  const items = todayItems();
+  if (!items.length) return `<div class="card today" style="margin-top:12px"><h2>Today</h2><p class="hint" style="margin:4px 0 0">Nothing due. You're caught up.</p></div>`;
+  return `<div class="card today" style="margin-top:12px"><h2>Today</h2>${items.map(x => `<div class="item"><div class="open" data-open="${esc(x.id)}" role="button" tabindex="0"><b>${esc(x.b)}</b><span>${esc(x.t)}</span></div>${x.act === "closeout" ? `<button class="btn ghost small" data-closeout="${esc(x.s.id)}">Close Out</button>` : `<button class="btn ghost small" data-open="${esc(x.id)}">Open</button>`}</div>`).join("")}</div>`;
+}
+document.addEventListener("click", async e => {
+  const c = e.target.closest("[data-closeout]"); if (!c) return;
+  c.disabled = true;
+  const { data, error } = await sb.from("saved_jobs").update({ status: "closed", updated_at: new Date().toISOString() }).eq("id", c.dataset.closeout).select().single();
+  if (error) { toast(error.message); c.disabled = false; return; }
+  saved = saved.map(s => s.id === data.id ? data : s);
+  toast("Closed out. On to the next one."); renderMine();
+});
 
 // ---------- Big moments ----------
 function celebrate(kind, s) {
@@ -661,6 +757,7 @@ function renderMe() {
     line("Want Less Of", esc([(w.avoid || []).includes("sales") ? "Sales jobs" : "", p.prefs?.hideSenior ? "Senior, Lead and Director titles" : "", p.prefs?.hideUnderFloor ? "Jobs under your pay floor" : "", ...(p.prefs?.hideCompanies || []).map(c => "Jobs at " + c)].filter(Boolean).join(", "))) +
     (p.prefs && (p.prefs.hideSenior || p.prefs.hideUnderFloor || p.prefs.hideCompanies?.length) ? `<button class="btn ghost small" style="margin-top:10px" id="unlearn">Show Everything Again</button>` : "");
   $("#meEmail").textContent = "Signed in as " + (user?.email || "");
+  renderBg();
 }
 $("#editMe").onclick = startSetup;
 document.addEventListener("click", async e => {
@@ -677,11 +774,101 @@ $("#cGo").onclick = async () => {
   $("#cGo").disabled = false;
   if (error || data?.error) { out.innerHTML = `<div class="err">${esc(data?.error || error.message)}</div>`; return; }
   const good = data.fit === "strong" || data.fit === "good";
-  out.innerHTML = `<div style="margin-top:14px"><div class="pills"><span class="pill ${data.fit || "flag"}">${esc(data.verdict)}</span></div>
+  out.innerHTML = `<div style="margin-top:14px"><div class="pills"><span class="pill ${data.fit || "flag"}">${esc(FIT[data.fit] || tc(data.verdict || ""))}</span></div>
     ${data.hiddenBecause ? `<p><b>Why not:</b> ${esc(data.hiddenBecause)}</p>` : ""}
     ${data.reasons?.length ? `<div class="label">${good ? "Why It Fits" : "What Lines Up"}</div><ul class="why">${data.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
-    ${[...data.gaps, ...data.headsUp, ...data.flags.filter(f => !/Pay Not|Date Not/.test(f))].length ? `<div class="label">Watch For</div><ul class="why">${[...data.gaps, ...data.headsUp, ...data.flags.filter(f => !/Pay Not|Date Not/.test(f))].map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}</div>`;
+    ${[...data.gaps, ...data.headsUp, ...data.flags.filter(f => !/Pay Not|Date Not/.test(f))].length ? `<div class="label">Watch For</div><ul class="why">${[...data.gaps, ...data.headsUp, ...data.flags.filter(f => !/Pay Not|Date Not/.test(f))].map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+    ${data.knockouts?.length ? `<div class="label">Check Before You Apply</div><ul class="ev">${data.knockouts.map(k => `<li><span class="dot ${k.status}"></span><div style="flex:1" class="ko"><span><b>${esc(k.need)}</b></span><span class="n">${KO_WORD[k.status]} · ${esc(k.note)}</span></div></li>`).join("")}</ul>` : ""}
+    ${data.check?.warn?.filter(w => !/^Open|Thin/.test(w)).length ? `<div class="label">About the Posting</div><ul class="ev">${data.check.warn.filter(w => !/^Open|Thin/.test(w)).map(w => `<li><span class="dot check"></span>${esc(w)}</li>`).join("")}</ul>` : ""}</div>`;
 };
+
+
+// ---------- One job, up close: posting check, knockouts, insider moves, the saved posting ----------
+const KO_WORD = { ok: "Fine", check: "Check", miss: "Missing" };
+const jobById = id => result?.jobs.find(j => j.id === id) || saved.find(s => s.job_key === id)?.job;
+function insider(j) {   // same moves the engine makes, built here so a saved job works offline
+  const days = j.check?.openDays, a = /^[aeiou]/i.test(j.title || "") ? "an" : "a";
+  const past = (profile?.data?.pastTitles || [])[0], name = profile?.data?.name || "";
+  const out = [];
+  if (j.check?.fresh) out.push(`<div class="move"><b>Apply While It's New</b><p>Open ${days === 0 ? "since today" : days + (days === 1 ? " day" : " days")}. Most applications on a posting come in its first four days.</p></div>`);
+  const note = [`Hey, I saw ${j.company} is hiring ${a} ${j.title}.`, past ? `I've been working as ${/^[aeiou]/i.test(past) ? "an" : "a"} ${past} and it lines up well.` : "It lines up well with what I've been doing.",
+    "Would you be up for passing my name to the hiring manager, or telling me who that is?", `Thanks either way${name ? ", " + name : ""}.`].join(" ");
+  out.push(`<div class="move"><b>Who Do You Know at ${esc(j.company)}?</b><p>In hiring data from Ashby, referred applicants got interviews 40% of the time and cold applicants 3%. Past vendors, customers, subs and old coworkers all count.</p>
+    <div class="note" id="refNote">${esc(note)}</div>
+    <div class="row" style="margin-top:8px"><button class="btn small" data-copy="refNote">Copy Note</button><a class="btn ghost small" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(j.company)}">Find People There</a></div></div>`);
+  out.push(`<div class="move"><b>One Follow-Up After a Week</b><p>If you hear nothing in 7 days, one short note to the recruiter or hiring manager. Nothing after 21 days, close it out and move on.</p></div>`);
+  return out.join("");
+}
+function openSheet(id) {
+  const j = jobById(id); if (!j) return;
+  const s = saved.find(x => x.job_key === id), c = j.check || { label: "", good: [], warn: [] }, ko = j.knockouts || [];
+  const gone = s?.job?.goneAt;
+  $("#sheetBody").innerHTML = `
+    <div class="grab"><div style="flex:1;min-width:0"><p class="title" style="font-size:19px;font-weight:800;margin:0">${esc(j.title)}</p><div class="co">${esc(j.company)}</div></div>${payBox(j)}<button class="btn ghost small" data-close aria-label="Close">Close</button></div>
+    <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${placePill(j)}${openPill(j)}</div>
+    <h3>Posting Check ${gone ? `<span class="pill gone">Taken Down ${mdy(gone)}</span>` : c.label ? `<span class="pill ${CHECK[c.label]}">${esc(c.label)}</span>` : ""}</h3>
+    <ul class="ev">${gone ? `<li><span class="dot miss"></span>No longer on ${esc(j.company)}'s job board as of ${mdy(gone)}.</li>` : ""}${c.warn.map(w => `<li><span class="dot check"></span>${esc(w)}</li>`).join("")}${c.good.map(g => `<li><span class="dot ok"></span>${esc(g)}</li>`).join("")}</ul>
+    ${ko.length ? `<h3>Check Before You Apply</h3><ul class="ev">${ko.map(k => `<li><span class="dot ${k.status}"></span><div style="flex:1" class="ko"><span><b>${esc(k.need)}</b></span><span class="n">${KO_WORD[k.status]} · ${esc(k.note)}</span></div></li>`).join("")}</ul>` : ""}
+    ${j.reasons?.length ? `<h3>Why It Fits</h3><ul class="why" style="margin-top:0">${j.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+    <h3>Insider Moves</h3>${insider(j)}
+    ${j.description ? `<details style="margin-top:14px"><summary class="section-h" style="margin:0">The Posting, Saved ${s ? mdy(s.created_at) : "Today"}</summary><p class="desc">${esc(j.description)}</p></details>` : ""}
+    <div class="stick"><a class="btn" style="text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center" href="${esc(j.applyUrl)}" target="_blank" rel="noopener">Open Posting</a>${s ? "" : `<button class="btn ghost" data-save="${esc(j.id)}">Save</button>`}</div>`;
+  $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
+}
+function closeSheet() { $("#sheet").classList.add("hidden"); document.body.style.overflow = ""; }
+$("#sheet").addEventListener("click", e => { if (e.target.id === "sheet" || e.target.closest("[data-close]")) closeSheet(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !$("#sheet").classList.contains("hidden")) closeSheet();
+  const o = e.target.closest?.('[data-open][role="button"]'); if (o && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openSheet(o.dataset.open); }
+});
+document.addEventListener("click", async e => {
+  const o = e.target.closest("[data-open]"); if (o && !e.target.closest("a")) { openSheet(o.dataset.open); return; }
+  const cp = e.target.closest("[data-copy]");
+  if (cp) { try { await navigator.clipboard.writeText($("#" + cp.dataset.copy).textContent); toast("Copied. Paste it into a text or LinkedIn message."); } catch { toast("Couldn't copy. Press and hold the note to copy it."); } }
+});
+
+// ---------- How a recruiter reads your background ----------
+let backgrounds = null, bgFor = "";
+async function loadBackground(titles) {
+  const key = titles.join("|");
+  if (bgFor === key && backgrounds) return backgrounds;
+  if (!titles.length) { backgrounds = []; bgFor = key; return backgrounds; }
+  const { data, error } = await sb.functions.invoke("match", { body: { background: titles } });
+  backgrounds = error || data?.error ? [] : data.backgrounds || []; bgFor = key;
+  return backgrounds;
+}
+function bgHtml(list, compact) {
+  return list.map(b => `<div class="bg"><b style="font-size:17px">${esc(b.label)}</b> ${b.titles.join() .toLowerCase() === b.label.toLowerCase() ? "" : `<span class="from">${esc(b.titles.join(", "))}</span>`}
+    <p style="margin:6px 0 0;color:var(--ink2)">${esc(b.why)}</p>
+    <div class="chips" style="margin-top:8px">${b.roles.map(r => compact ? `<button type="button" class="chip ${draft.roles.includes(r) ? "on" : ""}" data-tog="roles:${esc(r)}">${esc(tc(r))}</button>` : `<span class="pill good">${esc(tc(r))}</span>`).join("")}</div>
+    ${compact ? "" : `<div class="lbl">Say This Instead</div><div class="say">${b.say.map(x => `<span class="was">${esc(x.was)}</span><span class="now">${esc(x.now)}</span>`).join("")}</div>
+    <div class="lbl">Numbers to Put on Your Resume</div><div class="chips" style="margin-top:6px">${b.numbers.map(n => `<span class="pill">${esc(n)}</span>`).join("")}</div>`}</div>`).join("");
+}
+async function renderBgSetup() {
+  const el = $("#bgSetup"), list = await loadBackground(draft.titles);
+  el.classList.toggle("hidden", !list.length);
+  if (list.length) el.innerHTML = `<div class="moment" style="margin-bottom:4px"><img src="img/papers.webp" alt="" style="width:56px"><b style="font-size:17px">Your Background Points To</b></div>${bgHtml(list, true)}`;
+}
+async function renderBg() {
+  const list = await loadBackground(profile?.data?.pastTitles || []);
+  $("#bgCard").classList.toggle("hidden", !list.length);
+  $("#bgBody").innerHTML = bgHtml(list, false);
+}
+
+// ---------- Saved postings: still up, or taken down? ----------
+async function recheckSaved() {
+  const due = saved.filter(s => !["passed", "closed", "offer"].includes(s.status) && !s.job?.goneAt && Date.now() - Date.parse(s.job?.checkedAt || 0) > 12 * 3600e3).map(s => s.job_key);
+  if (!due.length) return;
+  const { data, error } = await sb.functions.invoke("match", { body: { verify: due } });
+  if (error || !data?.status) return;
+  for (const s of saved.filter(x => due.includes(x.job_key))) {
+    const st = data.status[s.job_key]; if (!st || st === "unknown") continue;
+    const job = { ...s.job, checkedAt: data.checkedAt, ...(st === "gone" ? { goneAt: data.checkedAt } : {}) };
+    const { data: row } = await sb.from("saved_jobs").update({ job }).eq("id", s.id).select().single();
+    if (row) saved = saved.map(x => x.id === s.id ? row : x);
+  }
+  renderMine();
+}
 
 // ---------- Tabs and session ----------
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => openApp(b.dataset.tab));
@@ -699,7 +886,7 @@ async function load() {
   ]);
   profile = p; saved = s || []; result = p?.last_result || null;
   if (!p?.data?.pastTitles?.length) return startSetup();
-  openApp("matches"); renderMine();
+  openApp("matches"); renderMine(); recheckSaved();
   if (!result || Date.now() - Date.parse(result.ranAt) > 12 * 3600e3) runSearch(); else renderMatches();
 }
 let loadedFor = null;
