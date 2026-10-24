@@ -101,7 +101,7 @@ test("Gus: legit, fitting jobs come back ranked with reasons", async () => {
   assert.equal(top.fit, "strong");
   assert.equal(top.source, "Company Site", "the employer's own posting wins over the repost");
   assert.ok(top.reasons.includes("Remote"));
-  assert.ok(top.reasons.some(x => x.startsWith("Pay reaches")));
+  assert.ok(top.reasons.some(x => x.startsWith("Pays up to")));
 
   assert.equal(r.dropped.tooOld, 1);
   assert.equal(r.dropped.looksLikeScam, 1);

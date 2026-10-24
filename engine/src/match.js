@@ -259,7 +259,7 @@ export function score(j, p, common) {
   // Pay (up to 10)
   const floor = p.wants.payFloor;
   if (j.payMax) {
-    if (!floor || j.payMax >= floor) { s += 10; reasons.push(`Pay reaches ${money(j.payMax)}`); }
+    if (!floor || j.payMax >= floor) { s += 10; reasons.push(`Pays up to ${money(j.payMax)}`); }
     else flags.push(`Pay Under ${money(floor)}`);
   } else { s += 4; flags.push("Pay Not Listed"); }
 

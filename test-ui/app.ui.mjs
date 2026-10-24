@@ -319,16 +319,32 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     await page.waitForTimeout(400);
     await shot(page, "phone-light-resume-sheet");
   });
+  await step("[resume] back from the company's site, one tap marks it Applied", async () => {
+    await page.keyboard.press("Escape");
+    await page.click('.tab[data-tab="matches"]');
+    await page.waitForSelector("#mBody .job");
+    await page.locator('#mBody .job[data-open="gh:buildco:1"] .title').click();
+    await page.waitForSelector("#sheet:not(.hidden) [data-applyout]");
+    const id = await page.getAttribute("#sheet [data-applyout]", "data-applyout");
+    await page.evaluate(() => { const a = document.querySelector("#sheet [data-applyout]"); a.removeAttribute("target"); a.addEventListener("click", e => e.preventDefault()); a.click(); });
+    await page.waitForTimeout(2700);
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await page.waitForSelector("#sheet [data-didapply]");
+    await page.click("#sheet [data-didapply]");
+    await page.waitForFunction(k => window.__db.saved_jobs.some(r => r.job_key === k && r.status === "applied" && r.follow_up), id);
+    await page.click("#sheet [data-close]");
+  });
   await step("[resume] the email is written for the job, and Gmail saves it as a draft with the PDF", async () => {
+    await page.click('.tab[data-tab="mine"]');
+    await page.locator('#mineBody .rows [data-open="gh:buildco:2"]').click();
+    await page.waitForSelector("#sheet:not(.hidden) [data-mail]");
     await page.click("#sheetBody [data-mail]");
     await page.waitForSelector("#mailBody");
     assert.match(await page.inputValue("#mailBody"), /^Hello BuildCo hiring team,\n\nI'm applying for the Implementation Specialist role\./);
     assert.ok(await page.$("#sheetBody [data-compose]"), "without Gmail it opens a filled-in Gmail compose");
     await page.click("#sheetBody [data-gconnect]");
-    await page.waitForFunction(() => window.__db.saved_jobs[1].status === "interview");
-    assert.equal(await page.evaluate(() => window.__db.saved_jobs[1].job.mail.kind), "interview");
-    await page.waitForSelector(".party button"); await page.click(".party button");
     await page.waitForSelector("#sheetBody [data-gdraft]");
+    assert.equal(await page.evaluate(() => window.__db.saved_jobs[1].status), "applied", "Gmail never moves a job without a tap");
     await page.fill("#mailBody", (await page.inputValue("#mailBody")) + "\nP.S. Thanks.");
     await page.click("#sheetBody [data-gdraft]");
     await page.waitForFunction(() => document.querySelector("#toast")?.textContent.includes("Gmail Drafts"));
@@ -336,8 +352,21 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     assert.match(raw, /Subject: Application: Implementation Specialist - Jordan Avery/);
     assert.match(raw, /Content-Type: application\/pdf; name="Jordan Avery - BuildCo Implementation Specialist.pdf"/);
     assert.ok(Buffer.from(raw.split("charset=UTF-8")[1].split("--rg")[0].split("base64")[1].replace(/\s+/g, ""), "base64").toString().includes("P.S. Thanks."), "their edits go into the draft");
-    assert.ok((await page.textContent("#sheetBody")).includes("Interview Request in Gmail"), "the sheet says why it moved");
     await shot(page, "phone-light-resume-email");
+    await page.click("#sheet [data-close]");
+    await page.click('.tab[data-tab="mine"]');
+    await page.waitForSelector("#mineBody [data-mailyes]");
+    assert.ok((await page.textContent("#mineBody .mailnudge")).includes("schedule a phone screen"), "the email shows beside the suggestion");
+    await shot(page, "phone-light-gmail-suggest");
+    const n = await page.$$eval("#mineBody [data-mailyes]", els => els.length);
+    assert.equal(n, 2, "both BuildCo jobs get the reply as a suggestion");
+    await page.click("#mineBody [data-mailall]");
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "row2").status === "interview");
+    assert.equal(await page.evaluate(() => window.__db.saved_jobs.find(r => r.id === "row2").job.mail.kind), "interview");
+    await page.waitForSelector(".party button"); await page.click(".party button");
+    await page.locator('#mineBody .rows [data-open="gh:buildco:2"]').click();
+    await page.waitForSelector("#sheet:not(.hidden)");
+    assert.ok((await page.textContent("#sheetBody")).includes("Interview Request in Gmail"), "the sheet says why it moved");
     await page.click("#sheet [data-close]");
   });
   await step("[resume] Me shows the resume and Gmail, and edits save", async () => {

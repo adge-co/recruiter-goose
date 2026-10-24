@@ -252,6 +252,15 @@ details>summary.section-h{cursor:pointer;list-style:none}
 .sheet .grab{position:sticky;top:0;z-index:2;padding:16px 0 10px;display:flex;align-items:center;gap:12px;background:linear-gradient(to bottom,rgba(var(--panel-rgb),.98) 80%,rgba(var(--panel-rgb),0))}
 .sheet .grab::before{content:"";position:absolute;top:7px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:3px;background:var(--muted);opacity:.4}
 .sheet .x{margin-left:auto}
+.sheet .grab .gt{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:0;opacity:0;transition:opacity .2s,max-height .2s}
+.sheet .scrolled .grab .gt{max-height:22px;opacity:1}
+.stick .btn svg{width:18px;height:18px}
+.paysrc{font-size:13px;color:var(--muted);margin-top:4px}
+.mailnudge{align-items:flex-start}
+.mailnudge > div:nth-child(2){min-width:0;flex:1}
+.mailnudge span{display:block}
+.didapply{margin-top:14px;border-radius:14px;padding:12px 14px;background:var(--green-soft)}
+.didapply b{font-size:15.5px}
 .sh-ttl{font-family:var(--display);font-weight:600;font-size:27px;line-height:1.12;letter-spacing:-.02em;margin:10px 0 6px}
 .sheet h3{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:-.01em;margin:26px 0 10px}
 .verdict{border-radius:14px;padding:12px 14px;margin-bottom:10px;background:var(--brass-soft)}
@@ -308,6 +317,10 @@ details summary.section-h{margin:22px 0 0;font-size:17px}
 .fitline{display:flex;align-items:center;gap:12px;margin-top:2px}
 .fitline .big{white-space:nowrap;line-height:1;font-family:var(--display);font-size:30px;font-weight:600;letter-spacing:-.02em;color:var(--green-text);font-variant-numeric:tabular-nums}
 .fitline span{color:var(--ink2);font-size:14.5px}
+button.pill{border:0;cursor:pointer;font-family:inherit}
+.pill.on{outline:2px solid currentColor;outline-offset:1px}
+.kwctx{margin-top:10px;border-left:3px solid var(--brass);padding:4px 0 4px 12px}
+.kwctx p{margin:4px 0 0;font-family:var(--display);font-style:italic;color:var(--ink)}
 .pill.miss{background:var(--brass-soft);color:var(--brass-text)}
 .paper{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:18px 18px 14px;margin-top:12px;font-size:13.5px;color:var(--ink);box-shadow:var(--hl)}
 .paper .nm{font-family:var(--display);font-size:20px;font-weight:600}
@@ -537,6 +550,7 @@ const I = {
   clock: SVG('<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>'),
   send: SVG('<path d="M4 12l16-8-6 16-2.5-6.5z"/>'),
   spark: SVG('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/>'),
+  out: SVG('<path d="M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4"/>'),
   off: SVG('<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>'),
 };
 const X_BTN = `<button class="icon x" data-close aria-label="Close">${I.x}</button>`;
@@ -776,11 +790,10 @@ const trail = j => {
 };
 function jobCard(j, s) {
   const st = s?.status;
-  const flags = (j.flags || []).map(f => `<span class="pill flag">${esc(f)}</span>`).join("");
   return `<div class="job ${st === "passed" || st === "closed" ? "faded" : ""}" data-open="${esc(j.id)}" role="button" tabindex="0" aria-label="${esc(j.title)} at ${esc(j.company)}">
     ${logo(j.company)}
     <div style="min-width:0"><div class="co">${esc(j.company)}</div><p class="title">${esc(j.title)}</p><div class="meta">${payText(j)}<span>${placeText(j)}</span></div>
-      <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${checkPill(j, s)}${flags}</div>
+      <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${checkPill(j, s)}</div>
       ${s?.job?.goneAt ? "" : trail(j)}</div>
     <div class="side">${s ? `<span class="icon saved" role="img" aria-label="In My Jobs">${I.marked}</span>` : `<button class="icon" data-save="${esc(j.id)}" aria-label="Save">${I.mark}</button><button class="icon" data-pass="${esc(j.id)}" aria-label="Pass">${I.x}</button>`}</div>
   </div>`;
@@ -940,7 +953,7 @@ function renderMine() {
   const active = live.length - c("closed");
   $("#mineSub").textContent = [`${active} active`, c("applied") + c("interview") + c("offer") ? `${c("applied") + c("interview") + c("offer")} applied` : "", c("interview") ? `${c("interview")} interviewing` : "", c("offer") ? `${c("offer")} ${c("offer") === 1 ? "offer" : "offers"}` : ""].filter(Boolean).join(" · ");
   const bar = active ? `<div class="facts" aria-hidden="true">${["offer", "interview", "applied", "saved"].filter(c).map(st => `<i class="f-${st}" style="flex:${c(st)}"></i>`).join("")}</div>` : "";
-  $("#mineBody").innerHTML = bar + todayCard() +
+  $("#mineBody").innerHTML = bar + mailCards() + todayCard() +
     groups.map(([st, label]) => {
       const list = live.filter(s => s.status === st).sort(by);
       if (!list.length) return "";
@@ -1072,7 +1085,7 @@ function renderResumeCard() {
   const r = myResume();
   $("#editResume").classList.toggle("hidden", !r);
   if (!r) {
-    $("#resumeBody").innerHTML = `<p style="margin:6px 0 0;color:var(--ink2)">Add it once. Every job then gets its own version with your best-fitting lines first, as a PDF, with the email drafted.</p>
+    $("#resumeBody").innerHTML = `<p style="margin:6px 0 0;color:var(--ink2)">Add it once. Every job then gets its own version with your best-fitting lines first, as a PDF, with the email drafted. It only reorders what you wrote and never adds anything.</p>
       <div class="btnrow"><button class="btn small" data-resume-file>Add From a File</button><button class="btn ghost small" data-resume-edit>Type It In</button></div>`;
     return;
   }
@@ -1098,6 +1111,16 @@ $("#resumeFile").onchange = async e => {
     toast(`Read ${r.jobs.length} ${r.jobs.length === 1 ? "job" : "jobs"}. Check them, then save.`);
   } catch (x) { toast(x.message); }
 };
+// Tap a posting word: the sentence where the posting uses it.
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-kw]"); if (!b) return;
+  const j = jobById($("#sheetBody").dataset.job), w = b.dataset.kw.toLowerCase(), box = $("#kwCtx"); if (!j || !box) return;
+  const line = String(j.description || "").split(/(?<=[.!?])\s+|\n+/).find(x => x.toLowerCase().includes(w.replace(/s$/, ""))) || "";
+  document.querySelectorAll("[data-kw].on").forEach(x => x !== b && x.classList.remove("on"));
+  const on = b.classList.toggle("on");
+  box.classList.toggle("hidden", !on || !line);
+  box.innerHTML = line ? `<span class="lbl" style="margin:0">Where the Posting Says It</span><p>“${esc(line.trim().slice(0, 260))}”</p>` : "";
+});
 // The editor: what's on the resume, in the order it prints. Back to the job they came from when saved.
 function openResumeEditor(back, from) {
   const r = structuredClone(from || myResume() || { name: profile?.data?.name || "", email: user?.email || "", phone: "", city: "", jobs: [], skills: profile?.data?.skills || [], education: [] });
@@ -1153,9 +1176,10 @@ function madeFor(j) {
   const lines = t.jobs.reduce((n, x) => n + x.bullets.length, 0);
   const g = gmail.ready();
   return `${t.words ? `<div class="fitline"><span class="big">${t.matched.length} of ${t.words}</span><span>words from this posting are already on your resume</span></div>` : ""}
-    ${t.matched.length ? `<div class="pills">${t.matched.map(w => `<span class="pill strong">${esc(/^[a-z]/.test(w) ? tc(w) : w)}</span>`).join("")}</div>` : ""}
-    ${t.missing.length ? `<div class="lbl">Not on Your Resume Yet, Add Only If You've Done It</div><div class="pills">${t.missing.map(w => `<span class="pill miss">${esc(/^[a-z]/.test(w) ? tc(w) : w)}</span>`).join("")}</div>` : ""}
-    <details style="margin-top:6px"><summary class="section-h">This Version: ${t.jobs.length} ${t.jobs.length === 1 ? "Job" : "Jobs"}, ${lines} Lines, ${t.skills.length} Skills</summary>${paperHtml(t)}</details>
+    ${t.matched.length ? `<div class="pills">${t.matched.map(w => `<button type="button" class="pill strong" data-kw="${esc(w)}">${esc(/^[a-z]/.test(w) ? tc(w) : w)}</button>`).join("")}</div>` : ""}
+    ${t.missing.length ? `<div class="lbl">Not on Your Resume Yet, Add Only If You've Done It</div><div class="pills">${t.missing.map(w => `<button type="button" class="pill miss" data-kw="${esc(w)}">${esc(/^[a-z]/.test(w) ? tc(w) : w)}</button>`).join("")}</div>` : ""}
+    <div class="kwctx hidden" id="kwCtx"></div>
+    <details style="margin-top:6px"><summary class="section-h">Your Lines, Best Fit First: ${t.jobs.length} ${t.jobs.length === 1 ? "Job" : "Jobs"}, ${lines} Lines, ${t.skills.length} Skills</summary>${paperHtml(t)}</details>
     <div class="btnrow"><button class="btn ghost small" data-pdf="${esc(j.id)}">Download PDF</button><button class="btn ghost small" data-mail="${esc(j.id)}">${mailOpen.has(j.id) ? "Hide the Email" : "Write the Email"}</button><div class="spacer"></div><button class="linkbtn" data-resume-edit="${esc(j.id)}">Edit My Resume</button></div>
     ${mailOpen.has(j.id) ? `<div class="mail">
       <label class="label" for="mailTo" style="margin:6px 0 0">To</label><input type="email" id="mailTo" value="${esc(m.to)}" placeholder="${m.to ? "" : "Recruiter's email, if you have it"}">
@@ -1170,7 +1194,7 @@ function paperHtml(t) {
     <div class="ct">${esc([t.city, t.phone, t.email].filter(Boolean).join(" · "))}</div>${t.headline ? `<div class="hd">${esc(t.headline)}</div>` : ""}
     <div class="sec">Summary</div><p>${esc(t.summary)}</p>
     ${t.skills.length ? `<div class="sec">Skills</div><p>${t.skills.map(esc).join(" · ")}</p>` : ""}
-    <div class="sec">Experience</div>${t.jobs.map(x => `<div class="jt">${esc(x.title)}<span>${esc(x.dates)}</span></div>${x.company ? `<div class="jc">${esc(x.company)}</div>` : ""}<ul>${x.bullets.map(b => `<li>${esc(b)}</li>`).join("")}</ul>`).join("")}
+    <div class="sec">Work Experience</div>${t.jobs.map(x => `<div class="jt">${esc(x.title)}<span>${esc(x.dates)}</span></div>${x.company ? `<div class="jc">${esc(x.company)}</div>` : ""}<ul>${x.bullets.map(b => `<li>${esc(b)}</li>`).join("")}</ul>`).join("")}
     ${t.education.length ? `<div class="sec">Education and Certifications</div>${t.education.map(e => `<p>${esc(e)}</p>`).join("")}` : ""}</div>`;
 }
 const loadPdf = async () => { if (!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"); return window.jspdf.jsPDF; };
@@ -1234,37 +1258,69 @@ function renderGmailCard() {
     : `<p style="margin:6px 0 0;color:var(--ink2)">Connect it and replies from companies in My Jobs move them to Applied, Interviewing, Offer or Closed. Each job's email can be saved as a draft with its PDF attached. Only emails that name a company you saved are read.</p>
        <div class="btnrow"><button class="btn small" data-gconnect>Connect Gmail</button></div>`;
 }
-// One Gmail search per job that's in play. A reply moves it forward, a clear no closes it; it never moves backward.
+// One Gmail search per job that's in play. A reply becomes a suggestion with the email beside it; one tap moves the job.
+// It never moves a job on its own, and never backward (a clear no can close it).
+let mailSuggest = [];
 async function checkReplies(quiet) {
   const live = saved.filter(s => ["saved", "applied", "interview"].includes(s.status));
   if (!live.length) { if (!quiet) toast("Nothing in play to check."); return; }
-  const moved = [];
+  const found = [];
   for (const s of live) {
     const list = await gmail.call(`messages?maxResults=5&q=${encodeURIComponent(Tailor.gmailQuery(s.job, s.created_at))}`);
     for (const { id } of list.messages || []) {
+      if ((s.job.mailSeen || []).includes(id)) continue;
       const msg = await gmail.call(`messages/${id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`);
       const h = n => (msg.payload?.headers || []).find(x => x.name === n)?.value || "";
-      const kind = Tailor.readReply(h("Subject"), msg.snippet);
-      const to = Tailor.nextStatus(s.status, kind);
+      const kind = Tailor.readReply(h("Subject"), msg.snippet), to = Tailor.nextStatus(s.status, kind);
       if (!to) continue;
-      const at = new Date(Number(msg.internalDate) || Date.now()).toISOString();
-      const job = { ...s.job, mail: { kind, from: h("From").replace(/\s*<.*>$/, "").replace(/"/g, "") || s.job.company, subject: h("Subject"), at } };
-      const patch = { status: to, job, updated_at: new Date().toISOString(), ...(to === "applied" && !s.follow_up ? { follow_up: isoDay(7) } : {}) };
-      const { data, error } = await sb.from("saved_jobs").update(patch).eq("id", s.id).select().single();
-      if (!error) { saved = saved.map(x => x.id === s.id ? data : x); moved.push([data, to]); }
+      found.push({ sid: s.id, msgId: id, to, kind, from: h("From").replace(/\s*<.*>$/, "").replace(/"/g, "") || s.job.company, subject: h("Subject"),
+        snippet: String(msg.snippet || "").slice(0, 160), at: new Date(Number(msg.internalDate) || Date.now()).toISOString() });
       break;   // newest meaningful email wins
     }
   }
+  // One email naming two saved jobs at the same company goes with the job its words name, when they name one.
+  const said = m => (m.subject + " " + m.snippet).toLowerCase();
+  mailSuggest = found.filter(m => { const twins = found.filter(x => x.msgId === m.msgId); if (twins.length < 2) return true;
+    const named = twins.filter(x => said(x).includes(String(saved.find(s => s.id === x.sid)?.job.title || "").toLowerCase()));
+    return !named.length || named.includes(m); });
   try { localStorage.setItem("rg.gchecked", new Date().toISOString()); } catch {}
   renderMine(); renderGmailCard();
-  const openId = $("#sheetBody").dataset.job;
-  if (moved.length && openId && !$("#sheet").classList.contains("hidden")) openSheet(openId, true);
-  const word = { applied: "Applied", interview: "Interviewing", offer: "Offer", closed: "Closed" };
-  if (moved.length) toast(moved.map(([d, to]) => `${d.job.company} moved to ${word[to]}`).join(". ") + ".");
+  if (found.length) { toast(`${found.length} ${found.length === 1 ? "reply" : "replies"} from your companies. See My Jobs.`); if ($("#vMine").classList.contains("hidden") && $("#sheet").classList.contains("hidden")) openApp("mine"); }
   else if (!quiet) toast("No new replies from your companies.");
-  const big = moved.find(([, to]) => to === "offer") || moved.find(([, to]) => to === "interview");
-  if (big) celebrate(big[1], big[0]);
 }
+const STAGE_WORD = { applied: "Applied", interview: "Interviewing", offer: "Offer", closed: "Closed" };
+function mailCards() {
+  if (!mailSuggest.length) return "";
+  return `<div class="today">${mailSuggest.map((m, i) => { const s = saved.find(x => x.id === m.sid); if (!s) return "";
+    return `<div class="nudge go mailnudge"><div class="ni">${I.send}</div><div><b>${esc(s.job.title)} at ${esc(s.job.company)}</b><span>${esc(m.from)} wrote ${shortDay(m.at)}: “${esc(m.subject)}.” ${esc(m.snippet)}</span>
+      <div class="btnrow" style="margin-top:8px"><button class="btn small" data-mailyes="${i}">Move to ${STAGE_WORD[m.to]}</button><button class="btn ghost small" data-mailno="${i}">Not Now</button></div></div></div>`; }).join("")}
+    ${mailSuggest.length > 1 ? `<button class="btn ghost small" data-mailall style="margin-top:8px">Move All ${mailSuggest.length}</button>` : ""}</div>`;
+}
+async function acceptMail(m) {
+  const s = saved.find(x => x.id === m.sid); if (!s) return null;
+  const job = { ...s.job, mail: { kind: m.kind, from: m.from, subject: m.subject, at: m.at }, mailSeen: [...(s.job.mailSeen || []), m.msgId].slice(-20) };
+  const patch = { status: m.to, job, updated_at: new Date().toISOString(), ...(m.to === "applied" && !s.follow_up ? { follow_up: isoDay(7) } : {}) };
+  const { data, error } = await sb.from("saved_jobs").update(patch).eq("id", s.id).select().single();
+  if (error) { toast(error.message); return null; }
+  saved = saved.map(x => x.id === s.id ? data : x); return data;
+}
+async function skipMail(m) {   // remembered so the same email isn't suggested again
+  const s = saved.find(x => x.id === m.sid); if (!s) return;
+  const { data } = await sb.from("saved_jobs").update({ job: { ...s.job, mailSeen: [...(s.job.mailSeen || []), m.msgId].slice(-20) } }).eq("id", s.id).select().single();
+  if (data) saved = saved.map(x => x.id === s.id ? data : x);
+}
+document.addEventListener("click", async e => {
+  const y = e.target.closest("[data-mailyes]"), n = e.target.closest("[data-mailno]"), all = e.target.closest("[data-mailall]");
+  if (!y && !n && !all) return;
+  const pick = y ? [mailSuggest[+y.dataset.mailyes]] : n ? [mailSuggest[+n.dataset.mailno]] : [...mailSuggest];
+  mailSuggest = mailSuggest.filter(m => !pick.includes(m));
+  if (n) { await skipMail(pick[0]); renderMine(); return; }
+  let big = null;
+  for (const m of pick) { const d = await acceptMail(m); if (d && (m.to === "offer" || (m.to === "interview" && !big))) big = [m.to, d]; }
+  renderMine(); renderMatches();
+  toast(pick.length === 1 ? `Moved to ${STAGE_WORD[pick[0].to]}.` : `Moved ${pick.length} jobs.`);
+  if (big) celebrate(big[0], big[1]);
+});
 document.addEventListener("click", async e => {
   const c = e.target.closest("[data-gconnect]"), k = e.target.closest("[data-gcheck]"), d = e.target.closest("[data-gdisconnect]");
   if (!c && !k && !d) return;
@@ -1306,23 +1362,57 @@ function openSheet(id, keep) {
   const gone = s?.job?.goneAt, top = keep ? $("#sheetBody").scrollTop : 0;
   $("#sheetBody").dataset.job = id;
   $("#sheetBody").innerHTML = `
-    <div class="grab">${logo(j.company)}<div style="min-width:0"><div class="co">${esc(j.company)}</div></div>${X_BTN}</div>
+    <div class="grab">${logo(j.company)}<div style="min-width:0"><div class="co">${esc(j.company)}</div><div class="gt">${esc(j.title)}</div></div>${X_BTN}</div>
     <div class="sh-ttl">${esc(j.title)}</div>
     ${meta(j)}
+    ${j.payMax || j.payMin ? `<div class="paysrc">Pay as listed by ${esc(j.company)}</div>` : ""}
     <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${s && s.status !== "passed" ? `<span class="pill">In My Jobs</span>` : ""}</div>
+    ${askApplied(j, s)}
     ${s && s.status !== "passed" ? `<h3>Where It Stands</h3>${trackBox(s)}` : ""}
     <h3>Paper Trail</h3>
     ${gone ? `<div class="verdict gone"><b>Taken Down</b><p>${esc(j.company)} took it off their job board. Close it out and move on.</p></div>` : c.label && c.label !== "Looks Real" ? `<div class="verdict ${CHECK[c.label]}"><b>${esc(c.label)}</b><p>${VERDICT[c.label]}</p></div>` : ""}
     <ul class="ev">${gone ? `<li><span class="dot miss"></span>No longer on ${esc(j.company)}'s job board as of ${shortDay(gone)}.</li>` : ""}${c.good.map(g => `<li><span class="dot ok"></span>${esc(niceDates(g))}</li>`).join("")}${c.warn.map(w => `<li><span class="dot check"></span>${esc(niceDates(w))}</li>`).join("")}</ul>
     ${ko.length ? `<h3>Check Before You Apply</h3><div class="kos">${ko.map(k => `<div class="ko"><span>${esc(k.need)}</span><span class="n"><b class="${k.status}">${KO_WORD[k.status]}</b> · ${esc(k.note)}</span></div>`).join("")}</div>` : ""}
+    ${(j.flags || []).length ? `<h3>Watch For</h3><ul class="why">${j.flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
     ${j.reasons?.filter(r => r !== "Remote").length ? `<h3>Why It Fits</h3><ul class="why">${j.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
     <h3>Your Resume For This Job</h3>${madeFor(j)}
     <h3>Insider Moves</h3>${insider(j)}
     ${j.description ? `<details><summary class="section-h">The Posting, Saved ${s ? shortDay(s.created_at) : "Today"}</summary><p class="desc">${esc(j.description)}</p></details>` : ""}
-    <div class="stick"><a class="btn" href="${esc(j.applyUrl)}" target="_blank" rel="noopener">Apply on ${esc(j.company)}'s Site</a>${s ? "" : `<button class="icon" data-save="${esc(j.id)}" aria-label="Save">${I.mark}</button>`}</div>`;
+    <div class="stick"><a class="btn" href="${esc(j.applyUrl)}" target="_blank" rel="noopener" data-applyout="${esc(j.id)}">Apply on ${esc(j.company)}'s Site ${I.out}</a>${s ? "" : `<button class="icon" data-save="${esc(j.id)}" aria-label="Save">${I.mark}</button>`}</div>`;
   $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
-  $("#sheetBody").scrollTop = top;
+  $("#sheetBody").scrollTop = top; titleShow();
 }
+// The job title rides in the header once the big title scrolls away.
+function titleShow() { const b = $("#sheetBody"), t = b.querySelector(".sh-ttl"); b.classList.toggle("scrolled", !!t && b.scrollTop > t.offsetTop + t.offsetHeight - 70); }
+$("#sheetBody").addEventListener("scroll", titleShow, { passive: true });
+
+// Back from the company's site: one tap marks it Applied (the way the big boards ask), with the follow-up set.
+let applyOut = null;
+document.addEventListener("click", e => { const a = e.target.closest("[data-applyout]"); if (a) applyOut = { id: a.dataset.applyout, at: Date.now() }; });
+const askApplied = (j, s) => applyOut?.id === j.id && applyOut.back && !["applied", "interview", "offer", "closed"].includes(s?.status)
+  ? `<div class="didapply"><b>Did you apply?</b><div class="btnrow" style="margin-top:8px"><button class="btn small" data-didapply="${esc(j.id)}">Yes, I Applied</button><button class="btn ghost small" data-notyet>Not Yet</button></div></div>` : "";
+function backFromSite() {
+  if (!applyOut || applyOut.back || Date.now() - applyOut.at < 2500 || document.visibilityState !== "visible") return;
+  applyOut.back = true;
+  if (!$("#sheet").classList.contains("hidden") && $("#sheetBody").dataset.job === applyOut.id) openSheet(applyOut.id, true);
+  else openSheet(applyOut.id);
+  $("#sheetBody").scrollTop = 0; titleShow();
+}
+document.addEventListener("visibilitychange", backFromSite); addEventListener("focus", backFromSite);
+document.addEventListener("click", async e => {
+  if (e.target.closest("[data-notyet]")) { const id = applyOut?.id; applyOut = null; if (id) openSheet(id, true); return; }
+  const y = e.target.closest("[data-didapply]"); if (!y) return;
+  const id = y.dataset.didapply, found = jobById(id); applyOut = null;
+  if (!user) { pending = { id, status: "applied" }; askAccount("save"); return; }
+  y.disabled = true;
+  const before = saved.find(s => s.job_key === id), follow = before?.follow_up || isoDay(7);
+  const job = before?.job || { ...found, checkedAt: found.checkedAt || result?.ranAt };
+  const { data, error } = await sb.from("saved_jobs").upsert({ user_id: user.id, job_key: id, job, status: "applied", follow_up: follow, updated_at: new Date().toISOString() }, { onConflict: "user_id,job_key" }).select().single();
+  if (error) { toast(error.message); y.disabled = false; return; }
+  saved = saved.filter(s => s.job_key !== id).concat(data);
+  toast(`Marked Applied. Follow-up set for ${longDay(follow)}.`);
+  openSheet(id, true); renderMatches(); renderMine();
+});
 function closeSheet() {
   $("#sheet").classList.add("hidden"); document.body.style.overflow = "";
   const a = $("#authCard"); if (a.parentElement.id !== "authSlot") { $("#authSlot").appendChild(a); a.classList.add("hidden"); }
@@ -1333,7 +1423,7 @@ const PAGES = {
     <h2>Where the Jobs Come From</h2>
     <p>Public job boards that companies run themselves, plus a few remote job sites. Every job links to the company's own posting, and you apply there. Recruiter Goose never applies for you and never sends your information to an employer.</p>
     <h2>How Matching Works</h2>
-    <p>It compares the jobs you've held, your skills and what you want with each posting's title and description. The rules are written by hand and the same for everyone. No AI reads your answers, and nobody pays to be shown first.</p>
+    <p>Resumes made for a job only reorder the lines you wrote and pick the ones that fit; nothing is added or made up. It compares the jobs you've held, your skills and what you want with each posting's title and description. The rules are written by hand and the same for everyone. No AI reads your answers, and nobody pays to be shown first.</p>
     <h2>Who Makes It</h2>
     <p>Gus Johnson, who spent seven years in construction supply: takeoffs, purchasing, a manufacturer's rep agency and warehouse work, before moving into construction tech.</p>
     <h2>Cost</h2>
@@ -1442,7 +1532,7 @@ async function load() {
     const found = jobById(pending.id), job = found && { ...found, checkedAt: found.checkedAt || result?.ranAt };
     if (job) {
       const { data } = await sb.from("saved_jobs").upsert({ user_id: user.id, job_key: pending.id, job, status: pending.status, updated_at: new Date().toISOString(), ...(pending.note ? { note: pending.note } : {}) }, { onConflict: "user_id,job_key" }).select().single();
-      if (data) { saved = saved.filter(x => x.job_key !== pending.id).concat(data); toast(pending.status === "saved" ? "Account made. The job is in My Jobs." : "Account made."); }
+      if (data) { saved = saved.filter(x => x.job_key !== pending.id).concat(data); toast(pending.status === "saved" ? "Account made. The job is in My Jobs." : pending.status === "applied" ? "Account made. The job is in My Jobs as Applied." : "Account made."); }
     }
     pending = null;
   }

@@ -174,7 +174,7 @@
     const room = h => { if (y + h > BOTTOM) { doc.addPage(); y = 60; } };
     const text = (s, size, style = "normal", x = M, color = [33, 28, 24]) => { doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...color); doc.text(String(s), x, y); };
     const wrap = (s, size, width) => { doc.setFontSize(size); return doc.splitTextToSize(String(s), width); };
-    const head = s => { y += 10; room(30); text(s.toUpperCase(), 9.5, "bold", M, [63, 107, 82]); y += 5; doc.setDrawColor(201, 164, 106); doc.setLineWidth(0.8); doc.line(M, y, R, y); y += 15; };
+    const head = s => { y += 12; room(32); text(s, 12.5, "bold", M, [47, 90, 65]); y += 5; doc.setDrawColor(201, 164, 106); doc.setLineWidth(0.8); doc.line(M, y, R, y); y += 15; };
 
     text(t.name || "Your Name", 22, "bold"); y += 18;
     const contact = [t.city, t.phone, t.email].filter(Boolean).join("  ·  ");
@@ -183,7 +183,7 @@
     if (t.summary) { head("Summary"); for (const l of wrap(t.summary, 10.5, R - M)) { room(14); text(l, 10.5); y += 14; } }
     if (t.skills.length) { head("Skills"); for (const l of wrap(t.skills.join("  ·  "), 10.5, R - M)) { room(14); text(l, 10.5); y += 14; } }
     if (t.jobs.length) {
-      head("Experience");
+      head("Work Experience");
       for (const j of t.jobs) {
         room(34);
         text(j.title || "", 11, "bold");
