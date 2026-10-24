@@ -10,7 +10,8 @@ const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "applic
 const rest = async (path: string, init: RequestInit = {}) => {
   const res = await fetch(`${URL_}/rest/v1/${path}`, { ...init, headers: { ...H, ...(init.headers || {}) } });
   if (!res.ok) throw new Error(`${path.split("?")[0]}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
-  return res.status === 204 || res.status === 201 && !(init.headers as Record<string, string> | undefined)?.Prefer?.includes("representation") ? null : res.json();
+  const text = await res.text();   // PATCH and minimal POST answer with no body
+  return text ? JSON.parse(text) : null;
 };
 
 Deno.serve(async () => {
