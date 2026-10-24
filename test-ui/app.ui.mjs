@@ -163,14 +163,14 @@ for (const dark of [false, true]) {
     assert.ok(!pills.some(p => p.includes("Looks Real")), "cards grade themselves: " + pills.join(" / "));
     assert.ok(!(await page.$("#mBody .stats")), "stats row is gone");
     assert.equal(await page.$eval(".tabs", el => getComputedStyle(el).position), "fixed", "tab bar sits at the bottom on a phone");
-    const metas = await page.$$eval("#mBody .job .meta", els => els.map(e => e.textContent));
+    const metas = await page.$$eval("#mBody .job", els => els.map(e => e.textContent));
     assert.ok(metas.some(m => /Open (\d+ days|1 day|since today)/.test(m) && /\$\d+k/.test(m)), metas.join(" / "));
     await noSideScroll(page);
     await shot(page, `phone-${tag}-matches`);
   });
   await step(`[${tag}] the sheet shows evidence, knockouts and insider moves, and saves`, async () => {
     const card = page.locator("#mBody .job", { hasText: "Purchasing Coordinator" });
-    await card.locator("button.more").click();
+    await card.locator(".title").click();
     await page.waitForSelector("#sheet:not(.hidden)");
     const text = await page.textContent("#sheetBody");
     for (const want of ["Paper Trail", "First Posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working as a Counter Sales"])
@@ -193,7 +193,10 @@ for (const dark of [false, true]) {
     await page.waitForSelector("#mineBody .today");
     const today = await page.textContent("#mineBody .today");
     assert.ok(today.includes("Strong fit at") || today.includes("Nothing due"), today);
-    const id = await page.getAttribute("#mineBody [data-status]", "data-status");
+    assert.ok(await page.$("#mineBody .rows .row-job"), "saved job shows as a pipeline row");
+    await page.click("#mineBody .row-job");
+    await page.waitForSelector("#sheet:not(.hidden) [data-status]");
+    const id = await page.getAttribute("#sheet [data-status]", "data-status");
     await page.click(`[data-status="${id}"][data-val="applied"]`);
     await page.waitForSelector(`[data-fuwhen="${id}"]`);
     const want = new Date(Date.now() + 7 * 864e5 - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
@@ -202,6 +205,10 @@ for (const dark of [false, true]) {
     assert.ok(!(await page.$("#mineBody select, #mineBody input[type=date]")), "no browser select or date box");
     await page.click(`[data-follow="${id}"][data-days="14"]`);
     await page.waitForFunction(w => window.__db.saved_jobs[0].follow_up > w, want);
+    await page.waitForTimeout(450);
+    await shot(page, `phone-${tag}-track`);
+    await page.keyboard.press("Escape");
+    assert.ok((await page.textContent("#mineBody .row-job")).includes("Follow up"), "row shows the follow-up day");
     await noSideScroll(page);
     await shot(page, `phone-${tag}-myjobs`);
   });
