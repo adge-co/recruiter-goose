@@ -308,6 +308,10 @@ details summary.section-h{margin:22px 0 0;font-size:17px}
 .say .now{color:var(--ink);font-weight:600}
 .lbl{font-size:13.5px;font-weight:700;color:var(--ink2);margin-top:12px}
 .ok{color:var(--ok);font-weight:700}
+.rmsg{margin-top:10px;font-size:14.5px;color:var(--ink2)}
+.rmsg:empty{display:none}
+.acct{margin:4px 0 12px;color:var(--ink2);font-size:15px}
+.stamp{display:inline-block;margin:2px 0 0;padding:3px 10px;border-radius:999px;background:var(--raise);font-size:13px;font-weight:600;color:var(--ink2)}
 .page{padding-bottom:28px}
 .page h2{margin-top:22px;font-size:19px}
 .page p{color:var(--ink2);font-size:15px}
@@ -376,42 +380,35 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
     <div class="steps"><i class="on" id="st1"></i><i id="st2"></i></div>
     <div id="setup1">
       <h1>About You</h1>
-      <p class="hint">What you've done. This is how I tell a good fit from a title that just sounds right.</p>
       <div class="card drop" id="drop">
-        <div class="row"><img class="mascot" src="img/papers.webp" alt="" style="width:64px"><div style="flex:1;min-width:180px"><b style="font-size:17px">Skip the typing</b><p class="hint" style="margin:2px 0 0">Drop in your resume (PDF, Word or text) and I'll fill this page in. You just fix anything I got wrong.</p></div></div>
-        <div class="row" style="margin-top:12px"><label class="btn small" for="rFile" style="cursor:pointer">Choose My Resume</label><input type="file" id="rFile" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" class="hidden"><button class="btn ghost small" id="rPasteBtn" type="button">Paste It Instead</button></div>
+        <div class="row"><img class="mascot" src="img/papers.webp" alt="" style="width:56px"><b style="font-size:17px;flex:1;min-width:160px">Fill This In From Your Resume</b></div>
+        <div class="row" style="margin-top:12px"><label class="btn small" for="rFile" style="cursor:pointer">Choose PDF or Word</label><input type="file" id="rFile" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" class="hidden"><button class="btn ghost small" id="rPasteBtn" type="button">Paste It Instead</button></div>
         <div class="hidden" id="rPasteBox"><textarea id="rPaste" placeholder="Paste your resume text" style="margin-top:10px"></textarea><button class="btn small" id="rPasteGo" type="button" style="margin-top:8px">Read It</button></div>
-        <div id="rMsg" class="hint" style="margin-top:8px"></div>
+        <div id="rMsg" class="rmsg"></div>
       </div>
-      <label class="label">Jobs You've Held</label>
-      <p class="hint">Type one and press Add. Example: Purchasing Agent</p>
+      <label class="label" for="iTitles">Jobs You've Held</label>
       <div class="chips" id="cTitles"></div>
-      <div class="chipin"><input type="text" id="iTitles" placeholder="Job title"><button class="btn small" data-add="titles">Add</button></div>
+      <div class="chipin"><input type="text" id="iTitles" placeholder="Purchasing Agent" enterkeyhint="done"><button class="btn small" data-add="titles">Add</button></div>
       <label class="label" for="iYears">Years of Work Experience</label>
       <input type="number" id="iYears" min="0" max="60" inputmode="numeric" placeholder="7">
-      <label class="label">Industries You Know</label>
-      <p class="hint">Pick every one you've worked in or sold to.</p>
+      <label class="label">Industries You've Worked In or Sold To</label>
       <div class="chips" id="cInd"></div>
-      <label class="label">Skills And Tools</label>
-      <p class="hint">Things a posting might ask for. Example: quoting, ERP, Excel, takeoffs</p>
+      <label class="label" for="iSkills">Skills and Tools</label>
       <div class="chips" id="cSkills"></div>
-      <div class="chipin"><input type="text" id="iSkills" placeholder="Skill or tool"><button class="btn small" data-add="skills">Add</button></div>
+      <div class="chipin"><input type="text" id="iSkills" placeholder="Quoting, ERP, Excel, takeoffs" enterkeyhint="done"><button class="btn small" data-add="skills">Add</button></div>
       <div class="err hidden" id="s1Err"></div>
       <button class="btn wide" style="margin-top:22px" id="next1">Next</button>
     </div>
     <div id="setup2" class="hidden">
       <h1>What You Want</h1>
-      <p class="hint">Your next move. You can change all of this later.</p>
       <div class="card hidden" id="bgSetup" style="margin-top:14px"></div>
-      <label class="label">Kinds Of Roles</label>
-      <p class="hint" id="rolesHint">Tap the ones you want. Add your own below.</p>
+      <label class="label" id="rolesHint">Kinds of Roles</label>
       <div class="chips" id="cRoles"></div>
       <div class="chipin"><input type="text" id="iRoles" placeholder="Another role"><button class="btn small" data-add="roles">Add</button></div>
       <label class="label">Where</label>
       <label class="toggle"><input type="checkbox" id="iRemote" checked> Remote jobs (in the US)</label>
-      <p class="hint">Cities you'd work in. Example: Dallas, TX</p>
       <div class="chips" id="cCities"></div>
-      <div class="chipin"><input type="text" id="iCities" placeholder="City, State"><button class="btn small" data-add="cities">Add</button></div>
+      <div class="chipin"><input type="text" id="iCities" placeholder="Add a city: Dallas, TX" enterkeyhint="done"><button class="btn small" data-add="cities">Add</button></div>
       <label class="label" for="iFloor">Lowest Yearly Pay You'd Take</label>
       <input type="number" id="iFloor" min="0" step="1000" inputmode="numeric" placeholder="80000">
       <label class="label">Want Less Of</label>
@@ -448,12 +445,11 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
       <div id="bgBody"></div>
     </div>
     <div class="group">
-      <h2>Check a Job</h2>
-      <p class="hint">Found a posting somewhere else? Paste it here and I'll tell you how it fits you.</p>
+      <h2>Check a Job From Anywhere</h2>
       <label class="label" for="cTitle">Job Title</label>
       <input type="text" id="cTitle" placeholder="Implementation Consultant">
       <label class="label" for="cText">The Posting</label>
-      <textarea id="cText" placeholder="Paste the whole job description"></textarea>
+      <textarea id="cText" placeholder="Paste a job description from any site to see how it fits you"></textarea>
       <button class="btn wide" style="margin-top:12px" id="cGo">Check It</button>
       <div id="cOut"></div>
     </div>
@@ -463,7 +459,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
     </div>
     <div class="group">
       <h2>Account</h2>
-      <p class="hint" id="meEmail"></p>
+      <p class="acct" id="meEmail"></p>
       <div class="row" id="meAcct"><button class="btn ghost" id="signOut">Sign Out</button><button class="btn ghost" id="deleteMe">Delete My Account</button></div>
       <button class="btn hidden" id="meJoin" data-account="me">Make a Free Account</button>
     </div>
@@ -588,7 +584,7 @@ function renderRoleChips() {
   const narrow = pointed.length && !allRoles;
   renderToggleChips("roles", $("#cRoles"), narrow ? [...new Set([...pointed, ...draft.roles.filter(r => ROLES.includes(r))])] : ROLES);
   if (narrow) $("#cRoles").insertAdjacentHTML("beforeend", `<button type="button" class="chip" id="moreRoles">More Roles</button>`);
-  $("#rolesHint").textContent = narrow ? "These are the roles your past jobs point to. Tap the ones you want, or add your own below." : "Tap the ones you want. Add your own below.";
+  $("#rolesHint").textContent = narrow ? "Roles Your Past Jobs Point To" : "Kinds of Roles";
 }
 document.addEventListener("click", e => { if (e.target.closest("#moreRoles")) { allRoles = true; renderRoleChips(); } });
 function renderSetup() {
@@ -816,7 +812,7 @@ function renderMatches() {
   $("#nMatches").textContent = jobs.length ? `(${jobs.length})` : "";
   $("#mSub").textContent = `${jobs.length ? `${jobs.length} fit your background` : "Nothing fits yet"} · ${shortDay(r.ranAt)}`;
   const leftOut = `
-      <details class="filtered"><summary>What Was Left Out</summary><p class="hint" style="margin:6px 0 0">From ${sourcesOk} job sources. Each job links to the company's own posting.</p><ul>
+      <details class="filtered"><summary>What Was Left Out</summary><ul><li>Searched ${sourcesOk} job sources; every job links to the company's own posting</li>
         ${dropped.tooOld ? `<li>${dropped.tooOld} older than 30 days</li>` : ""}
         ${dropped.wrongPlace ? `<li>${dropped.wrongPlace} not remote in the US or not in your cities</li>` : ""}
         ${dropped.duplicate ? `<li>${dropped.duplicate} duplicates posted on more than one site</li>` : ""}
@@ -1089,9 +1085,10 @@ const PAGES = {
     <p>It compares the jobs you've held, your skills and what you want with each posting's title and description. The rules are written by hand and the same for everyone. No AI reads your answers, and nobody pays to be shown first.</p>
     <h2>Who Makes It</h2>
     <p>Gus Johnson, who spent seven years in construction supply: takeoffs, purchasing, a manufacturer's rep agency and warehouse work, before moving into construction tech.</p>
-    <p class="hint">It's free. There are no ads.</p>`,
+    <h2>Cost</h2>
+    <p>Free, with no ads.</p>`,
   privacy: `<h2 style="margin-top:0">Privacy</h2>
-    <p class="hint">Updated October 24, 2026</p>
+    <p class="stamp">Updated October 24, 2026</p>
     <h2>Without an Account</h2>
     <p>Your answers and last search are kept in this browser only. Searches send your answers to our server to find matches, and nothing is stored there.</p>
     <h2>With an Account</h2>
