@@ -96,7 +96,7 @@ textarea{min-height:150px;resize:vertical}
 
 /* Segmented controls */
 .seg,.segf,.statusseg{display:flex;padding:3px;border-radius:12px;background:var(--surface);gap:2px;border:1px solid rgba(243,235,221,.04)}
-.seg button,.segf button,.statusseg button{flex:1 0 auto;appearance:none;border:0;background:transparent;border-radius:9px;min-height:36px;padding:6px 8px;font-weight:600;font-size:14px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:background .2s,color .2s}
+.seg button,.segf button,.statusseg button{flex:1 0 auto;appearance:none;border:0;background:transparent;border-radius:9px;min-height:40px;padding:6px 8px;font-weight:600;font-size:14px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:background .2s,color .2s}
 .seg button.on,.segf button.on,.statusseg button.on{background:#33291F;color:var(--ink);box-shadow:inset 0 1px 0 rgba(243,235,221,.12),0 2px 8px rgba(0,0,0,.35)}
 .segf{margin:14px 0 4px}
 .segf span{font-weight:500;opacity:.7;margin-left:4px}
@@ -105,7 +105,8 @@ textarea{min-height:150px;resize:vertical}
 
 /* Welcome */
 .hero{display:grid;gap:22px;padding-top:36px;max-width:520px;margin:0 auto}
-.hero img{width:min(220px,58%);margin:0 auto;display:block;border-radius:24px}
+.hero img{width:min(220px,58%);margin:0 auto;display:block}
+.hero img.mascot{-webkit-mask-image:linear-gradient(to bottom,#000 72%,transparent 98%);mask-image:linear-gradient(to bottom,#000 72%,transparent 98%)}
 .hero h1{font-size:38px}
 .hero h1 em{font-style:italic;color:var(--brass-text);font-weight:500}
 .hero p.lead{font-size:17.5px;color:var(--ink2);margin:0}
@@ -152,7 +153,7 @@ textarea{min-height:150px;resize:vertical}
 .trail{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);margin-top:9px}
 .trail svg{width:15px;height:15px;flex:none;color:#8CC7A2}
 .job .side{display:flex;flex-direction:column;gap:6px}
-.job .icon{width:38px;height:38px}
+.job .icon{width:40px;height:40px}
 .job .icon svg{width:18px;height:18px}
 .job .icon.saved{color:var(--brass)}
 .passwhy{grid-column:1/-1}
