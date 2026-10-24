@@ -851,11 +851,15 @@ function capped(list, keys) {
     return jobCard(j, keys.get(j.id)) + more;
   }).join("");
 }
+// The same job reposted under a new id is still the job they passed on.
+const sameJob = j => `${String(j.company || "").toLowerCase().trim()}|${String(j.title || "").toLowerCase().replace(/\s+/g, " ").trim()}`;
+const guestPass = new Set((() => { try { return JSON.parse(localStorage.getItem("rg-passed") || "[]"); } catch { return []; } })());
 function renderMatches() {
   const r = result, keys = savedKeys();
   if (!r) return;
   const prefs = profile.data.prefs || {};
-  const jobs = r.jobs.filter(j => (!keys.get(j.id) || keys.get(j.id).status !== "passed")
+  const gone = new Set([...guestPass, ...saved.filter(s => s.status === "passed" && s.job).map(s => sameJob(s.job))]);
+  const jobs = r.jobs.filter(j => (!keys.get(j.id) || keys.get(j.id).status !== "passed") && !gone.has(sameJob(j))
     && !(prefs.hideCompanies || []).includes(j.company)
     && !(prefs.hideSenior && SENIOR_TITLE.test(j.title))
     && !(prefs.hideUnderFloor && (j.flags || []).some(f => f.startsWith("Pay Under"))));
@@ -901,7 +905,9 @@ document.addEventListener("click", async e => {
     const id = sv ? sv.dataset.save : pw.dataset.passwhy;
     const found = jobById(id); if (!found) return;
     const job = { ...found, checkedAt: found.checkedAt || result?.ranAt };   // seen live in this search
-    if (!user) { pending = { id, status: sv ? "saved" : "passed", note: pw ? "Passed: " + pw.dataset.why : null }; askAccount("save"); return; }
+    // A pass never needs an account: store reviews say seeing the same unwanted job again is the top complaint.
+    if (!user && pw) { guestPass.add(sameJob(found)); try { localStorage.setItem("rg-passed", JSON.stringify([...guestPass].slice(-500))); } catch {} toast("Passed. I won't show it again."); renderMatches(); return; }
+    if (!user) { pending = { id, status: "saved", note: null }; askAccount("save"); return; }
     (sv || pw).disabled = true;
     const row = { user_id: user.id, job_key: id, job, status: sv ? "saved" : "passed", updated_at: new Date().toISOString(), ...(pw ? { note: "Passed: " + pw.dataset.why } : {}) };
     const { data, error } = await sb.from("saved_jobs").upsert(row, { onConflict: "user_id,job_key" }).select().single();

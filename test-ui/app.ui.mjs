@@ -170,6 +170,17 @@ for (const dark of [false, true]) {
     await noSideScroll(page);
     await shot(page, `phone-${tag}-matches`);
   });
+  await step(`[${tag}] a guest can pass on a job without an account, and it stays gone`, async () => {
+    const titles = await page.$$eval("#mBody .job .title", els => els.map(e => e.textContent));
+    const last = page.locator("#mBody .job").first();
+    const gone = await last.locator(".title").textContent();
+    await last.locator("[data-pass]").click();
+    await last.locator("[data-passwhy]").first().click();
+    await page.waitForFunction(t => ![...document.querySelectorAll("#mBody .job .title")].some(e => e.textContent === t), gone);
+    assert.ok(!(await page.$("#authSheet.open, .sheet.open #aEmail")), "no account wall for a pass");
+    assert.equal((await page.$$("#mBody .job")).length, titles.length - 1);
+    await page.evaluate(() => { guestPass.clear(); localStorage.removeItem("rg-passed"); renderMatches(); });   // the next checks use this job
+  });
   await step(`[${tag}] the sheet shows evidence, knockouts and insider moves, and saves`, async () => {
     const card = page.locator("#mBody .job", { hasText: "Purchasing Coordinator" });
     await card.locator(".title").click();
