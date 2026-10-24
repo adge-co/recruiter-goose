@@ -86,7 +86,9 @@ async function greenhouse(token, name) {
     return {
       id: `gh:${token}:${j.id}`, title: j.title, company: name, location: loc || "Not Listed",
       remote: isRemoteText(loc), ...(payFromText(desc) || {}), payText: "",
-      postedAt: j.updated_at, applyUrl: j.absolute_url, description: desc, source: "Company Site",
+      // first_published is when the job went up; updated_at moves on every edit and made old jobs look new.
+      postedAt: j.first_published || j.updated_at, firstPublished: j.first_published || null, updatedAt: j.updated_at || null,
+      requisitionId: j.requisition_id || null, applyUrl: j.absolute_url, description: desc, source: "Company Site",
     };
   });
 }
@@ -99,7 +101,7 @@ async function lever(token, name) {
     return {
       id: `lever:${token}:${j.id}`, title: j.text, company: name, location: loc || "Not Listed",
       remote: j.workplaceType === "remote" || isRemoteText(loc), ...pay, payText: "",
-      postedAt: j.createdAt ? new Date(j.createdAt).toISOString() : null, applyUrl: j.hostedUrl,
+      postedAt: j.createdAt ? new Date(j.createdAt).toISOString() : null, firstPublished: j.createdAt ? new Date(j.createdAt).toISOString() : null, applyUrl: j.hostedUrl,
       description: j.descriptionPlain || stripHtml(j.description), source: "Company Site",
     };
   });
@@ -114,7 +116,7 @@ async function ashby(token, name) {
       id: `ashby:${token}:${j.id}`, title: j.title, company: name, location: j.location || "Not Listed",
       remote: j.isRemote || j.workplaceType === "Remote" || isRemoteText(j.location), ...pay,
       payText: j.compensation?.compensationTierSummary || "",
-      postedAt: j.publishedAt, applyUrl: j.jobUrl || j.applyUrl, description: j.descriptionPlain || stripHtml(j.descriptionHtml), source: "Company Site",
+      postedAt: j.publishedAt, firstPublished: j.publishedAt || null, applyUrl: j.jobUrl || j.applyUrl, description: j.descriptionPlain || stripHtml(j.descriptionHtml), source: "Company Site",
     };
   });
 }

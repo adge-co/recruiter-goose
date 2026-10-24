@@ -2,6 +2,7 @@
 // and roles worth looking at. Plain rules, no AI. The person checks the result and fixes anything wrong.
 
 import { FIELD_WORDS, ROLE_WORDS } from "./match.js";
+import { suggestedRoles as fromBackground } from "./translate.js";
 
 const MONTH = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?";
 const RANGE = new RegExp(`(?:${MONTH}\\s+|\\d{1,2}/)?((?:19|20)\\d{2})\\s*(?:-|–|—|to)\\s*(?:(present|current|now|today)|(?:${MONTH}\\s+|\\d{1,2}/)?((?:19|20)\\d{2}))`, "gi");
@@ -89,6 +90,8 @@ export function parseResume(text, now = new Date()) {
     (role === "estimating" && /\b(estimating|takeoffs?)\b/.test(body)) ||
     (role === "purchasing" && /\b(purchasing|procurement|procured)\b/.test(body))
   ).map(([role]) => role);
+  // Roles a recruiter would read their background as pointing to (trades, counter, field), after the ones their titles name.
+  for (const r of fromBackground(titles)) if (!roles.includes(r)) roles.push(r);
 
-  return { pastTitles: titles.slice(0, 6), pastCompanies: companies.slice(0, 6), years, skills: skills.slice(0, 15), industries, suggestedRoles: roles };
+  return { pastTitles: titles.slice(0, 6), pastCompanies: companies.slice(0, 6), years, skills: skills.slice(0, 15), industries, suggestedRoles: roles.slice(0, 6) };
 }

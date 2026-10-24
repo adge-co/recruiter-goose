@@ -2,6 +2,7 @@
 // the reasons it fits and anything to watch for. Runs in Node 18+ and Deno (Supabase).
 
 import * as S from "./sources/index.js";
+import { postingCheck, knockouts } from "./trust.js";
 
 // Words people use for the same kind of role. A role the person types that isn't here is used as-is.
 export const ROLE_WORDS = {
@@ -17,6 +18,10 @@ export const ROLE_WORDS = {
   operations: ["operations manager", "operations analyst", "operations", "process improvement"],
   support: ["support specialist", "technical support", "customer support", "help desk"],
   "product manager": ["product manager", "product owner", "product specialist"],
+  scheduling: ["dispatcher", "dispatch", "scheduler", "scheduling coordinator", "service coordinator"],
+  inventory: ["inventory", "materials planner", "material planner", "materials coordinator", "supply planner", "demand planner"],
+  safety: ["safety coordinator", "safety manager", "safety specialist", "ehs", "hse"],
+  quality: ["quality", "qa qc", "qc coordinator", "quality control", "quality assurance"],
 };
 
 const SENIOR = /\b(senior|sr\.?|lead|principal|staff)\b/i;
@@ -38,9 +43,10 @@ export const FIELD_WORDS = {
   "proptech": ["homebuilder", "homebuilders", "homebuilding", "home builders", "property management", "real estate", "multifamily"],
   "logistics": ["logistics", "supply chain", "freight", "shipping", "warehouse", "fleet", "fleets", "trucking", "carrier", "carriers", "procurement", "transportation"],
   "energy": ["solar", "battery", "batteries", "energy storage", "ev charging", "charging stations", "utility", "utilities", "renewable"],
+  "hospitality": ["hotel", "hotels", "hospitality", "resort", "resorts", "restaurant", "restaurants", "guest", "guests", "front desk", "food service", "property management system"],
   "saas": [],
 };
-const FIELD_NAMES = { "construction-tech": "Construction", "building-materials": "Building materials", "trades-software": "Trades", "proptech": "Homebuilding", "logistics": "Logistics", "energy": "Energy" };
+const FIELD_NAMES = { "construction-tech": "Construction", "building-materials": "Building materials", "trades-software": "Trades", "proptech": "Homebuilding", "logistics": "Logistics", "energy": "Energy", "hospitality": "Hospitality" };
 
 // Fields that, when a job is clearly about one of them and not the person's own, mean "not for you".
 export const OTHER_FIELDS = {
@@ -140,7 +146,8 @@ export function vet(jobs, p) {
     ids.add(j.id);
     if (!j.title || !j.company || !/^https:\/\//.test(j.applyUrl || "")) { dropped.noApplyLink++; continue; }
     const age = daysAgo(j.postedAt);
-    if (age !== null && age > p.wants.maxAgeDays) { dropped.tooOld++; continue; }
+    // Still live on the employer's own board means it's open, so those get twice as long before they count as old.
+    if (age !== null && age > p.wants.maxAgeDays * (j.source === "Company Site" ? 2 : 1)) { dropped.tooOld++; continue; }
     if (SCAM.test(j.description)) { dropped.looksLikeScam++; continue; }
     if (!placeFits(j, p)) { dropped.wrongPlace++; continue; }
     const key = norm(j.company) + "|" + norm(j.title).replace(/\b(remote|us|usa|united states)\b/g, "").trim();
@@ -189,7 +196,7 @@ export function fieldFit(j, p, own) {
   const companyShared = (j.industries || []).filter(i => mine.has(i) && i !== "saas");
   let other = null, otherHits = 0;
   for (const [field, list] of Object.entries(OTHER_FIELDS)) {
-    if (mine.has(field)) continue;
+    if (mine.has(field) || (field === "restaurants" && mine.has("hospitality"))) continue;
     const n = list.filter(w => has(own, w)).length + list.filter(w => has(j.title, w)).length;
     if (n >= 2 && n > otherHits) { other = field; otherHits = n; }
   }
@@ -297,12 +304,16 @@ export function checkJob(job, profile) {
   if (travel && Number(travel[1] || travel[2]) >= 25) headsUp.push(`Travel up to ${travel[1] || travel[2]}%`);
   if (SALESY.test(j.description)) headsUp.push("Has quota or commission language");
   const verdict = r.fit === "strong" ? "Strong fit" : r.fit === "good" ? "Good fit" : r.fit === "reach" ? "A reach" : r.fit === "sales" ? "Sales role" : "Not a fit";
-  return { verdict, fit: r.fit, score: r.score, reasons: r.reasons, flags: r.flags, hiddenBecause: r.hiddenBecause || null, gaps, headsUp };
+  return { verdict, fit: r.fit, score: r.score, reasons: r.reasons, flags: r.flags, hiddenBecause: r.hiddenBecause || null, gaps, headsUp,
+    check: postingCheck({ ...j, remote: !!job.remote }), knockouts: knockouts(j, p) };
 }
 
 // ---------- The whole run ----------
 
-export async function match(profile, env = {}, sources = S) {
+// The same posting under a new id (company, title and place match) is a repost.
+export const signature = j => [norm(j.company), norm(j.title).replace(/\b(remote|us|usa|united states)\b/g, "").trim(), norm(j.location)].join("|");
+
+export async function match(profile, env = {}, sources = S, store = null) {
   const p = cleanProfile(profile);
   if (!p.wants.roles.length) throw new Error("Add at least one role to look for.");
   if (!p.wants.remote && !p.wants.cities.length) throw new Error("Add remote or at least one city.");
@@ -316,11 +327,37 @@ export async function match(profile, env = {}, sources = S) {
   // How many right-sounding titles were hidden and why, so the person can see the filter working.
   const hidden = {};
   for (const j of all) if (j.hiddenBecause) hidden[j.hiddenBecause] = (hidden[j.hiddenBecause] || 0) + 1;
-  const jobs = scored.slice(0, 100).map(({ description, raw, ...j }) => ({ ...j, snippet: description.slice(0, 280) }));
+  // The app's own record of what it has seen on company boards: first and last seen, and reposts.
+  let seen = {};
+  if (store) { try { seen = await store.record(vetted.filter(j => j.source === "Company Site").map(j => ({ id: j.id, sig: signature(j) }))); } catch (e) { report.push({ name: "Posting history", ok: false, count: 0, error: String(e.message || e) }); } }
+  const jobs = scored.slice(0, 100).map(({ description, raw, ...j }) => ({ ...j, snippet: description.slice(0, 280), description: description.slice(0, 4000),
+    check: postingCheck({ ...j, description }, seen[j.id] || null), knockouts: knockouts({ ...j, description }, p) }));
   return {
     ranAt: new Date().toISOString(), tookMs: Date.now() - started,
     counts: { found: raw.length, legit: vetted.length, matched: scored.length, shown: jobs.length,
       strong: scored.filter(j => j.fit === "strong").length },
     dropped, hidden, sources: report, jobs,
   };
+}
+
+// ---------- Is a saved posting still up? ----------
+
+// Re-reads the company boards behind saved postings. Answers open, gone or unknown (sites we can't re-check).
+export async function verify(ids = [], sources = S) {
+  const out = {}, boards = new Map();
+  for (const id of ids.slice(0, 60)) {
+    const m = String(id).match(/^(gh|lever|ashby):([^:]+):/);
+    if (!m) { out[id] = "unknown"; continue; }
+    const ats = { gh: "greenhouse", lever: "lever", ashby: "ashby" }[m[1]];
+    const key = ats + ":" + m[2];
+    if (!boards.has(key)) boards.set(key, { ats, token: m[2], ids: [] });
+    boards.get(key).ids.push(id);
+  }
+  await Promise.all([...boards.values()].map(async b => {
+    try {
+      const live = new Set((await sources.readBoard({ ats: b.ats, token: b.token, name: "" })).map(j => j.id));
+      for (const id of b.ids) out[id] = live.has(id) ? "open" : "gone";
+    } catch { for (const id of b.ids) out[id] = "unknown"; }
+  }));
+  return { checkedAt: new Date().toISOString(), status: out };
 }

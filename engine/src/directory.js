@@ -13,6 +13,7 @@ export const INDUSTRIES = {
   "saas": "General Software",
   "logistics": "Logistics and Supply Chain",
   "energy": "Energy and Battery Storage",
+  "hospitality": "Hospitality Tech",
 };
 
 export const DIRECTORY = [
@@ -65,4 +66,14 @@ export const DIRECTORY = [
   { name: "Arrive Logistics", ats: "lever", token: "arrivelogistics", industries: ["logistics"] },
   { name: "Cargomatic", ats: "greenhouse", token: "cargomatic", industries: ["logistics"] },
   { name: "SPAN", ats: "ashby", token: "span", industries: ["energy"] },
+  // Added Oct 24, 2026: each token answered from the Supabase server that day with open jobs, and the postings named the right company.
+  { name: "Traba", ats: "ashby", token: "traba", industries: ["logistics"] },
+  { name: "MaintainX", ats: "ashby", token: "maintainx", industries: ["trades-software", "saas"] },
+  { name: "UpKeep", ats: "greenhouse", token: "upkeep", industries: ["trades-software"] },
+  { name: "TOOLBX", ats: "ashby", token: "toolbx", industries: ["building-materials"] },
+  { name: "Instawork", ats: "greenhouse", token: "instawork", industries: ["hospitality", "logistics"] },
+  // Hospitality, a lighter extra (hotel and restaurant software).
+  { name: "Toast", ats: "greenhouse", token: "toast", industries: ["hospitality"] },
+  { name: "Cloudbeds", ats: "greenhouse", token: "cloudbeds", industries: ["hospitality"] },
+  { name: "Canary Technologies", ats: "lever", token: "canarytechnologies", industries: ["hospitality"] },
 ];
