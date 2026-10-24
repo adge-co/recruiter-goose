@@ -53,3 +53,10 @@ A web app: anyone makes an account, drops in a resume (or types their background
 - Check a new company board the same way: `net.http_get` on `https://boards-api.greenhouse.io/v1/boards/<token>/jobs`, `https://api.lever.co/v0/postings/<token>?mode=json`, or `https://api.ashbyhq.com/posting-api/job-board/<token>`, and confirm the postings name the right company (several tokens belong to other companies with the same name).
 
 **Newest code on this Mac:** `latest-from-cloud/` in this folder holds the current `app/`, `engine/` and `PLAN.md` copied from the project files on 10-24-2026 (engine tests: 9 pass). Use it instead of the older files beside it.
+
+## Recruiter Goose 2 (10-24-2026)
+- Live search function `match` (version 4) reads the engine from this public repo at a pinned commit through jsDelivr (`cdn.jsdelivr.net/gh/adge-co/recruiter-goose@<commit>/engine/src/...`). To ship engine changes: push, then redeploy `engine/supabase/functions/match/index.ts` with `./src/` swapped for that URL at the new commit.
+- Table `postings_seen` (migration `20261024_postings_seen.sql`) keeps first and last seen dates for company-board postings; only the function's service role can touch it.
+- `.github/workflows/pages.yml` runs both test suites and publishes `app/` to GitHub Pages. Pages has to be switched on once in the repo settings (Source: GitHub Actions).
+- Tests: `cd engine && npm test` (22) and `node test-ui/app.ui.mjs` (25 click-through checks, phone and desktop, light and dark).
+- Leftover `_probe` table is still in the database: the delete was blocked by a safety check. Harmless.
