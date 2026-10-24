@@ -9,7 +9,21 @@ import { match, checkJob, verify, ROLE_WORDS } from "./src/match.js";
 import { INDUSTRIES } from "./src/directory.js";
 import { parseResume } from "./src/resume.js";
 import { readBackground } from "./src/translate.js";
-import * as S from "./src/sources/index.js";
+import * as S0 from "./src/sources/index.js";
+import { indexWords, fromRow } from "./src/crawl.js";
+
+// The job index the crawl function fills every 4 hours: one read instead of forty sites.
+const S = {
+  ...S0,
+  async index(p: Record<string, unknown>) {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/index_search`, {
+      method: "POST", headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` }, body: JSON.stringify({ p_words: indexWords(p), p_limit: 2500 }),
+    });
+    if (!res.ok) throw new Error(`Job index: HTTP ${res.status}`);
+    return (await res.json()).map(fromRow);
+  },
+};
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" };
 
