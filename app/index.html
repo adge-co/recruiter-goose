@@ -626,7 +626,7 @@ function jobCard(j, s, inMine) {
     <div class="head open" data-open="${esc(j.id)}"><div style="flex:1;min-width:0"><div class="co">${esc(j.company)}</div><p class="title">${esc(j.title)}</p>${meta(j)}</div></div>
     <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${checkPill(j, s)}</div>
     ${j.reasons?.filter(r => r !== "Remote").length || flags ? `<ul class="why">${(j.reasons || []).filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}${flags}</ul>` : ""}
-    <button class="more" data-open="${esc(j.id)}">Paper Trail and Insider Moves ›</button>
+    <button class="more" data-open="${esc(j.id)}">Paper Trail and Insider Moves</button>
     ${s && inMine ? trackBox(s) : ""}
     <div class="acts">
       <a class="btn small" href="${esc(j.applyUrl)}" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center">Open Posting</a>
