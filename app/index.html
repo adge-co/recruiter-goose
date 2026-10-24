@@ -73,6 +73,25 @@ textarea{min-height:140px;resize:vertical}
 .tab{flex:1;border:0;background:transparent;border-radius:10px;padding:10px 6px;font-weight:600;cursor:pointer;font-size:15px;color:var(--muted)}
 .tab.on{background:var(--navy-soft);color:var(--ink)}
 .tab .n{font-weight:600;opacity:.8}
+.tab svg{display:none;width:24px;height:24px}
+@media (max-width:640px){
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;margin:0;max-width:none;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);gap:0}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:11px;white-space:nowrap;min-height:48px}
+  .tab.on{background:transparent;color:var(--navy)}
+  .tab svg{display:block}
+  .tab .n{display:none}
+  main.wrap{padding-bottom:96px}
+  body .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}
+.linkbtn{border:0;background:none;padding:0;font:inherit;color:var(--navy);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.statusseg{display:flex;gap:4px;overflow-x:auto;background:var(--line);border-radius:12px;padding:3px;scrollbar-width:none}
+.statusseg button{flex:1 0 auto;border:0;border-radius:10px;padding:9px 6px;background:transparent;font-weight:600;font-size:13.5px;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.statusseg button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.fuline{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
+.fuline .when{font-weight:600;flex-basis:100%}
+.page h2{margin-top:18px}
+.page p{color:var(--ink2)}
+.trail{font-size:14px;color:var(--muted);margin-top:6px}
 
 /* welcome */
 .hero{display:grid;gap:18px;padding-top:24px}
@@ -138,8 +157,9 @@ details.filtered li{color:var(--ink2)}
 .drop{margin-top:14px;border-style:dashed;border-width:2px}
 .drop.over{border-color:var(--navy);background:var(--navy-soft)}
 .ok{color:var(--green);font-weight:700}
-.track{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.track label{font-size:14px;font-weight:700;display:block;margin-bottom:4px}
+.track{display:grid;gap:12px;margin-top:12px}
+.track>div{min-width:0}
+.track .tl{font-size:14px;font-weight:700;display:block;margin-bottom:6px}
 .faded{opacity:.6}
 
 /* toast + celebration */
@@ -219,9 +239,9 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
     <button class="btn ghost small" id="rerun">Search Again</button>
   </div>
   <nav class="tabs" id="tabs">
-    <button class="tab on" data-tab="matches">Matches <span class="n" id="nMatches"></span></button>
-    <button class="tab" data-tab="mine">My Jobs <span class="n" id="nMine"></span></button>
-    <button class="tab" data-tab="me">Me</button>
+    <button class="tab on" data-tab="matches"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18"/></svg>Matches <span class="n" id="nMatches"></span></button>
+    <button class="tab" data-tab="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-3.8L6 21V4.5a1 1 0 0 1 1-1z"/></svg>My Jobs <span class="n" id="nMine"></span></button>
+    <button class="tab" data-tab="me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20.5c1.2-3.6 4.1-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></svg>Me</button>
   </nav>
 </header>
 
@@ -232,10 +252,14 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
     <div class="hero">
       <img src="img/wave.webp" alt="Recruiter Goose waving">
       <div>
-        <h1>Hey, I'm your recruiter.</h1>
-        <p class="lead">Tell me what you've done and what you want. I'll go through real job postings, straight from the companies, and bring back the ones that fit your background. Then we track each one together until you're hired.</p>
+        <h1>Office and construction-tech jobs for people from the field.</h1>
+        <p class="lead">For people moving from the trades, the counter, purchasing or the jobsite into office work. Tell it the jobs you've held, and it reads company job boards for roles your background already fits.</p>
       </div>
-      <div class="card">
+      <div>
+        <button class="btn wide" id="tryIt">Find Jobs That Fit Me</button>
+        <p class="hint" style="text-align:center;margin-top:12px">No account needed to look. Have one? <button class="linkbtn" id="showSignIn" type="button">Sign In</button></p>
+      </div>
+      <div id="authSlot"><div class="card hidden" id="authCard">
         <div class="seg"><button class="on" data-mode="up">Make An Account</button><button data-mode="in">Sign In</button></div>
         <form id="authForm">
           <label class="label" for="aName" id="aNameL">First Name</label>
@@ -247,8 +271,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
           <div class="err hidden" id="aErr"></div>
           <button class="btn wide" style="margin-top:16px" id="aGo">Make My Account</button>
         </form>
-      </div>
-      <p class="hint" style="text-align:center">Free. No resume upload, no recruiter spam. Your info is only used to find you jobs.</p>
+      </div></div>
     </div>
   </section>
 
@@ -338,11 +361,12 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:36px}
     <div class="card" style="margin-top:16px">
       <h2>Account</h2>
       <p class="hint" id="meEmail"></p>
-      <button class="btn ghost" id="signOut">Sign Out</button>
+      <div class="row" id="meAcct"><button class="btn ghost" id="signOut">Sign Out</button><button class="btn ghost" id="deleteMe">Delete My Account</button></div>
+      <button class="btn hidden" id="meJoin" data-account="me">Make a Free Account</button>
     </div>
   </section>
 
-  <footer>Recruiter Goose · Built by Gus Johnson with Claude</footer>
+  <footer><button class="linkbtn" data-page="about">About</button> &nbsp;·&nbsp; <button class="linkbtn" data-page="privacy">Privacy</button></footer>
 </main>
 
 <div id="sheet" class="sheet hidden" role="dialog" aria-modal="true"><div class="panel" id="sheetBody"></div></div>
@@ -362,7 +386,7 @@ const INDUSTRIES = {
 const ROLES = ["purchasing", "estimating", "implementation", "project manager", "coordinator", "operations", "customer success", "onboarding", "training", "scheduling", "inventory", "safety", "quality", "pricing", "support", "product manager"];
 const CHECK = { "Looks Real": "real", "Check First": "checkfirst", "Pipeline": "pipeline", "Likely Stale": "stale" };
 const FIT = { strong: "Strong Fit", good: "Good Fit", reach: "A Reach", sales: "Partly Sales" };
-const STATUS = [["saved", "Saved"], ["applied", "Applied"], ["interview", "Interviewing"], ["offer", "Offer"], ["closed", "Closed Out"]];
+const STATUS = [["saved", "Saved"], ["applied", "Applied"], ["interview", "Interviewing"], ["offer", "Offer"], ["closed", "Closed"]];
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -372,19 +396,31 @@ const k = n => "$" + Math.round(n / 1000) + "k";
 const show = (...ids) => ["vWelcome", "vSetup", "vMatches", "vMine", "vMe"].forEach(v => $("#" + v).classList.toggle("hidden", !ids.includes(v)));
 
 let user = null, profile = null, result = null, saved = [], filter = "all", tab = "matches", authMode = "up";
+// Looking around needs no account. A guest's answers and last search stay on this device until they sign up.
+let guest = false, pending = null;
+const GUEST_KEY = "rg.guest";
+const readGuest = () => { try { return JSON.parse(localStorage.getItem(GUEST_KEY) || "null"); } catch { return null; } };
+const writeGuest = () => { try { localStorage.setItem(GUEST_KEY, JSON.stringify({ data: profile?.data, result })); } catch {} };
+const clearGuest = () => { try { localStorage.removeItem(GUEST_KEY); } catch {} };
+// Saves profile changes for a signed-in person, or on this device for a guest.
+async function saveProfile(fields) {
+  if (!user) { writeGuest(); return {}; }
+  return await sb.from("profiles").update({ ...fields, updated_at: new Date().toISOString() }).eq("user_id", user.id);
+}
 const draft = { titles: [], skills: [], roles: [], cities: [], industries: [] };
 
 function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.add("hidden"), 2600); }
 
 // ---------- Sign in ----------
-document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
-  authMode = b.dataset.mode;
-  document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b));
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => setAuthMode(b.dataset.mode));
+function setAuthMode(m) {
+  authMode = m;
+  document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x.dataset.mode === m));
   $("#aName").classList.toggle("hidden", authMode === "in"); $("#aNameL").classList.toggle("hidden", authMode === "in");
   $("#aPass").autocomplete = authMode === "in" ? "current-password" : "new-password";
   $("#aGo").textContent = authMode === "in" ? "Sign In" : "Make My Account";
   $("#aErr").classList.add("hidden");
-});
+}
 $("#authForm").onsubmit = async e => {
   e.preventDefault();
   const email = $("#aEmail").value.trim(), password = $("#aPass").value, err = $("#aErr"), go = $("#aGo");
@@ -400,7 +436,23 @@ $("#authForm").onsubmit = async e => {
   } catch (x) { err.textContent = x.message; err.classList.remove("hidden"); }
   go.disabled = false;
 };
-$("#signOut").onclick = async () => { await sb.auth.signOut(); };
+$("#signOut").onclick = async () => { guest = false; clearGuest(); await sb.auth.signOut(); };
+$("#deleteMe").onclick = async () => {
+  if (!confirm("Delete your account, your answers and every saved job? This can't be undone.")) return;
+  const { error } = await sb.rpc("delete_me");
+  if (error) { toast(error.message); return; }
+  guest = false; clearGuest(); await sb.auth.signOut(); toast("Your account and everything in it is deleted.");
+};
+$("#tryIt").onclick = () => { guest = true; startSetup(); };
+$("#showSignIn").onclick = () => { setAuthMode("in"); $("#authCard").classList.remove("hidden"); $("#aEmail").focus(); };
+// The sign-up form, opened in the sheet when a guest saves a job or asks for an account.
+function askAccount(why) {
+  setAuthMode("up");
+  $("#sheetBody").innerHTML = `<div class="grab"><div style="flex:1"><h2 style="margin:0">${why === "save" ? "Keep This Job" : "Make a Free Account"}</h2><p class="hint" style="margin:4px 0 0">${why === "save" ? "An account keeps your saved jobs, where each one stands and when to follow up, on any device." : "Your answers and saved jobs stay with you on any device."}</p></div><button class="btn ghost small" data-close aria-label="Close">Close</button></div>`;
+  $("#sheetBody").appendChild($("#authCard")); $("#authCard").classList.remove("hidden");
+  $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
+}
+document.addEventListener("click", e => { const a = e.target.closest("[data-account]"); if (a) { pending = null; askAccount("account"); } });
 
 // ---------- Chips ----------
 function renderChips(key, el, labels) {
@@ -522,14 +574,15 @@ $("#next2").onclick = async () => {
   err.classList.add("hidden");
   const data = {
     prefs: profile?.data?.prefs || {},
-    name: user.user_metadata?.name || "", pastTitles: draft.titles, pastCompanies: draft.companies || [], years: Number($("#iYears").value) || 0, skills: draft.skills, industries: draft.industries,
+    name: user?.user_metadata?.name || profile?.data?.name || "", pastTitles: draft.titles, pastCompanies: draft.companies || [], years: Number($("#iYears").value) || 0, skills: draft.skills, industries: draft.industries,
     wants: { roles: draft.roles, remote, cities: draft.cities, payFloor: Number($("#iFloor").value) || 0, avoid: $("#iNoSales").checked ? ["sales"] : [] },
   };
   $("#next2").disabled = true;
-  const { error } = await sb.from("profiles").upsert({ user_id: user.id, data, updated_at: new Date().toISOString() });
+  const { error } = user ? await sb.from("profiles").upsert({ user_id: user.id, data, updated_at: new Date().toISOString() }) : {};
   $("#next2").disabled = false;
   if (error) { err.textContent = error.message; err.classList.remove("hidden"); return; }
   profile = { ...(profile || {}), data };
+  if (!user) writeGuest();
   openApp("matches"); runSearch();
 };
 
@@ -542,7 +595,7 @@ async function runSearch() {
     if (error) { let msg = error.message; try { msg = (await error.context.json()).error || msg; } catch {} throw new Error(msg); }
     if (data.error) throw new Error(data.error);
     result = data;
-    await sb.from("profiles").update({ last_result: data, last_run_at: data.ranAt }).eq("user_id", user.id);
+    await saveProfile({ last_result: data, last_run_at: data.ranAt });
   } catch (x) {
     $("#mBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img src="img/coffee.webp" alt=""><h2>The search hit a snag</h2><p class="hint">${esc(x.message)}</p><button class="btn" onclick="runSearch()">Try Again</button></div>`;
   }
@@ -565,7 +618,7 @@ function placeText(j) {
 const openText = j => { const d = openDays(j); return d == null ? "" : `<span>Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}</span>`; };
 const meta = j => `<div class="meta">${payText(j)}<span>${placeText(j)}</span>${openText(j)}</div>`;
 const openDays = j => { const t = Date.parse(j.firstPublished || j.postedAt); return Number.isFinite(t) ? Math.max(0, Math.floor((Date.now() - t) / 864e5)) : j.check?.openDays ?? null; };
-const checkPill = (j, s) => s?.job?.goneAt ? `<span class="pill gone">Taken Down ${mdy(s.job.goneAt)}</span>` : j.check ? `<span class="pill ${CHECK[j.check.label]}">${esc(j.check.label)}</span>` : "";
+const checkPill = (j, s) => s?.job?.goneAt ? `<span class="pill gone">Taken Down ${mdy(s.job.goneAt)}</span>` : j.check && j.check.label !== "Looks Real" ? `<span class="pill ${CHECK[j.check.label]}">${esc(j.check.label)}</span>` : "";
 function jobCard(j, s, inMine) {
   const st = s?.status;
   const flags = (j.flags || []).map(f => `<li class="heads">Heads up: ${esc(f)}</li>`).join("");
@@ -573,17 +626,18 @@ function jobCard(j, s, inMine) {
     <div class="head open" data-open="${esc(j.id)}"><div style="flex:1;min-width:0"><div class="co">${esc(j.company)}</div><p class="title">${esc(j.title)}</p>${meta(j)}</div></div>
     <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${checkPill(j, s)}</div>
     ${j.reasons?.filter(r => r !== "Remote").length || flags ? `<ul class="why">${(j.reasons || []).filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}${flags}</ul>` : ""}
-    <button class="more" data-open="${esc(j.id)}">Posting Check and Insider Moves ›</button>
+    <button class="more" data-open="${esc(j.id)}">Paper Trail and Insider Moves ›</button>
     ${s && inMine ? trackBox(s) : ""}
     <div class="acts">
       <a class="btn small" href="${esc(j.applyUrl)}" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center">Open Posting</a>
       ${s ? (inMine ? "" : `<span class="pill good" style="align-self:center">In My Jobs</span>`) : `<button class="btn ghost small" data-save="${esc(j.id)}">Save</button><button class="btn ghost small" data-pass="${esc(j.id)}">Pass</button>`}
     </div></div>`;
 }
+const longDay = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 function trackBox(s) {
   return `<div class="track">
-    <div><label for="st-${s.id}">Where It Stands</label><select id="st-${s.id}" data-status="${s.id}">${STATUS.map(([v, l]) => `<option value="${v}" ${s.status === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>
-    <div><label for="fu-${s.id}">Follow Up On</label><input type="date" id="fu-${s.id}" data-follow="${s.id}" value="${s.follow_up || ""}"></div>
+    <div><span class="tl" id="stl-${s.id}">Where It Stands</span><div class="statusseg" role="radiogroup" aria-labelledby="stl-${s.id}">${STATUS.map(([v, l]) => `<button type="button" role="radio" aria-checked="${s.status === v}" class="${s.status === v ? "on" : ""}" data-status="${s.id}" data-val="${v}">${l}</button>`).join("")}</div></div>
+    <div><span class="tl">Follow Up</span><div class="fuline">${s.follow_up ? `<span class="when" data-fuwhen="${s.id}">${longDay(s.follow_up)}</span>` : ""}${[[3, "In 3 Days"], [7, "In a Week"], [14, "In 2 Weeks"]].map(([n, l]) => `<button type="button" class="chip" data-follow="${s.id}" data-days="${n}">${l}</button>`).join("")}${s.follow_up ? `<button type="button" class="chip" data-follow="${s.id}" data-days="">Clear</button>` : ""}</div></div>
   </div>`;
 }
 // ---------- Learning from passes: a repeated reason gets one question, and the answer filters future matches ----------
@@ -606,7 +660,7 @@ async function answerLearn(key, yes) {
   if (yes && key === "pay") prefs.hideUnderFloor = true;
   if (yes && key.startsWith("co:")) prefs.hideCompanies = [...(prefs.hideCompanies || []), key.slice(3)];
   profile.data = { ...profile.data, prefs };
-  await sb.from("profiles").update({ data: profile.data, updated_at: new Date().toISOString() }).eq("user_id", user.id);
+  await saveProfile({ data: profile.data });
   toast(yes ? "Got it. I'll leave those out." : "Okay, I'll keep showing them.");
   renderMatches();
 }
@@ -642,10 +696,9 @@ function renderMatches() {
   $("#mBody").innerHTML = `
     <div class="card" style="margin-top:16px">
       <div class="summary"><img src="img/${jobs.length ? "wave" : "coffee"}.webp" alt=""><div>
-        <h2>${jobs.length ? `I found ${jobs.length} ${jobs.length === 1 ? "job" : "jobs"} that fit you${profile.data.name ? ", " + esc(profile.data.name) : ""}.` : "Nothing fits yet."}</h2>
-        <p class="hint" style="margin:0">Searched ${mdy(r.ranAt)} across ${sourcesOk} sources. Every one links to the company's own posting.</p></div></div>
-      <div class="stats"><div class="stat"><b>${r.counts.found.toLocaleString()}</b><span>Postings Read</span></div><div class="stat"><b>${r.counts.legit.toLocaleString()}</b><span>Legit And Fresh</span></div><div class="stat"><b>${jobs.length}</b><span>Fit You</span></div></div>
-      <details class="filtered"><summary>What I Filtered Out</summary><ul>
+        <h2>${jobs.length ? `${jobs.length} ${jobs.length === 1 ? "job fits" : "jobs fit"} your background` : "Nothing fits yet"}</h2>
+        <p class="hint" style="margin:0">From ${sourcesOk} job sources, searched ${longDay(r.ranAt.slice(0, 10))}. Each one links to the company's own posting.</p></div></div>
+      <details class="filtered"><summary>What Was Left Out</summary><ul>
         ${dropped.tooOld ? `<li>${dropped.tooOld} older than 30 days</li>` : ""}
         ${dropped.wrongPlace ? `<li>${dropped.wrongPlace} not remote in the US or not in your cities</li>` : ""}
         ${dropped.duplicate ? `<li>${dropped.duplicate} duplicates posted on more than one site</li>` : ""}
@@ -673,7 +726,9 @@ document.addEventListener("click", async e => {
   const sv = e.target.closest("[data-save]"), pw = e.target.closest("[data-passwhy]");
   if (sv || pw) {
     const id = sv ? sv.dataset.save : pw.dataset.passwhy;
-    const job = jobById(id); if (!job) return;
+    const found = jobById(id); if (!found) return;
+    const job = { ...found, checkedAt: found.checkedAt || result?.ranAt };   // seen live in this search
+    if (!user) { pending = { id, status: sv ? "saved" : "passed", note: pw ? "Passed: " + pw.dataset.why : null }; askAccount("save"); return; }
     (sv || pw).disabled = true;
     const row = { user_id: user.id, job_key: id, job, status: sv ? "saved" : "passed", updated_at: new Date().toISOString(), ...(pw ? { note: "Passed: " + pw.dataset.why } : {}) };
     const { data, error } = await sb.from("saved_jobs").upsert(row, { onConflict: "user_id,job_key" }).select().single();
@@ -684,18 +739,20 @@ document.addEventListener("click", async e => {
     renderMatches(); renderMine();
   }
 });
-document.addEventListener("change", async e => {
-  const st = e.target.closest("[data-status]"), fu = e.target.closest("[data-follow]");
-  if (!st && !fu) return;
-  const id = (st || fu).dataset.status || (st || fu).dataset.follow;
+document.addEventListener("click", async e => {
+  const stb = e.target.closest("[data-status]"), fu = e.target.closest("[data-follow]");
+  if (!stb && !fu) return;
+  const id = (stb || fu).dataset.status || (stb || fu).dataset.follow;
   const before = saved.find(s => s.id === id);
-  const patch = st ? { status: st.value } : { follow_up: fu.value || null };
+  const st = stb && { value: stb.dataset.val };
+  if (st && st.value === before.status) return;
+  const patch = st ? { status: st.value } : { follow_up: fu.dataset.days ? isoDay(+fu.dataset.days) : null };
   if (st?.value === "applied" && before.status !== "applied" && !before.follow_up) patch.follow_up = isoDay(7);
   const { data, error } = await sb.from("saved_jobs").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select().single();
   if (error) { toast(error.message); return; }
   saved = saved.map(s => s.id === id ? data : s);
   if (st) {
-    if (st.value === "applied" && before.status !== "applied") toast(patch.follow_up ? `Applied. Nice. I set a follow-up for ${mdy(patch.follow_up + "T12:00:00")}.` : "Applied. Nice.");
+    if (st.value === "applied" && before.status !== "applied") toast(patch.follow_up ? `Applied. Follow-up set for ${longDay(patch.follow_up)}.` : "Applied. Nice.");
     if (st.value === "interview") celebrate("interview", data);
     if (st.value === "offer") celebrate("offer", data);
   }
@@ -708,6 +765,7 @@ function renderMine() {
   $("#nMine").textContent = live.length ? `(${live.length})` : "";
   const groups = [["offer", "Offers"], ["interview", "Interviewing"], ["applied", "Applied"], ["saved", "Saved, Not Applied Yet"], ["closed", "Closed Out"]];
   const by = s => (a, b) => (a.follow_up || "9999").localeCompare(b.follow_up || "9999");
+  if (!user) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img src="img/papers.webp" alt=""><h2>Keep the jobs you like</h2><p class="hint">With a free account, saved jobs land here, and you can mark each one Applied, Interviewing or Offer and pick a follow-up day.</p><button class="btn" data-account="mine">Make a Free Account</button></div>`; return; }
   if (!live.length) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img src="img/papers.webp" alt=""><h2>Nothing saved yet</h2><p class="hint">Tap Save on a match and it lands here. Then mark it Applied, Interviewing or Offer as it moves.</p></div>`; return; }
   const applied = live.filter(s => s.status !== "saved").length;
   $("#mineBody").innerHTML = `<div class="card moment" style="margin-top:16px"><img src="img/${applied ? "cheer" : "wave"}.webp" alt=""><div><h2>${applied} ${applied === 1 ? "application" : "applications"} out</h2><p class="hint" style="margin:0">${live.filter(s => s.status === "interview").length} interviewing · ${live.filter(s => s.status === "saved").length} saved to apply</p></div></div>` + todayCard() +
@@ -786,14 +844,15 @@ function renderMe() {
     line("Pay Floor", w.payFloor ? k(w.payFloor) + " a year" : "") +
     line("Want Less Of", esc([(w.avoid || []).includes("sales") ? "Sales jobs" : "", p.prefs?.hideSenior ? "Senior, Lead and Director titles" : "", p.prefs?.hideUnderFloor ? "Jobs under your pay floor" : "", ...(p.prefs?.hideCompanies || []).map(c => "Jobs at " + c)].filter(Boolean).join(", "))) +
     (p.prefs && (p.prefs.hideSenior || p.prefs.hideUnderFloor || p.prefs.hideCompanies?.length) ? `<button class="btn ghost small" style="margin-top:10px" id="unlearn">Show Everything Again</button>` : "");
-  $("#meEmail").textContent = "Signed in as " + (user?.email || "");
+  $("#meEmail").textContent = user ? "Signed in as " + user.email : "You're looking without an account. Your answers are kept on this device only.";
+  $("#meAcct").classList.toggle("hidden", !user); $("#meJoin").classList.toggle("hidden", !!user);
   renderBg();
 }
 $("#editMe").onclick = startSetup;
 document.addEventListener("click", async e => {
   if (!e.target.closest("#unlearn")) return;
   profile.data = { ...profile.data, prefs: { asked: profile.data.prefs?.asked || {} } };
-  await sb.from("profiles").update({ data: profile.data, updated_at: new Date().toISOString() }).eq("user_id", user.id);
+  await saveProfile({ data: profile.data });
   toast("Done. Everything shows again."); renderMe(); renderMatches();
 });
 $("#cGo").onclick = async () => {
@@ -843,8 +902,8 @@ function openSheet(id) {
     <div class="grab job"><div style="flex:1;min-width:0"><div class="co">${esc(j.company)}</div><p class="title" style="font-size:20px">${esc(j.title)}</p></div><button class="btn ghost small" data-close aria-label="Close">Close</button></div>
     ${meta(j)}
     <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}</div>
-    <h3>Posting Check</h3>
-    ${gone ? `<div class="verdict gone"><b>Taken Down</b><p>${esc(j.company)} took it off their job board. Close it out and move on.</p></div>` : c.label ? `<div class="verdict ${CHECK[c.label]}"><b>${esc(c.label)}</b><p>${VERDICT[c.label]}</p></div>` : ""}
+    <h3>Paper Trail</h3>
+    ${gone ? `<div class="verdict gone"><b>Taken Down</b><p>${esc(j.company)} took it off their job board. Close it out and move on.</p></div>` : c.label && c.label !== "Looks Real" ? `<div class="verdict ${CHECK[c.label]}"><b>${esc(c.label)}</b><p>${VERDICT[c.label]}</p></div>` : ""}
     <ul class="ev">${gone ? `<li><span class="dot miss"></span>No longer on ${esc(j.company)}'s job board as of ${mdy(gone)}.</li>` : ""}${c.warn.map(w => `<li><span class="dot check"></span>${esc(w)}</li>`).join("")}${c.good.map(g => `<li><span class="dot ok"></span>${esc(g)}</li>`).join("")}</ul>
     ${ko.length ? `<h3>Check Before You Apply</h3><ul class="ev">${ko.map(k => `<li><span class="dot ${k.status}"></span><div style="flex:1" class="ko"><span><b>${esc(k.need)}</b></span><span class="n">${KO_WORD[k.status]} · ${esc(k.note)}</span></div></li>`).join("")}</ul>` : ""}
     ${j.reasons?.length ? `<h3>Why It Fits</h3><ul class="why" style="margin-top:0">${j.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
@@ -853,7 +912,38 @@ function openSheet(id) {
     <div class="stick"><a class="btn" style="text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center" href="${esc(j.applyUrl)}" target="_blank" rel="noopener">Open Posting</a>${s ? "" : `<button class="btn ghost" data-save="${esc(j.id)}">Save</button>`}</div>`;
   $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
 }
-function closeSheet() { $("#sheet").classList.add("hidden"); document.body.style.overflow = ""; }
+function closeSheet() {
+  $("#sheet").classList.add("hidden"); document.body.style.overflow = "";
+  const a = $("#authCard"); if (a.parentElement.id !== "authSlot") { $("#authSlot").appendChild(a); a.classList.add("hidden"); }
+}
+const PAGES = {
+  about: `<h2 style="margin-top:0">About Recruiter Goose</h2>
+    <p>Recruiter Goose helps people from the trades, counter sales, purchasing and the jobsite find office and construction-tech jobs that their background already fits.</p>
+    <h2>Where the Jobs Come From</h2>
+    <p>Public job boards that companies run themselves, plus a few remote job sites. Every job links to the company's own posting, and you apply there. Recruiter Goose never applies for you and never sends your information to an employer.</p>
+    <h2>How Matching Works</h2>
+    <p>It compares the jobs you've held, your skills and what you want with each posting's title and description. The rules are written by hand and the same for everyone. No AI reads your answers, and nobody pays to be shown first.</p>
+    <h2>Who Makes It</h2>
+    <p>Gus Johnson, who spent seven years in construction supply: takeoffs, purchasing, a manufacturer's rep agency and warehouse work, before moving into construction tech.</p>
+    <p class="hint">It's free. There are no ads.</p>`,
+  privacy: `<h2 style="margin-top:0">Privacy</h2>
+    <p class="hint">Updated October 24, 2026</p>
+    <h2>Without an Account</h2>
+    <p>Your answers and last search are kept in this browser only. Searches send your answers to our server to find matches, and nothing is stored there.</p>
+    <h2>With an Account</h2>
+    <p>We store your email, your answers, your last search and the jobs you save, so they follow you to any device. We use your email only to sign you in.</p>
+    <h2>Your Resume</h2>
+    <p>If you add a resume, its text is read in your browser and sent once to fill in your answers. The file and its text are not kept.</p>
+    <h2>What We Never Do</h2>
+    <p>We never sell or share your information, never send it to employers or recruiters, and never email you marketing.</p>
+    <h2>Deleting Your Data</h2>
+    <p>Signed in, go to Me, then Delete My Account. Your account, answers and saved jobs are deleted right away.</p>`,
+};
+document.addEventListener("click", e => {
+  const pg = e.target.closest("[data-page]"); if (!pg) return;
+  $("#sheetBody").innerHTML = `<div class="grab"><div style="flex:1"></div><button class="btn ghost small" data-close aria-label="Close">Close</button></div><div class="page">${PAGES[pg.dataset.page]}</div>`;
+  $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
+});
 $("#sheet").addEventListener("click", e => { if (e.target.id === "sheet" || e.target.closest("[data-close]")) closeSheet(); });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !$("#sheet").classList.contains("hidden")) closeSheet();
@@ -924,15 +1014,40 @@ async function load() {
     sb.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
     sb.from("saved_jobs").select("*").order("updated_at", { ascending: false }),
   ]);
+  const g = guest ? { data: profile?.data, result: guestResult } : readGuest();
   profile = p; saved = s || []; result = p?.last_result || null;
-  if (!p?.data?.pastTitles?.length) return startSetup();
+  if (!p?.data?.pastTitles?.length && g?.data?.pastTitles?.length) {
+    const data = { ...g.data, name: g.data.name || user.user_metadata?.name || "" };
+    const row = { user_id: user.id, data, last_result: g.result || null, last_run_at: g.result?.ranAt || null, updated_at: new Date().toISOString() };
+    const { error } = await sb.from("profiles").upsert(row);
+    if (!error) { profile = row; result = g.result || null; }
+  }
+  guest = false; clearGuest();
+  if (pending) {
+    const found = jobById(pending.id), job = found && { ...found, checkedAt: found.checkedAt || result?.ranAt };
+    if (job) {
+      const { data } = await sb.from("saved_jobs").upsert({ user_id: user.id, job_key: pending.id, job, status: pending.status, updated_at: new Date().toISOString(), ...(pending.note ? { note: pending.note } : {}) }, { onConflict: "user_id,job_key" }).select().single();
+      if (data) { saved = saved.filter(x => x.job_key !== pending.id).concat(data); toast(pending.status === "saved" ? "Account made. The job is in My Jobs." : "Account made."); }
+    }
+    pending = null;
+  }
+  closeSheet();
+  if (!profile?.data?.pastTitles?.length) return startSetup();
   openApp("matches"); renderMine(); recheckSaved();
   if (!result || Date.now() - Date.parse(result.ranAt) > 12 * 3600e3) runSearch(); else renderMatches();
 }
-let loadedFor = null;
+let loadedFor = null, guestResult = null;
 sb.auth.onAuthStateChange((_e, session) => {
+  const was = user;
   user = session?.user || null;
-  if (!user) { loadedFor = null; profile = result = null; saved = []; $("#topbar").classList.add("hidden"); show("vWelcome"); return; }
+  if (!user) {
+    loadedFor = null; saved = [];
+    if (guest && !was) return;   // already looking around as a guest
+    const g = readGuest();
+    if (!was && g?.data?.pastTitles?.length) { guest = true; profile = { data: g.data }; result = g.result || null; openApp("matches"); result ? renderMatches() : runSearch(); return; }
+    guest = false; profile = result = null; $("#topbar").classList.add("hidden"); show("vWelcome"); return;
+  }
+  if (guest) guestResult = result;
   if (loadedFor === user.id) return;
   loadedFor = user.id; setTimeout(load, 0);
 });

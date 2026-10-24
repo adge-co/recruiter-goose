@@ -111,10 +111,19 @@ const step = async (name, fn) => { await fn(); passed++; console.log("ok -", nam
 for (const dark of [false, true]) {
   const tag = dark ? "dark" : "light";
   const { ctx, page, errors } = await open(browser, { width: 390, height: 844, dark });
-  await step(`[${tag}] make an account and sign in`, async () => {
-    await page.click('.seg button[data-mode="up"]');
-    await page.fill("#aName", "Gus"); await page.fill("#aEmail", "gus@example.com"); await page.fill("#aPass", "a-long-password");
-    await page.click("#aGo");
+  await step(`[${tag}] the welcome says what it is, has About and Privacy, and lets people look without an account`, async () => {
+    await page.waitForSelector("#vWelcome:not(.hidden)");
+    const body = await page.textContent("body");
+    for (const gone of ["Hey, I'm your recruiter", "Built by", "with Claude", "No resume upload"]) assert.ok(!body.includes(gone), "still says: " + gone);
+    assert.ok(await page.isHidden("#authCard"), "sign-up form waits behind Sign In");
+    await page.click('footer [data-page="privacy"]');
+    assert.ok((await page.textContent("#sheetBody")).includes("Delete My Account"));
+    await page.click("#sheet [data-close]");
+    await page.click('footer [data-page="about"]');
+    assert.ok((await page.textContent("#sheetBody")).includes("Where the Jobs Come From"));
+    await page.click("#sheet [data-close]");
+    await shot(page, `phone-${tag}-welcome`);
+    await page.click("#tryIt");
     await page.waitForSelector("#vSetup:not(.hidden)");
   });
   await step(`[${tag}] setup step 1 takes past jobs`, async () => {
@@ -147,11 +156,13 @@ for (const dark of [false, true]) {
     for (const x of ["Counter Sales", "Purchasing Agent"]) { await page.fill("#iTitles", x); await page.press("#iTitles", "Enter"); }
     await page.click("#next1"); await page.waitForSelector("#bgSetup .bg");
   });
-  await step(`[${tag}] search shows matches with a posting check on each`, async () => {
+  await step(`[${tag}] a guest's search shows matches, with warnings only where there are some`, async () => {
     await page.click("#next2");
     await page.waitForSelector("#mBody .job");
     const pills = await page.$$eval("#mBody .job .pills", els => els.map(e => e.textContent));
-    assert.ok(pills.some(p => p.includes("Looks Real") || p.includes("Check First")), pills.join(" / "));
+    assert.ok(!pills.some(p => p.includes("Looks Real")), "cards grade themselves: " + pills.join(" / "));
+    assert.ok(!(await page.$("#mBody .stats")), "stats row is gone");
+    assert.equal(await page.$eval(".tabs", el => getComputedStyle(el).position), "fixed", "tab bar sits at the bottom on a phone");
     const metas = await page.$$eval("#mBody .job .meta", els => els.map(e => e.textContent));
     assert.ok(metas.some(m => /Open (\d+ days|1 day|since today)/.test(m) && /\$\d+k/.test(m)), metas.join(" / "));
     await noSideScroll(page);
@@ -162,15 +173,20 @@ for (const dark of [false, true]) {
     await card.locator("button.more").click();
     await page.waitForSelector("#sheet:not(.hidden)");
     const text = await page.textContent("#sheetBody");
-    for (const want of ["Posting Check", "Looks Real", "Nothing here says stale", "First Posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working as a Counter Sales"])
+    for (const want of ["Paper Trail", "First Posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working as a Counter Sales"])
       assert.ok(text.includes(want), "sheet is missing: " + want);
     await page.waitForTimeout(400);
     await shot(page, `phone-${tag}-sheet`);
+    assert.ok(!text.includes("Looks Real"), "sheet grades itself");
     await page.click('#sheet [data-save="gh:buildco:1"]');
-    await page.waitForFunction(() => !document.querySelector('#sheet [data-save]'));
-    assert.ok(!(await page.isHidden("#sheet")), "sheet stays open after saving");
-    await page.keyboard.press("Escape");
-    assert.ok(await page.isHidden("#sheet"));
+    await page.waitForSelector("#sheet #authCard:not(.hidden)");
+    assert.ok((await page.textContent("#sheetBody")).includes("Keep This Job"));
+    await page.fill("#aName", "Gus"); await page.fill("#aEmail", "gus@example.com"); await page.fill("#aPass", "a-long-password");
+    await page.click("#aGo");
+    await page.waitForFunction(() => window.__db.saved_jobs.length === 1 && window.__db.profiles.length === 1);
+    assert.ok((await page.evaluate(() => window.__db.profiles[0].data.pastTitles)).includes("Counter Sales"), "guest answers carried into the account");
+    await page.waitForSelector("#sheet.hidden", { state: "attached" });
+    assert.ok(await page.$("#authSlot #authCard"), "sign-up form goes back to its place");
   });
   await step(`[${tag}] My Jobs has the Today card, and Applied sets a follow-up a week out`, async () => {
     await page.click('.tab[data-tab="mine"]');
@@ -178,11 +194,14 @@ for (const dark of [false, true]) {
     const today = await page.textContent("#mineBody .today");
     assert.ok(today.includes("Strong fit at") || today.includes("Nothing due"), today);
     const id = await page.getAttribute("#mineBody [data-status]", "data-status");
-    await page.selectOption(`[data-status="${id}"]`, "applied");
-    await page.waitForFunction(i => document.querySelector(`[data-follow="${i}"]`)?.value, id);
-    const fu = await page.inputValue(`[data-follow="${id}"]`);
+    await page.click(`[data-status="${id}"][data-val="applied"]`);
+    await page.waitForSelector(`[data-fuwhen="${id}"]`);
     const want = new Date(Date.now() + 7 * 864e5 - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
-    assert.equal(fu, want);
+    assert.equal(await page.evaluate(() => window.__db.saved_jobs[0].follow_up), want);
+    assert.ok(await page.$(`[data-status="${id}"][data-val="applied"].on`), "Applied shows as picked");
+    assert.ok(!(await page.$("#mineBody select, #mineBody input[type=date]")), "no browser select or date box");
+    await page.click(`[data-follow="${id}"][data-days="14"]`);
+    await page.waitForFunction(w => window.__db.saved_jobs[0].follow_up > w, want);
     await noSideScroll(page);
     await shot(page, `phone-${tag}-myjobs`);
   });
