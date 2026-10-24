@@ -247,7 +247,8 @@ export function score(j, p, common) {
   if (field.myHits.length >= 2) fieldPts = 20;
   else if (field.myHits.length === 1) fieldPts = 12;
   else if (field.companyShared.length) fieldPts = 8;
-  if (field.myHits.length) reasons.push(`${titleCase(field.myHits.slice(0, 2).join(", "))} work, like your background`);
+  const hitWords = field.myHits.filter(w => !field.myHits.includes(w + "s"));   // "contractors", not "contractor, contractors"
+  if (hitWords.length) reasons.push(`${titleCase(hitWords.slice(0, 2).join(", "))} work, like your background`);
   else if (field.companyShared.length) reasons.push(`Company works in ${fieldName(field.companyShared[0])}`);
   s += fieldPts;
 

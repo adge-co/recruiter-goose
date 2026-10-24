@@ -11,6 +11,7 @@ import { match, checkJob, verify } from "../engine/src/match.js";
 import { parseResume } from "../engine/src/resume.js";
 import { readBackground } from "../engine/src/translate.js";
 
+const JSPDF = createRequire(import.meta.url).resolve("jspdf/dist/jspdf.umd.min.js");   // the PDF maker the app loads from cdnjs
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const APP = join(ROOT, "app"), SHOTS = join(ROOT, "test-ui", "shots");
 await mkdir(SHOTS, { recursive: true });
@@ -83,7 +84,7 @@ const FAKE = `window.supabase = { createClient() {
   };
 } };`;
 
-const TYPES = { ".html": "text/html", ".webp": "image/webp", ".png": "image/png", ".webmanifest": "application/manifest+json" };
+const TYPES = { ".js": "application/javascript", ".html": "text/html", ".webp": "image/webp", ".png": "image/png", ".webmanifest": "application/manifest+json" };
 async function open(browser, { width, height, dark, seed }) {
   const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: dark ? "dark" : "light", deviceScaleFactor: 2 });
   const page = await ctx.newPage();
@@ -93,6 +94,7 @@ async function open(browser, { width, height, dark, seed }) {
   await page.exposeFunction("__engine", engine);
   if (seed) await page.addInitScript(s => { window.__db = s.db; window.__user = s.user; }, seed);
   await page.route("https://cdn.jsdelivr.net/**", r => r.fulfill({ contentType: "application/javascript", body: FAKE }));
+  await page.route("https://cdnjs.cloudflare.com/ajax/libs/jspdf/**", async r => r.fulfill({ contentType: "application/javascript", body: await readFile(JSPDF) }));
   await page.route("http://app.test/**", async r => {
     const path = new URL(r.request().url()).pathname.replace(/^\/$/, "/index.html");
     try { r.fulfill({ body: await readFile(join(APP, path)), contentType: TYPES[extname(path)] || "application/octet-stream" }); } catch { r.fulfill({ status: 404, body: "" }); }
@@ -173,7 +175,7 @@ for (const dark of [false, true]) {
     await card.locator(".title").click();
     await page.waitForSelector("#sheet:not(.hidden)");
     const text = await page.textContent("#sheetBody");
-    for (const want of ["Paper Trail", "First Posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working as a Counter Sales"])
+    for (const want of ["Your Resume For This Job", "Add My Resume", "Paper Trail", "First Posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working as a Counter Sales"])
       assert.ok(text.includes(want), "sheet is missing: " + want);
     await page.waitForTimeout(400);
     await shot(page, `phone-${tag}-sheet`);
@@ -271,6 +273,90 @@ for (const [w, h, dark, tag] of [[390, 844, false, "phone-light"], [1280, 860, f
     await page.click("#sheet [data-close]");
   });
   await step(`[${tag}] no page errors`, async () => assert.deepEqual(errors, []));
+  await ctx.close();
+}
+// 3. Their resume made for one job, the PDF, the email, and Gmail moving a job along.
+const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817) 555-0142", city: "Fort Worth, TX",
+  jobs: [{ title: "Purchasing Agent", company: "Lone Star Mechanical", dates: "Jan 2021 - Present", bullets: ["Kept the shop clean and organized", "Managed purchase orders and vendor lead times for 40+ active jobs", "Trained two coordinators on Epicor", "Ran onboarding for new contractor accounts"] },
+    { title: "Counter Sales", company: "Builders Supply Co", dates: "2017 - 2020", bullets: ["Quoted doors and windows for contractor accounts", "Built takeoffs from plans"] }],
+  skills: ["Purchasing", "Epicor", "Excel"], education: ["OSHA 10"] };
+{
+  const seed3 = structuredClone(seed);
+  seed3.db.profiles[0].data = { ...seed3.db.profiles[0].data, pastTitles: ["Purchasing Agent"], resume: RESUME, wants: { roles: ["implementation", "purchasing"], remote: true, cities: [] } };
+  const { ctx, page, errors } = await open(browser, { width: 390, height: 844, dark: false, seed: seed3 });
+  const drafts = [];
+  await page.addInitScript(() => {
+    window.RG_GOOGLE_CLIENT_ID = "test.apps.googleusercontent.com";
+    window.google = { accounts: { oauth2: { initTokenClient: o => ({ requestAccessToken() { setTimeout(() => o.callback({ access_token: "tok", expires_in: 3600 }), 0); } }), revoke() {} } } };
+  });
+  await ctx.route("https://mail.google.com/**", r => r.fulfill({ contentType: "text/html", body: "<p>Gmail</p>" }));
+  await page.route("https://gmail.googleapis.com/**", async r => {
+    const u = new URL(r.request().url());
+    if (u.pathname.endsWith("/drafts")) { drafts.push(JSON.parse(r.request().postData())); return r.fulfill({ json: { id: "d1", message: { id: "m1" } } }); }
+    if (u.pathname.endsWith("/messages")) return r.fulfill({ json: u.searchParams.get("q").includes("BuildCo") ? { messages: [{ id: "x1" }] } : {} });
+    return r.fulfill({ json: { snippet: "Thanks for applying. We'd like to schedule a phone screen. What is your availability this week?", internalDate: String(Date.now()),
+      payload: { headers: [{ name: "Subject", value: "Next steps with BuildCo" }, { name: "From", value: "Dana Lee <dana@buildco.com>" }] } } });
+  });
+  await page.reload();
+  await step("[resume] a job's sheet shows how the resume lines up, and the PDF downloads", async () => {
+    await page.waitForSelector("#mBody .summary");
+    await page.click('.tab[data-tab="mine"]');
+    await page.locator('#mineBody .rows [data-open="gh:buildco:2"]').click();
+    await page.waitForSelector("#sheet:not(.hidden) .fitline");
+    const text = await page.textContent("#sheetBody");
+    assert.match(text, /\d+ of \d+words from this posting are already on your resume/);
+    await page.locator("#sheetBody .fitline").evaluate(el => el.scrollIntoView({ block: "center" }));
+    await page.waitForTimeout(450);
+    await shot(page, "phone-light-resume-fit");
+    await page.click("#sheetBody details:has(.paper) summary");
+    const lines = await page.$$eval("#sheetBody .paper li", els => els.map(e => e.textContent));
+    assert.equal(lines[0], "Ran onboarding for new contractor accounts", "the line that fits this posting comes first");
+    assert.equal(lines[1], "Managed purchase orders and vendor lead times for 40+ active jobs", "then the line with a number in it");
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#sheetBody [data-pdf]")]);
+    assert.equal(dl.suggestedFilename(), "Jordan Avery - BuildCo Implementation Specialist.pdf");
+    const head = await (await import("node:fs/promises")).readFile(await dl.path());
+    assert.equal(head.subarray(0, 5).toString(), "%PDF-");
+    await page.waitForTimeout(400);
+    await shot(page, "phone-light-resume-sheet");
+  });
+  await step("[resume] the email is written for the job, and Gmail saves it as a draft with the PDF", async () => {
+    await page.click("#sheetBody [data-mail]");
+    await page.waitForSelector("#mailBody");
+    assert.match(await page.inputValue("#mailBody"), /^Hello BuildCo hiring team,\n\nI'm applying for the Implementation Specialist role\./);
+    assert.ok(await page.$("#sheetBody [data-compose]"), "without Gmail it opens a filled-in Gmail compose");
+    await page.click("#sheetBody [data-gconnect]");
+    await page.waitForFunction(() => window.__db.saved_jobs[1].status === "interview");
+    assert.equal(await page.evaluate(() => window.__db.saved_jobs[1].job.mail.kind), "interview");
+    await page.waitForSelector(".party button"); await page.click(".party button");
+    await page.waitForSelector("#sheetBody [data-gdraft]");
+    await page.fill("#mailBody", (await page.inputValue("#mailBody")) + "\nP.S. Thanks.");
+    await page.click("#sheetBody [data-gdraft]");
+    await page.waitForFunction(() => document.querySelector("#toast")?.textContent.includes("Gmail Drafts"));
+    const raw = Buffer.from(drafts[0].message.raw.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString();
+    assert.match(raw, /Subject: Application: Implementation Specialist - Jordan Avery/);
+    assert.match(raw, /Content-Type: application\/pdf; name="Jordan Avery - BuildCo Implementation Specialist.pdf"/);
+    assert.ok(Buffer.from(raw.split("charset=UTF-8")[1].split("--rg")[0].split("base64")[1].replace(/\s+/g, ""), "base64").toString().includes("P.S. Thanks."), "their edits go into the draft");
+    assert.ok((await page.textContent("#sheetBody")).includes("Interview Request in Gmail"), "the sheet says why it moved");
+    await shot(page, "phone-light-resume-email");
+    await page.click("#sheet [data-close]");
+  });
+  await step("[resume] Me shows the resume and Gmail, and edits save", async () => {
+    await page.click('.tab[data-tab="me"]');
+    await page.waitForSelector("#resumeBody .kv");
+    assert.ok((await page.textContent("#resumeBody")).includes("Purchasing Agent, Counter Sales"));
+    assert.ok((await page.textContent("#gmailBody")).includes("Check for Replies"));
+    await page.click("#editResume");
+    await page.waitForSelector("#rjB1");
+    await page.fill("#rjB1", "Quoted doors and windows for contractor accounts\nBuilt takeoffs from plans\nRan the will-call desk");
+    await page.click("#rAddJob");
+    await page.fill("#rjT2", "Warehouse Associate");
+    await page.click("#rSave");
+    await page.waitForFunction(() => window.__db.profiles[0].data.resume.jobs.length === 3);
+    assert.equal(await page.evaluate(() => window.__db.profiles[0].data.resume.jobs[1].bullets.length), 3);
+    await noSideScroll(page);
+    await shot(page, "phone-light-resume-me");
+  });
+  await step("[resume] no page errors", async () => assert.deepEqual(errors, []));
   await ctx.close();
 }
 await browser.close();

@@ -21,7 +21,7 @@ jobs:
           node-version: 22
       - run: npm test
         working-directory: engine
-      - run: npm install --no-save playwright@1.49.1 && npx playwright install --with-deps chromium && node test-ui/app.ui.mjs
+      - run: npm install --no-save playwright@1.49.1 jspdf@2.5.1 && npx playwright install --with-deps chromium && node test-ui/app.ui.mjs
   publish:
     needs: test
     runs-on: ubuntu-latest
