@@ -17,7 +17,7 @@ export const BACKGROUNDS = [
     match: /\b(purchas\w*|buyer|procure\w*|sourcing|materials manager)\b/i,
     roles: ["purchasing", "operations", "implementation", "pricing"],
     why: "Buying is the same job in every industry: vendors, lead times, price and paper. Recruiters search for it by title, so use the words they type.",
-    say: [["Ordered materials", "Managed purchase orders and vendor lead times"], ["Called vendors", "Negotiated pricing and terms with suppliers"]],
+    say: [["Ordered materials", "Managed purchase orders and vendor lead times"], ["Called vendors", "Worked with vendors on price and delivery dates"]],
     numbers: ["Dollars bought per year", "Number of vendors", "Savings you found"],
   },
   {
@@ -33,7 +33,7 @@ export const BACKGROUNDS = [
     match: /\b(project coordinator|assistant project manager|apm|project administrator|project assistant)\b/i,
     roles: ["project manager", "coordinator", "implementation", "operations"],
     why: "Submittals, RFIs, schedules and change orders map straight to project and implementation work.",
-    say: [["Kept the job organized", "Managed submittals, RFIs and change orders"], ["Helped the PM", "Ran schedules and owner updates for the project team"]],
+    say: [["Kept the job organized", "Tracked submittals, RFIs and change orders"], ["Helped the PM", "Kept schedules and owner updates current for the project manager"]],
     numbers: ["Project size in dollars", "Jobs at once", "Subs or vendors you tracked"],
   },
   {
@@ -81,7 +81,7 @@ export const BACKGROUNDS = [
     match: /\b(branch manager|store manager|general manager|assistant manager|location manager|operations manager)\b/i,
     roles: ["operations", "warehouse", "purchasing", "sales", "training"],
     why: "You ran a small business inside a bigger one: people, stock, money and customers. That reads as operations.",
-    say: [["Ran the store", "Managed a branch's sales, staff and inventory"], ["Hired and trained", "Hired, trained and scheduled a team"]],
+    say: [["Ran the store", "Ran a branch's sales, staff and inventory"], ["Hired and trained", "Hired, trained and scheduled a team"]],
     numbers: ["Yearly sales", "Team size", "Margin or growth"],
   },
   {
@@ -105,7 +105,7 @@ export const BACKGROUNDS = [
     match: /\b(project engineer|field engineer|assistant engineer)\b/i,
     roles: ["project manager", "estimating", "implementation"],
     why: "Project engineers already do the paperwork side of construction: submittals, RFIs and cost tracking.",
-    say: [["Handled paperwork", "Managed RFIs, submittals and cost tracking"]],
+    say: [["Handled paperwork", "Kept RFIs, submittals and job costs up to date"]],
     numbers: ["Project size", "RFIs or submittals handled", "Change orders priced"],
   },
   {

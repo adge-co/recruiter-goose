@@ -58,7 +58,8 @@ test("the made-for-this-job resume puts fitting lines first and never adds what 
   assert.ok(t.missing.includes("NetSuite"), "NetSuite is in the posting, not the resume");
   assert.ok(!t.skills.includes("NetSuite"), "a missing word is never put on the resume");
   assert.equal(t.skills[0], "Purchasing");
-  assert.equal(t.jobs[0].bullets.length, 3);
+  assert.equal(t.jobs[0].bullets.length, 2, "lines that fit nothing drop off, down to two");
+  assert.ok(!t.jobs[0].bullets.some(b => /shop clean/.test(b)));
   assert.match(t.summary, /^7 years of experience, most recently as a Purchasing Agent at Lone Star Mechanical\. Hands-on with purchasing, purchase orders and vendor management\./);
   assert.ok(!t.skills.includes("Procurement"), "their own word, not the posting's");
   assert.doesNotMatch(t.summary, /Applying for/, "the email says which job; the resume doesn't");
@@ -290,4 +291,34 @@ test("nine more layouts: military, oldest first, projects lists, check-mark skil
   assert.match(T.tailor(mil, { title: "Buyer", company: "X" }).summary, /in the U\.S\. Army\./);
   assert.deepEqual(read("b1_indeed").education[0], "High school diploma · Arlington High School - Arlington, TX · 2014 to 2018");
   assert.ok(!read("b4_union").education.includes("APPRENTICESHIP"));
+});
+
+// Ten more: a career snapshot table, an HVAC tech's licenses, a career break, dates on the left, a two-page header,
+// territory lines, Title Case headings with colons, all Spanish, a credential after the name, and one line per job.
+test("ten more layouts: snapshot tables, licenses, career breaks, page headers, territories, credentials", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = f => T.readResume(readFileSync(new URL(`./resumes/${f}.txt`, import.meta.url), "utf8"));
+  const jobs = f => read(f).jobs.map(j => [j.title, j.company, j.dates]);
+  assert.deepEqual(jobs("c1_career_snapshot").map(j => j[0]), ["Inside Sales / Counter Representative", "Warehouse Lead", "Delivery Driver"]);
+  const hvac = read("c2_hvac_epa");
+  assert.equal(hvac.jobs[0].company, "Berkeys Air Conditioning, Plumbing & Electrical");
+  assert.ok(hvac.education.some(e => /EPA Section 608/.test(e)) && hvac.education.some(e => /OSHA 10/.test(e)));
+  assert.ok(hvac.skills.includes("ServiceTitan") && !hvac.education.includes("TOOLS"));
+  const gap = read("c3_career_break");
+  assert.ok(gap.skills.includes("Excel (VLOOKUP, pivot tables)"));
+  const g = T.tailor(gap, { title: "Buyer", company: "X", description: "purchasing" });
+  assert.match(g.summary, /^Most recently worked as a Senior Buyer at Builders FirstSource\./);
+  assert.doesNotMatch(T.email(g, { title: "Buyer", company: "X" }).body, /Career Break/);
+  assert.equal(read("c5_two_page_header").jobs[1].bullets.some(b => /Page 2/.test(b)), false);
+  assert.deepEqual(jobs("c6_territory"), [["Outside Sales Representative", "US LBM (Lumbermens Merchandising)", "2021 - Present"], ["Territory Sales Representative", "Boral Roofing", "2017 - 2021"], ["Counter Sales", "84 Lumber", "2014 - 2017"]]);
+  const sup = read("c7_titlecase_colons");
+  assert.deepEqual(T.tailor(sup, { title: "Purchasing Agent", company: "X", description: "purchasing and purchase orders" }).matched, [], "walking punch lists with home buyers isn't purchasing");
+  assert.deepEqual(jobs("c8_spanish"), [["Compradora", "Materiales del Norte S.A. de C.V.", "Marzo 2019 – Presente"], ["Auxiliar de Almacén", "Home Depot México", "Enero 2016 – Febrero 2019"]]);
+  assert.equal(T.fileName({ name: "María Torres" }, { company: "Winsupply", title: "Buyer" }), "María Torres - Winsupply Buyer.pdf");
+  assert.equal(read("c9_summary_first_combo").name, "Jamal Reeves");
+  assert.deepEqual(jobs("c9_summary_first_combo").map(j => j[1]), ["Hensel Phelps", "Austin Commercial"]);
+  const one = read("c10_one_line_jobs");
+  assert.deepEqual(one.jobs.map(j => [j.title, j.company, j.dates]), [["Counter Sales", "Johnstone Supply", "Oct 2022-Present"], ["Parts Runner", "Morrison Supply", "2020-2022"]]);
+  assert.match(one.jobs[0].bullets[0], /^Sell HVAC parts/);
+  assert.deepEqual(one.education, ["EPA 608 Type II", "Forklift"]);
 });

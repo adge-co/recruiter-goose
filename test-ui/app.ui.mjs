@@ -190,7 +190,7 @@ for (const dark of [false, true]) {
     await card.locator(".title").click();
     await page.waitForSelector("#sheet:not(.hidden)");
     const text = await page.textContent("#sheetBody");
-    for (const want of ["Your Resume For This Job", "Add My Resume", "Paper Trail", "first posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working in Counter Sales"])
+    for (const want of ["Your Resume for This Job", "Add My Resume", "Paper Trail", "first posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working in Counter Sales"])
       assert.ok(text.includes(want), "sheet is missing: " + want);
     await page.waitForTimeout(400);
     await shot(page, `phone-${tag}-sheet`);
@@ -233,7 +233,7 @@ for (const dark of [false, true]) {
     await page.click('.tab[data-tab="me"]');
     await page.waitForSelector("#bgCard:not(.hidden) .say");
     const bg = await page.textContent("#bgCard");
-    assert.ok(bg.includes("Say This Instead") && bg.includes("Numbers to Put on Your Resume"));
+    assert.ok(bg.includes("Same Work, Recruiter Words") && bg.includes("Numbers to Put on Your Resume"));
     await page.click('.tab[data-tab="matches"]');
     await page.fill("#cTitle", "Buyer");
     await page.fill("#cText", "Buy fittings and fixtures for our branches. 5+ years in purchasing. CDL required. Travel up to 60%. Pay not listed." + LONG);
@@ -380,8 +380,8 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     assert.ok((await page.textContent("#mineBody .mailnudge")).includes("schedule a phone screen"), "the email shows beside the suggestion");
     await shot(page, "phone-light-gmail-suggest");
     const n = await page.$$eval("#mineBody [data-mailyes]", els => els.length);
-    assert.equal(n, 2, "both BuildCo jobs get the reply as a suggestion");
-    await page.click("#mineBody [data-mailall]");
+    assert.equal(n, 1, "one email moves one job: the BuildCo job furthest along, not both");
+    await page.click("#mineBody [data-mailyes]");
     await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "row2").status === "interview");
     assert.equal(await page.evaluate(() => window.__db.saved_jobs.find(r => r.id === "row2").job.mail.kind), "interview");
     await page.waitForSelector(".party button"); await page.click(".party button");

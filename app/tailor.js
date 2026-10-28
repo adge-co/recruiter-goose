@@ -6,16 +6,17 @@
   // English and Spanish month names ("Ene 2018 – Presente"), for the many bilingual resumes in Texas.
   const MONTH = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|ene(?:ro)?|febrero|marzo|abr(?:il)?|mayo|junio|julio|ago(?:sto)?|sept?iembre|octubre|noviembre|dic(?:iembre)?)\\.?";
   const RANGE = new RegExp(`(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2}\\s*(?:-|–|—|to)\\s*(?:presente|present|actualidad|actualmente|actual|current|now|today|(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2})`, "i");
-  const HEAD_ONE = "profile|summary|professional summary|career summary|objective|about me|contact|experience|work experience|professional experience|relevant experience|employment|employment history|work history|career history|experiencia|experiencia laboral|education|educación|educacion|skills|top skills|core skills|key skills|technical skills|skills and tools|core competencies|areas of expertise|qualifications|summary of qualifications|habilidades|certifications|licenses|certifications and licenses|references|projects|training|certs|skills & tools|skills and certifications|licenses and certifications|key accomplishments|accomplishments|highlights|career highlights|achievements|languages|idiomas|apprenticeship|apprenticeship and training|selected projects|key projects|notable projects|project list";
+  const HEAD_ONE = "profile|summary|professional summary|career summary|objective|about me|contact|experience|work experience|professional experience|relevant experience|employment|employment history|work history|career history|experiencia|experiencia laboral|education|educación|educacion|skills|top skills|core skills|key skills|technical skills|skills and tools|core competencies|areas of expertise|qualifications|summary of qualifications|habilidades|certifications|licenses|certifications and licenses|references|projects|training|certs|skills & tools|skills and certifications|licenses and certifications|key accomplishments|accomplishments|highlights|career highlights|achievements|languages|idiomas|apprenticeship|apprenticeship and training|selected projects|key projects|notable projects|project list|career snapshot|snapshot|career overview|at a glance|career timeline|tools|equipment|tools and equipment|software|licenses and certifications|certifications and training";
   // A heading, alone on its line, in either language: "EXPERIENCIA / EXPERIENCE".
   const HEADING0 = new RegExp(`^(?:${HEAD_ONE})(?:\\s*/\\s*(?:${HEAD_ONE}))?\\s*:?$`, "i");
   // Any short "… Experience / History / Employment" heading ("MILITARY EXPERIENCE", "Work History (oldest first)"), and "MILITARY SERVICE" in capitals.
   const WORK_HEAD = /^(?:[A-Za-z&-]+ ){0,3}(?:experience|history|employment)(?: \([^)]{0,30}\))?:?$/i, CAPS_HEAD = /^(?:[A-Z&]+ ){0,2}(?:MILITARY|SERVICE)(?: [A-Z&]+){0,2}:?$/;
-  const HEADING = { test: l => HEADING0.test(l) || WORK_HEAD.test(l) || CAPS_HEAD.test(l) };
+  const HEADING = { test: l => HEADING0.test(l.replace(/\s*&\s*/g, " and ")) || WORK_HEAD.test(l) || CAPS_HEAD.test(l) };
   // A heading with its list on the same line: "Skills & Tools: Procore; Excel".
   const HEAD_INLINE = /^(skills|core skills|key skills|technical skills|skills and tools|skills & tools|tools|software|certs|certifications|licenses|education|training)\s*:\s*(.+)$/i;
   // How people separate a list of skills: commas, bars, dots, check marks, arrows, or " / ".
-  const SKILL_SPLIT = /\s*[,;|•·✓✔➢►▸♦]\s*|\s+\/\s+/;
+  const SKILL_SPLIT0 = /\s*[,;|•·✓✔➢►▸♦]\s*|\s+\/\s+/;
+  const SKILL_SPLIT = { [Symbol.split]: str => str.replace(/\([^)]*\)/g, m => m.replace(/,/g, "\u0001")).split(SKILL_SPLIT0).map(x => x.replace(/\u0001/g, ",")) };
   // A line that starts with what someone did ("Quoted doors…", "Ran the forklift…") is a line about the work, marked or not.
   const DID = /^(?:[a-z]+ed|ran|set|led|built|kept|made|took|sold|bought|grew|won|cut|wrote|drove|taught|met|oversaw|(?:build|track|count|process|schedule|enter|coordinate|answer|order|run|manage|lead|train|quote|price|handle|load|pull|receive|ship|support|maintain|prepare|review|create|update|assist|work|walk|read|write|send|do|issue|negotiate|plan|supervise|oversee|keep|cut|install|wire|frame|own|help|call|close|open|resolve|reduce|increase|improve|deliver|stage|pick|pack|check|inspect|estimate|bid|sell|buy|serve|teach|operate|clean|sort|stock|file|book|dispatch|route|cover)(?:s|es)?)\b/i;
   const STATE_CODES = "AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC";
@@ -37,18 +38,22 @@
     "SAP", "Oracle", "NetSuite", "QuickBooks", "Epicor", "BisTrack", "Spruce", "Microsoft Dynamics", "Hyphen", "SupplyPro", "BuildPro",
     "ServiceTitan", "Buildertrend", "JobNimbus", "Sage", "Viewpoint", "ERP", "CRM", "SaaS", "software", "troubleshooting", "support",
     "cross-functional", "stakeholders", "relationships", "communication", "problem solving", "leadership", "team lead", "hiring", "coaching",
+    // counter, yard and trade work
+    "counter sales", "inside sales", "outside sales", "will call", "forklift", "CDL", "deliveries", "cycle counts", "bilingual", "Spanish", "EPA 608", "NATE",
+    "service calls", "maintenance agreements", "plumbing", "waterworks", "fittings", "valves", "water heaters", "Eclipse", "Prophet 21", "DMSi", "Agility",
   ];
   const norm = s => " " + String(s || "").toLowerCase().replace(/[^a-z0-9&+ ]+/g, " ").replace(/\s+/g, " ") + " ";
   const esc = w => w.toLowerCase().replace(/[^a-z0-9&+ ]+/g, " ").trim().replace(/\s+/g, " ");
   const has = (text, w) => text.includes(" " + esc(w) + " ") || (!/s$/.test(w) && text.includes(" " + esc(w) + "s "));
   const CONTEXT = new Set(["contractors", "general contractors", "subcontractors", "builders", "distributors", "dealers", "supply houses", "lumber", "building materials",
     "doors", "windows", "millwork", "hvac", "electrical", "roofing", "framing", "software", "saas", "jobsite", "accounts", "relationships", "communication",
-    "stakeholders", "cross-functional", "plans", "specs", "quotes", "estimates", "support", "operations", "field operations", "site visits", "warehouse", "hiring"]);
+    "stakeholders", "cross-functional", "plans", "specs", "quotes", "estimates", "support", "operations", "field operations", "site visits", "warehouse", "hiring",
+    "plumbing", "waterworks", "fittings", "valves", "water heaters", "deliveries"]);
   // Words a recruiter reads as the same thing.
   const SAME = [["purchasing", "procurement", "sourcing"], ["vendor management", "supplier management"], ["estimating", "estimates"], ["quoting", "quotes"], ["negotiation", "negotiating"], ["bids", "bidding"], ["takeoffs", "takeoff"]];
   // Other forms of a word that show the same work ("Purchase lumber", "place POs" show purchasing and purchase orders). They count as a match,
   // but the resume and email always use the person's own words.
-  const FORMS = { purchasing: ["purchase", "purchased", "purchaser", "buyer", "buying"], "purchase orders": ["po", "pos", "purchase order"], inventory: ["inventories", "cycle count", "cycle counts", "dead stock", "stock levels", "reorder points", "fill rate"],
+  const FORMS = { purchasing: ["purchase", "purchased", "purchaser", "compras", "compro", "comprador", "compradora"], /* never "buyers": a superintendent walks homes with buyers */ "purchase orders": ["po", "pos", "purchase order"], inventory: ["inventario", "inventories", "cycle count", "cycle counts", "dead stock", "stock levels", "reorder points", "fill rate"],
     estimating: ["estimator", "estimated"], quoting: ["quoted", "quote"], pricing: ["priced", "price"], scheduling: ["schedule", "scheduled", "scheduler"], negotiation: ["negotiate", "negotiated"],
     dispatch: ["dispatched", "dispatcher", "dispatching"], receiving: ["received", "receive"], shipping: ["shipped", "ship"], budgeting: ["budget"], forecasting: ["forecast", "forecasted"],
     training: ["trained", "train"], bidding: ["bid"], takeoffs: ["takeoff", "take-offs", "take offs"], "vendor management": ["vendors", "vendor relations", "suppliers"], "customer service": ["customers"], "data entry": ["entered", "entering"] };
@@ -90,7 +95,10 @@
   function readResume(text) {
     // Tab columns ("06/2018 - Current<tab>PURCHASING AGENT<tab>ABC Mechanical") become " | " so each column stays its own part.
     const raw0 = prep(text);
-    const lines = raw0.lines.map(l => l.replace(/^\t+/, "").replace(/\t+/g, " | ").replace(/^o \| /, "o ").replace(/ {2,}/g, " ").trimEnd()).filter(l => l.trim());
+    const ONE_LINE_JOB = new RegExp(`^(.{3,140}?${RANGE.source}\\)?)\\s*:\\s+(\\S.*)$`, "i");   // "Counter Sales, Johnstone Supply, NRH TX, Oct 2022-Present: sell HVAC parts…"
+    const lines = raw0.lines.map(l => l.replace(/^\t+/, "").replace(/\t+/g, " | ").replace(/^o \| /, "o ").replace(/ {2,}/g, " ").trimEnd())
+      .filter(l => l.trim() && !/(^|\|\s*)page \d+( of \d+)?\s*$/i.test(l.trim()) && !/^\d{1,2}$/.test(l.trim()))   // "Keisha Brown-Miller | Page 2 of 2"
+      .flatMap(l => { const m = !BULLET.test(l) && l.match(ONE_LINE_JOB); return m ? [m[1], "- " + m[2][0].toUpperCase() + m[2].slice(1)] : [l]; });
     const all = lines.join("\n");
     const out = { name: "", email: "", phone: "", city: "", jobs: [], skills: [], education: [], ...(raw0.twoColumn ? { twoColumn: true } : {}) };
     out.email = (all.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [""])[0];
@@ -100,8 +108,13 @@
     // The name: two to four words of letters (accents too: "José Luis Hernández-Treviño"), near the top, not a heading or a job title.
     // LinkedIn exports put it below the Contact and Top Skills sidebar, so look a little further down.
     const NAME = /^[\p{L}][\p{L}.'’-]+(?: (?:"[\p{L}]+"|\([\p{L}]+\)|[\p{L}][\p{L}.'’-]*)){1,4}$/u;
-    const nameLines = lines.slice(0, 14).flatMap(l => l.split(/\s+[~|•·]\s+/)).map(clean).map(l => l.replace(/^([\p{L}'’-]+), ([\p{L}'’-]+)(.*)$/u, "$2 $1$3"));   // "NGUYEN, THANH" -> "THANH NGUYEN"
-    let name = nameLines.find(l => NAME.test(l) && !HEADING.test(l) && !TITLE_WORD.test(l) && !/\b(street|st|ave|road|rd|drive|dr|tx|texas|linkedin|resume|curriculum)\b/i.test(l)) || "";
+    const nameLines = lines.slice(0, 14).flatMap(l => l.split(/\s+[~|•·]\s+/)).map(clean)
+      .map(l => l.replace(/,?\s+(?:(?:CPPB|CPSM|CPM|CPPO|CSCP|CPIM|PMP|PE|P\.E\.|MBA|LEED AP|CHST|CSP|CDL)\b,?\s*)+$/, ""))   // "JAMAL REEVES, CPPB"
+      .map(l => l.replace(/^([\p{L}'’-]+), ([\p{L}'’-]+)(.*)$/u, "$2 $1$3"));   // "NGUYEN, THANH" -> "THANH NGUYEN"
+    const firstHead = lines.slice(0, 14).findIndex(l => HEADING.test(clean(l)));
+    const isName = l => NAME.test(l) && !HEADING.test(l) && !TITLE_WORD.test(l) && !/\b(street|st|ave|road|rd|drive|dr|tx|texas|linkedin|resume|curriculum)\b/i.test(l);
+    const above = firstHead > 0 ? lines.slice(0, firstHead).flatMap(l => l.split(/\s+[~|•·]\s+/)).map(clean).map(l => l.replace(/,?\s+(?:(?:CPPB|CPSM|CPM|CPPO|CSCP|CPIM|PMP|PE|MBA|CDL)\b,?\s*)+$/, "")) : [];
+    let name = above.find(isName) || nameLines.find(l => NAME.test(l) && !HEADING.test(l) && !TITLE_WORD.test(l) && !/\b(street|st|ave|road|rd|drive|dr|tx|texas|linkedin|resume|curriculum)\b/i.test(l)) || "";
     name = name.replace(/\s*("[^"]+"|\([^)]+\))\s*/g, " ").trim();   // a nickname in quotes stays off the header
     out.name = name === name.toUpperCase() || name === name.toLowerCase() ? tc(name.toLowerCase()).replace(/\bJr\b/, "Jr.") : name;   // "MARCUS DELGADO" -> "Marcus Delgado"
     const STATE_NAMES = { texas: "TX", oklahoma: "OK", louisiana: "LA", arkansas: "AR", "new mexico": "NM", arizona: "AZ", colorado: "CO", florida: "FL", georgia: "GA", tennessee: "TN", california: "CA" };
@@ -123,14 +136,16 @@
 
     // "84 LUMBER - GRAND PRAIRIE TX" -> "84 Lumber": the place isn't part of the name, and all caps reads as shouting.
     // A state code only comes off when a city sits before it ("SPARKS ELECTRIC CO" keeps its CO); LLC and LP stay capitals.
-    const tidyCompany = c => { c = clean(c).replace(new RegExp(`\\s*[,–—-]\\s*[A-Za-z .]+,? (?:${STATE_CODES})$`, "i"), "").replace(/\s*,\s*$/, ""); return c === c.toUpperCase() && /[A-Z]{3}/.test(c) ? tc(c.toLowerCase()).replace(/\b(Llc|Lp|Llp|Pllc|Usa|Hvac|Abc)\b/g, x => x.toUpperCase()) : c; };
+    const tidyCompany = c => { c = clean(c).replace(new RegExp(`\\s*[,–—-]\\s*[A-Za-z .]+,? (?:${STATE_CODES})$`, "i"), "").replace(/,\s*[\p{L} .]+,\s*(?:[A-Z]\.){2,}$/u, "").replace(/\s*,\s*$/, ""); return c === c.toUpperCase() && /[A-Z]{3}/.test(c) ? tc(c.toLowerCase()).replace(/\b(Llc|Lp|Llp|Pllc|Usa|Hvac|Abc)\b/g, x => x.toUpperCase()) : c; };
     let section = "", job = null;
     const startJob = (head, next) => {
       const alone = next && !clean(next.replace(new RegExp(RANGE.source, "gi"), "").replace(/[\s,|·•–—()-]+/g, " "));
       const dates = (head.match(RANGE) || (alone ? next.match(RANGE) : null) || [""])[0];
-      let rest = clean(head.replace(RANGE, "").replace(/^[\s,|·•–—-]+|[,|·•–—-]+\s*$/g, ""));
-      let [title, company] = rest.split(/\s+[|•·]\s+|\s+[–—-]\s+|,\s+(?=[A-Z0-9])|\s+at\s+(?=[A-Z0-9])/);
+      let rest = clean(head.replace(RANGE, "").replace(/\(\s*\)/g, "").replace(/^[\s,|·•–—-]+|[,|·•–—-]+\s*$/g, ""));
+      const parts = rest.split(/\s+[|•·]\s+|\s+[–—-]\s+|,\s+(?=[A-Z0-9])|\s+at\s+(?=[A-Z0-9])/);
+      let [title, company] = parts;
       if (company && !TITLE_WORD.test(title) && TITLE_WORD.test(company)) [title, company] = [company, title];
+      else if (parts.length > 2) company = parts.slice(1).join(", ").replace(/,\s*(remote|hybrid|on-?site)$/i, "");   // "Berkeys Air Conditioning, Plumbing & Electrical, Mesquite, TX"
       title = clean(title);
       if (title === title.toUpperCase() && /[A-Z]{3}/.test(title)) title = tc(title.toLowerCase());   // "PURCHASING AGENT" -> "Purchasing Agent"
       job = { title, company: tidyCompany(company || ""), dates: clean(dates), bullets: [] };
@@ -141,7 +156,7 @@
       if (HEADING.test(line)) { section = line.toLowerCase(); job = null; return; }
       if (out.name && line === out.name) { section = "about"; job = null; return; }   // LinkedIn: the name (and headline under it) ends the sidebar
       const inline = line.match(HEAD_INLINE);
-      if (inline) { section = inline[1].toLowerCase(); job = null; if (/cert|licens|education|training/.test(section)) out.education.push(inline[2]); else inline[2].split(SKILL_SPLIT).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
+      if (inline) { section = inline[1].toLowerCase(); job = null; if (/cert|licens|education|training/.test(section)) out.education.push(...inline[2].split(/\s*;\s*/).filter(Boolean)); else inline[2].split(SKILL_SPLIT).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
       if (/skill|tool|competenc|expertise|qualification|habilidad/.test(section) && !/cert|licens/.test(section)) { line.replace(BULLET, "").split(SKILL_SPLIT).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
       if (/educa|cert|licens|training|apprentice/.test(section)) {
         // A school's place and dates on their own lines join the line above: "Arlington High School - Arlington, TX · 2014 to 2018".
@@ -151,14 +166,15 @@
         if (prev && !BULLET.test(raw) && (tail || school)) out.education[out.education.length - 1] = `${prev} · ${e}`; else out.education.push(e);
         return;
       }
-      if (/summary|profile|objective|references|about|contact|accomplish|highlight|achievement|language|idioma|projects|project list/.test(section)) return;   // a projects list isn't a list of jobs
+      if (/summary|profile|objective|references|about|contact|accomplish|highlight|achievement|language|idioma|projects|project list|snapshot|overview|at a glance|timeline/.test(section)) return;   // a projects list isn't a list of jobs
       if (/@|\d{3}[\s.)-]+\d{3}[\s.-]\d{4}/.test(line) && !RANGE.test(line)) return;   // contact lines
       if (!section && i < 5 && !RANGE.test(line)) return;   // the name and address block above the first heading
       const bullet = BULLET.test(raw), text = line.replace(BULLET, "");
+      if (job && /^(territory|region|market|district|reports to|accounts|area)\s*:/i.test(text)) { (job.pre ||= []).push(text); return; }   // "Territory: North DFW — Denton…" belongs to the job above
       const last = job?.bullets[job.bullets.length - 1];
       if (!bullet && last && !/[.!]$/.test(last) && /^[a-z]/.test(text)) { job.bullets[job.bullets.length - 1] += " " + text; return; }   // a wrapped line
       // A title line: short, or any length when it carries the dates ("Counter Sales / Inside Sales — Red River…, Shreveport, LA  Mar 2019 – Present").
-      const short = !bullet && (line.length < 90 || (RANGE.test(line) && line.length < 180)) && !/[.;!]$/.test(line.replace(/\b(inc|co|corp|ltd|jr|sr|llc|bros)\.$/i, ""));
+      const short = !bullet && (line.length < 90 || (RANGE.test(line) && line.length < 180)) && !/[.;!]$/.test(line.replace(/\b(inc|co|corp|ltd|jr|sr|llc|bros)\.$|(?:\b[A-Z]\.){2,}$/i, ""));
       if (short) {
         const bare = clean(line.replace(new RegExp(RANGE.source, "gi"), "").replace(/\(\s*\)/g, "").replace(/^[,|·•–—()-]+\s*|[,|·•–—()-]+\s*$/g, ""));
         const dates = clean((line.match(RANGE) || [""])[0]);
@@ -175,6 +191,7 @@
       }
       if (job && (bullet || line.length > 30 || DID.test(text) || text.split(" ").length > 3)) job.bullets.push(text);
     });
+    for (const j of out.jobs) if (j.pre) { j.bullets.unshift(...j.pre); delete j.pre; }
     out.jobs = out.jobs.filter(j => j.title || j.bullets.length);
     // Oldest-first lists are turned around, so "most recently" is really the latest job.
     const ends = out.jobs.map(j => /present|current|now|today|actual/i.test(j.dates) ? 9999 : Number((j.dates.match(/(?:19|20)\d{2}/g) || []).pop()) || 0).filter(Boolean);
@@ -197,7 +214,7 @@
   function tailor(resume, job, profile = {}) {
     const r = resume || {}, jobs = (r.jobs || []).filter(j => j.title || j.bullets?.length);
     const want = postingWords(job);
-    const mine = norm([...jobs.flatMap(j => [j.title, j.company, ...(j.bullets || [])]), ...(r.skills || []), ...(r.education || []), ...(profile.skills || [])].join(" \n "));
+    const mine = norm([...jobs.flatMap(j => [j.title, /\b(buyer|purchas)/i.test(j.title) ? "purchasing" : "", j.company, ...(j.bullets || [])]), ...(r.skills || []), ...(r.education || []), ...(profile.skills || [])].join(" \n "));
     const fitsAll = want.filter(w => hasAny(mine, w));   // ranks their lines, customer and product words included
     const skillWant = want.filter(w => !CONTEXT.has(w.toLowerCase()));
     const matched = skillWant.filter(w => hasAny(mine, w));
@@ -216,7 +233,7 @@
       ranked.sort((a, b) => b.n - a.n || /\d/.test(b.b) - /\d/.test(a.b) || a.i - b.i);
       // Lines that match nothing drop off, keeping at least three per job so it never looks thin.
       const fits = ranked.filter(x => x.n).length;
-      const pick = ranked.slice(0, Math.max(fits, Math.min(3, ranked.length)));
+      const pick = ranked.slice(0, Math.max(fits, Math.min(2, ranked.length)));
       // Their best number always makes the cut: a kept line with no number gives way to one with a number.
       const numeric = ranked.find(x => /\d/.test(x.b));
       if (numeric && !pick.slice(0, keep).some(x => /\d/.test(x.b))) pick.splice(Math.min(pick.length, keep) - 1, 1, numeric);
@@ -237,10 +254,11 @@
     for (const w of said) if (skills.length < 16 && !skills.some(s => norm(s).includes(norm(w).trim())) && /^[A-Z]|^(purchasing|procurement|estimating|takeoffs|scheduling|inventory|quoting|pricing|onboarding|implementation|training|vendor management|purchase orders)$/.test(w)) skills.push(/^[a-z]/.test(w) ? tc(w) : w);
 
     const years = Number(profile.years) || 0;
-    const titles = [...new Set(jobs.map(j => clean(j.title)).filter(Boolean))].slice(0, 2);
+    const titles = [...new Set(jobs.filter(j => !GAP.test(j.title)).map(j => clean(j.title)).filter(Boolean))].slice(0, 2);
     const strong = said.filter(w => !/^(contractors|accounts|software|support|plans|quotes|estimates|relationships|communication)$/.test(w)).slice(0, 3);
     const headline = [titles.join(" · "), years ? `${years} Years` : ""].filter(Boolean).join(" · ");
-    const recent = jobs[0]?.title ? `most recently ${asRole(jobs[0].title)}${atCo(jobs[0].company)}` : "";
+    const work = jobs.filter(j => !GAP.test(j.title)), now0 = work[0];
+    const recent = now0?.title ? `most recently ${asRole(now0.title)}${atCo(now0.company)}` : "";
     const summary = [
       years ? `${years} years of experience${recent ? ", " + recent : ""}.` : recent ? `${recent[0].toUpperCase()}${recent.slice(1).replace(/^(\w+ \w+) /, "$1 worked ")}.` : "",   // "Most recently worked as a Buyer at …"
       strong.length ? `Hands-on with ${list(strong.map(w => /^[A-Z]/.test(w) ? w : w.toLowerCase()))}.` : "",
@@ -255,6 +273,8 @@
   // "as a Purchasing Agent", but "in Counter Sales": some titles name the work, not the person.
   const asRole = title0 => { const title = String(title0).split(/\s*\/\s*/)[0]; return /\b(sales|counter|desk|yard|warehouse|purchasing|estimating|operations|inventory|procurement|dispatch|receiving|shipping)$/i.test(String(title).trim())
     ? `in ${title}` : `as ${/^[aeiou]/i.test(title) ? "an" : "a"} ${title}`; };
+  // Time away from work stays on the resume, but is never "most recently" or the email's example.
+  const GAP = /\b(career break|sabbatical|caregiv|family leave|parental leave|maternity|paternity|stay[- ]at[- ]home|personal leave|relocation break)\b/i;
   // "at Red River Lumber Co", "in the U.S. Army"
   const atCo = c => !c ? "" : /\b(army|navy|air force|marine corps|marines|coast guard|national guard|space force)\b/i.test(c) ? ` in the ${c.replace(/^the /i, "").replace(/\.$/, "")}` : ` at ${c.replace(/\.$/, "")}`;
   const list = a => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
@@ -268,14 +288,14 @@
     // Name the job where those words actually show up, and take the example from that same job.
     const used = j => why.filter(w => norm(j.bullets.join(" ")).includes(norm(w).trim())).length;
     // The current job leads unless an older one covers clearly more (two words or more), since recruiters read the newest first.
-    const at = (t.jobs || []).reduce((best, j) => !best || used(j) >= used(best) + 2 ? j : best, null);
+    const at = (t.jobs || []).filter(j => !GAP.test(j.title)).reduce((best, j) => !best || used(j) >= used(best) + 2 ? j : best, null);
     const covered = at ? why.filter(w => norm(at.bullets.join(" ")).includes(norm(w).trim())) : [];
     const body = [
       `Hello ${job.company} hiring team,`,
       "",
       `I'm applying for the ${job.title} role. ${at?.title ? `I've worked ${asRole(at.title)}${atCo(at.company)}` : "My background is hands-on"}${covered.length ? `, where my work covered ${list(covered)}` : ""}.`,
       "",
-      at?.bullets?.[0] ? `One example: ${at.bullets[0].replace(/\.?$/, ".")}` : "",
+      at?.bullets?.[0] ? `One example: ${at.bullets[0][0].toUpperCase()}${at.bullets[0].slice(1).replace(/\.?$/, ".")}` : "",
       "",
       "My resume is attached. I'd welcome a short call about the role.",
       "",
@@ -325,7 +345,7 @@
     if (t.education.length) { head(SECTIONS.education); for (const e of t.education) for (const l of wrap(e, 10.5, R - M)) { room(14); text(l, 10.5); y += 14; } }
     return doc;
   }
-  const fileName = (t, job) => `${(t.name || "Resume").replace(/[^\w ]+/g, "").trim()} - ${String(job.company).replace(/[^\w ]+/g, "").trim()} ${String(job.title).replace(/[^\w ]+/g, "").trim()}.pdf`.replace(/\s+/g, " ");
+  const fileName = (t, job) => `${(t.name || "Resume").replace(/[^\p{L}\p{N} ]+/gu, "").trim()} - ${String(job.company).replace(/[^\p{L}\p{N} ]+/gu, "").trim()} ${String(job.title).replace(/[^\p{L}\p{N} ]+/gu, "").trim()}.pdf`.replace(/\s+/g, " ");
 
   // ---------- Gmail: a draft with the PDF attached, and what a reply means ----------
   const b64url = s => btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -356,11 +376,12 @@
     "\\b(offered|given|filled) (the (role|position|job|spot) )?(to )?(another|someone|internally|from within)|\\b(hire|hired|hiring|selected|chose|chosen|picked|extend|extended|offer|offered|give|gave|given)( the (role|position|job|spot|offer))?( to)? (a |an )?(another|other|someone|somebody|guy|gal|person|internal|different|candidate whose|a candidate whose)\\b|promote from within|hire(d)? (someone|internally)|internal candidate|another (candidate|applicant) (who|whose|was|has)",
     "\\b(whose|with) (qualifications|experience|background|skills)[^.?!]{0,40}(more closely|better|closer)",
     // the job went away
-    "\\b(position|role|job|opening|requisition|req|spot)[^.?!]{0,25}(has been|was|is|been) (now )?(filled|closed|cancell?ed|put on hold|on hold|withdrawn|eliminated|no longer (available|open))",
+    "\\b(position|role|job|opening|requisition|req|spot)[^.?!]{0,25}(has been|was|is|been) (now )?(filled|closed|cancell?ed|withdrawn|eliminated|no longer (available|open))",   // "on hold" may reopen, so it isn't a no
     "\\b(filled the (role|position|job|opening|spot)|we('ve| have)? filled (it|that one|this one)\\b|closing all applications|no longer hiring|decided not to fill)",
     "\\b(ended up|already|we'?ve|we have|we) (filling|filled|hiring|hired) (the|that|our|this) [^.?!]{0,20}(role|position|job|opening|spot|seat)",
-    "\\b(hold|holding) off on (filling|hiring)|\\bput (the )?(hiring|search|role|position) on hold|(won'?t|will not|don'?t|do not) (be )?(need|needing) (anyone|anybody|someone|another)|decided to keep (the|our) current|sorry it (didn'?t|did not) work out|accepted by (another|a different|someone|an internal)",
-    "\\b(applicants|candidates|others) (who|that) (more closely|better|more) (match|fit|align)",
+    "\\b(won'?t|will not|don'?t|do not) (be )?(need|needing) (anyone|anybody|someone|another)|decided to keep (the|our) current|sorry it (didn'?t|did not) work out|accepted by (another|a different|someone|an internal)",
+    "\\b(applicants|candidates|others|finalists) (who|that) (more closely|better|more) (match|fit|align)",
+    "\\b(candidates|applicants|others|finalists) [^.?!]{0,20}(better|more closely) (meet|match|fit|align)|\\b(were|was|is|are) a (stronger|better|closer) (match|fit)|\\b(does|do|did)( not|n'?t) meet (the |our )?(minimum|basic|required|requirements|qualifications)|\\b(giving|gave|give|given) (the )?[^.?!]{0,20}(spot|job|position|role) to\\b|\\bgo with one of (them|those)|\\bkeep (the|this) (position|role|job|spot) in-?house|\\bseguir adelante con otr|\\botro candidato",
     // Spanish: "Lamentablemente…", "continuar con otros candidatos", "no fue seleccionado"
     "\\blamentablemente\\b|\\bcontinuar con otr[oa]s? (candidat|persona)|\\bno (ha sido|fue|has sido) seleccionad|\\bel puesto (ya )?(ha sido|fue) (cubierto|ocupado)|\\bdecidido no (continuar|seguir|avanzar)",
     // the plain no
@@ -368,7 +389,7 @@
   ].join("|"));
   const OFFER = new RegExp([
     // the day-one paperwork, a pay rate they're ready to pay, and Spanish offers
-    "\\bnew hire (packet|paperwork|orientation|forms)|\\b(your )?first day (is|will be|on|at|starts)\\b|\\b(we can do|we can pay|we'?ll pay|we will pay|start you at|starting you at) \\$\\d|\\b(we'?d|we would) love to have you( on (board|the team)| join)?[.!,]|\\bofrecerle el puesto|\\bcarta de oferta|\\boferta de (empleo|trabajo)\\b",
+    "\\byour start date (is|will be)|\\bstart you at\\b|\\bstarting you at\\b|excited to have you (join|on)|\\bnew hire (packet|paperwork|orientation|forms)|\\b(your )?first day (is|will be|on|at|starts)\\b|\\b(we can do|we can pay|we'?ll pay|we will pay) \\$\\d|\\b(we'?d|we would) love to have you( on (board|the team)| join)?[.!,]|\\bofrecerle el puesto|\\bcarta de oferta|\\boferta de (empleo|trabajo)\\b",
     "\\boffer (letter|of employment|packet)|\\b(formal|conditional|contingent|verbal|written|job|employment) offer|your offer\\b|sign (your|the) offer|accept (the|our|this) offer",
     // "offer you the position", never "offer you an interview" or "offer you a lunch"
     "\\b(offer|offering|extend|extending)( to)? you (the |a |an |our )?([\\w$/,-]+ ){0,4}(position|role|job|spot|opportunity to join)|\\b(extend|extending|make|making) (you )?an offer|\\bmake you an offer",
@@ -379,7 +400,7 @@
     "\\b(schedule|set up|arrange|book|pick|grab|select|choose)\\b[^.?!]{0,30}\\b(time|call|interview|phone screen|screen|video|chat|meeting|conversation|slot)",
     "\\binterview (stage|slot|you|with)|(phone|video|in-person|onsite|on-site|zoom|teams|second|final|on-demand) (round |video )?interview|come in for an interview|invited to (a|an)|invite you|offer you an interview",
     "\\b(can|could|would|will) (u|you) (talk|chat|meet|come)|(\\d+|few|couple) (min|mins|minutes)\\b[^.?!]{0,30}\\b(chat|talk|call|visit)|(intro|introductory|quick|brief|short) (call|chat|conversation)|(do you have|got|have you got) (\\d+|a few) (min|mins|minutes)|\\b(are|would) you (be )?(free|available)|your availability|availability for|when are you (free|available)|what does your schedule look like|what days work|times? that works?|calendly|would \\S+ work",
-    "\\b(bring|have|get) you (in|back)|like you back|come in\\b|swing by|stop by|come by|meet (with )?(you|me|our|the) |talk to you about|chat (for|about|with)|talk (today|tomorrow|this week)|few minutes to talk|give me a call|call me (back )?(at|when|about|to discuss)|text or call|speak with you|talk with you|like to (meet|talk|chat|speak)|next (step|stage)[^.?!]{0,40}(call|interview|assessment|meet|talk|availability)|move you (forward|to the next)|online assessment|complete (the|your|an|a) ([\\w-]+ ){0,4}(assessment|test)\\b|aptitude test|skills (test|assessment)",
+    "\\b(bring|have|get) you (in|back)|like you back|come in\\b|swing by|stop by|stop in\\b|come by|meet (with )?(you|me|us)\\b|meet (the|our) (team|manager|owner|hiring|branch|gm|crew)|(move|reschedule|push|switch) (your|the|our) (interview|call|meeting|phone screen)|talk to you about|chat (for|about|with)|talk (today|tomorrow|this week)|few minutes to talk|give me a call|call me (back )?(at|when|about|to discuss)|text or call|speak with you|talk with you|like to (meet|talk|chat|speak)|next (step|stage)[^.?!]{0,40}(call|interview|assessment|meet|talk|availability)|move you (forward|to the next)|online assessment|complete (the|your|an|a) ([\\w-]+ ){0,4}(assessment|test)\\b|aptitude test|skills (test|assessment)",
     "\\bopen to (a|an) [^.?!]{0,20}(call|chat|conversation|interview)|\\bentrevista\\b|\\binvitarle\\b|\\binvitarte\\b",
   ].join("|"));
   const WHEN = new RegExp(`\\b${DAY}\\b[^.?!]{0,40}?\\b(${TIME}|morning|afternoon|(at|around) \\d{1,2}\\b)|\\b(tomorrow|today|tonight)\\b[^.?!]{0,20}(${TIME}|around \\d|at \\d)|\\b\\d{1,2}/\\d{1,2}\\b[^.?!]{0,12}\\bat \\d`);
@@ -400,15 +421,16 @@
     text = text.split(/\n\s*(?:On .{5,120}wrote:|-{2,} ?Original Message ?-{2,}|From: .+\n\s*(?:Sent|Date): )/i)[0];
     return text.split("\n").filter(l => !/^\s*>/.test(l)).join("\n").replace(/[ \t]+/g, " ").trim().slice(0, 4000);
   }
-  const ALERT = /\b(new (jobs|openings)|openings near|is hiring near|job alert|jobs (you may|for you|matching)|recommended jobs|apply today)\b/;
+  const ALERT = /\b(new (jobs|openings)|openings near|is hiring near|job alert|jobs (you may|for you|matching)|recommended jobs|apply today|newsletter|weekly|digest|this week:|hiring event|job fair|career fair|walk-ins welcome|meet the reps|pro days?|lunch provided)\b/;
   function readReply(subject, snippet) {
     // Lines stay apart (a signature's "Office 8-5 M-F, Sat 8-noon" isn't part of the sentence above it).
     const t = `${subject || ""}.\n${snippet || ""}`.toLowerCase().replace(/[’‘]/g, "'").replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n");
     if (ALERT.test(t) && !/\byour (application|resume|candidacy|interview)/.test(t)) return null;   // a job alert or a "we're hiring" blast
-    const sents = t.split(/(?<=[.!?])\s+|\n/).map(x => x.trim()).filter(x => x.trim() && !HOURS.test(x) && !NOISE.test(x));
+    const sents = t.split(/(?<=[.!?])\s+|\n/).map(x => x.trim()).filter(x => x.trim() && (!HOURS.test(x) || /\b(interview|reschedul|move your)/.test(x)) && !NOISE.test(x));
     const firm = sents.filter(x => !FORM.test(x)).join(" "), said = sents.join(" ");
     const about = ABOUT_A_JOB.test(said);
     if (NO.test(firm) || sents.some(x => /^(no|not) (at this time|right now|for now)\b/.test(x))) return "closed";   // "Not at this time, but we'll keep your resume on file"   // first: "we won't be able to offer you the position" is a no
+    if (/\b(on hold|hold off on)\b/.test(firm)) return null;   // paused, not closed: it may reopen
     if (OFFER.test(firm) && !/\boffer you (an? |the )?(interview|call|lunch|meal|time)/.test(firm)) return "offer";
     const when = WHEN.test(firm);
     const plainly = /\b(interview|phone screen|(schedule|set up|arrange|book) (a |an |some )?(time|call|meeting)|your availability|calendly)\b/.test(firm);
