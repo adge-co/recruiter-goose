@@ -5,18 +5,20 @@ import * as S from "./sources/index.js";
 import { ROLE_WORDS } from "./match.js";
 
 // `known` maps a board key to the posting ids already in the index, so big boards only read new postings in full.
-export async function crawl(boards, sources = S, known = new Map()) {
+export async function crawl(boards, sources = S, known = new Map(), { feeds = true } = {}) {
   const report = [], found = [];
   const run = async (name, key, fn) => {
     try { const list = await fn(); list.forEach(j => found.push({ ...j, boardKey: key })); report.push({ key, name, ok: true, count: list.length }); }
     catch (e) { report.push({ key, name, ok: false, count: 0, error: String(e.message || e).slice(0, 200) }); }
   };
   const tasks = boards.map(b => { const key = `${b.ats}:${b.token}`; return run(b.name, key, async () => (await sources.readBoard(b, { known: known.get(key) || new Set() })).map(j => ({ ...j, industries: b.industries || [] }))); });
-  for (const role of Object.keys(ROLE_WORDS)) {
-    tasks.push(run(`Remotive: ${role}`, "remotive", () => sources.remotive({ keyword: role })));
-    tasks.push(run(`Jobicy: ${role}`, "jobicy", () => sources.jobicy({ keyword: role })));
+  if (feeds) {
+    for (const role of Object.keys(ROLE_WORDS)) {
+      tasks.push(run(`Remotive: ${role}`, "remotive", () => sources.remotive({ keyword: role })));
+      tasks.push(run(`Jobicy: ${role}`, "jobicy", () => sources.jobicy({ keyword: role })));
+    }
+    tasks.push(run("The Muse: remote", "muse", () => sources.themuse({ remote: true })));
   }
-  tasks.push(run("The Muse: remote", "muse", () => sources.themuse({ remote: true })));
   await Promise.all(tasks);
   const byId = new Map();
   for (const j of found) if (j.id && j.title && j.company && /^https:\/\//.test(j.applyUrl || "") && !byId.has(j.id)) byId.set(j.id, j);

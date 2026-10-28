@@ -26,7 +26,7 @@ Optional keys add wide coverage: `JSEARCH_KEY=... npm start` turns on Google for
 - **Never oversold:** a director job with under 10 years, or a senior job with under 5 years, is a Reach. Pay under the floor caps a job at Reach. Quota or commission in the posting makes it Partly Sales. A role they ruled out is dropped (ruling out sales also rules out account executive and business development titles). Entry-level and graduate roles are a Reach for anyone with 5+ years.
 
 ## Sources
-No key: Remotive and Jobicy (remote jobs), The Muse, and company job boards read straight from Greenhouse, Lever and Ashby (src/directory.js).
+No key: Remotive and Jobicy (remote jobs), The Muse, and company job boards read straight from Greenhouse, Lever and Ashby (src/directory.js), plus builders' and supply houses' own hiring systems (Workday, iCIMS, UKG, SmartRecruiters, Oracle). The big boards list thousands of field jobs, so they're searched for the office roles in `DEEP_SEARCH` only, and each posting is read in full once (the crawl passes the ids already indexed). The board list lives in the `boards` table (migrations/20261028_builder_boards.sql).
 With a key: JSearch (Google for Jobs) and Adzuna.
 
 ## Server

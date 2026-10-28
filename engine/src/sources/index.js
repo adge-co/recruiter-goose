@@ -136,9 +136,10 @@ const DETAIL_CAP = 40;   // new postings read in full per board per run; the res
 const decode = s => String(s || "").replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 
 // Runs fn over items, a few at a time, so one company's server isn't hit with a hundred requests at once.
-async function pool(items, n, fn) {
+// Strict: one failure fails the whole board, so a half-read board never retires postings it simply missed.
+async function pool(items, n, fn, strict = false) {
   const out = []; let i = 0;
-  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = i++; out[k] = await fn(items[k]).catch(() => null); } }));
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = i++; out[k] = await (strict ? fn(items[k]) : fn(items[k]).catch(() => null)); } }));
   return out;
 }
 
@@ -181,7 +182,7 @@ export async function workday(token, name, { known = new Set(), search = DEEP_SE
   await pool(search, 4, async q => {
     const d = await getJson(`${api}/jobs`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset: 0, searchText: q }) });
     for (const p of d.jobPostings || []) if (p.externalPath && !seen.has(p.externalPath)) seen.set(p.externalPath, p);
-  });
+  }, true);
   const list = [...seen.values()];
   const id = p => `wd:${tenant}:${p.externalPath.split("_").pop() || p.externalPath}`;
   const fresh = list.filter(p => !known.has(id(p))).slice(0, DETAIL_CAP);
@@ -211,7 +212,7 @@ export async function icims(token, name, { known = new Set(), search = DEEP_SEAR
       const title = stripHtml(decode(m[3])).replace(/^Title\s*/i, "");
       if (title && !found.has(m[2])) found.set(m[2], { url: m[1], jid: m[2], title });
     }
-  });
+  }, true);
   const list = [...found.values()], id = p => `icims:${token.split(".")[0]}:${p.jid}`;
   const fresh = list.filter(p => !known.has(id(p))).slice(0, DETAIL_CAP);
   const details = new Map((await pool(fresh, 3, async p => [p.jid, jsonLdJob(await getText(p.url + "?in_iframe=1"))])).filter(x => x && x[1]));
@@ -238,7 +239,7 @@ export async function ukg(token, name, { known = new Set(), search = DEEP_SEARCH
     const d = await getJson(`${base}/JobBoardView/LoadSearchResults`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ opportunitySearch: { Top: 50, Skip: 0, QueryString: q, OrderBy: [{ Value: "postedDateDesc", PropertyName: "PostedDate", Ascending: false }], Filters: [] }, matchCriteria: { PreferredJobs: [], Educations: [], LicenseAndCertifications: [], Skills: [], hasNoLicenses: false, SkippedSkills: [] } }) });
     for (const o of d.opportunities || []) if (o.Id && !found.has(o.Id)) found.set(o.Id, o);
-  });
+  }, true);
   const list = [...found.values()], id = o => `ukg:${tenant}:${o.Id}`;
   const fresh = list.filter(o => !known.has(id(o))).slice(0, DETAIL_CAP);
   const details = new Map((await pool(fresh, 3, async o => {
@@ -264,7 +265,7 @@ export async function smartrecruiters(token, name, { known = new Set(), search =
   await pool(search, 3, async q => {
     const d = await getJson(`https://api.smartrecruiters.com/v1/companies/${token}/postings?limit=100&q=${encodeURIComponent(q)}&country=us`);
     for (const p of d.content || []) if (p.id && !found.has(p.id)) found.set(p.id, p);
-  });
+  }, true);
   const list = [...found.values()], id = p => `sr:${token}:${p.id}`;
   const fresh = list.filter(p => !known.has(id(p))).slice(0, DETAIL_CAP);
   const details = new Map((await pool(fresh, 3, async p => [p.id, await getJson(`https://api.smartrecruiters.com/v1/companies/${token}/postings/${p.id}`)])).filter(Boolean));
@@ -288,7 +289,7 @@ export async function oracle(token, name, { known = new Set(), search = DEEP_SEA
   await pool(search, 3, async q => {
     const d = await getJson(`${api}/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=${siteNo},keyword=${encodeURIComponent(q)},limit=25,sortBy=POSTING_DATES_DESC`);
     for (const r of d.items?.[0]?.requisitionList || []) if (r.Id && !found.has(r.Id)) found.set(r.Id, r);
-  });
+  }, true);
   const list = [...found.values()], id = r => `oracle:${host.split(".")[0]}:${r.Id}`;
   const fresh = list.filter(r => !known.has(id(r))).slice(0, DETAIL_CAP);
   const details = new Map((await pool(fresh, 3, async r => {

@@ -108,3 +108,9 @@ test("a saved job from a big board is checked against the index", async () => {
   const r = await verify(["wd:graybar:R1", "icims:careers-x:2", "ukg:T:3", "zip:9"], { readBoard: async () => [], indexStatus: async ids => ({ "wd:graybar:R1": true, "icims:careers-x:2": false }) });
   assert.deepEqual(r.status, { "wd:graybar:R1": "open", "icims:careers-x:2": "gone", "ukg:T:3": "unknown", "zip:9": "unknown" });
 });
+
+test("a big board whose search fails is a failed board, not an empty one", async () => {
+  serve([]);   // every request answers 404
+  await assert.rejects(S.workday("h.wd1.myworkdayjobs.com/h/S", "H", { search: ONE }));
+  await assert.rejects(S.icims("careers-x.icims.com", "X", { search: ONE }));
+});

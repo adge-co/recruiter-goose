@@ -11,7 +11,7 @@ A job finder for people coming out of the trades, the counter, purchasing and th
 - **Insider Moves.** Apply while it's new, a referral note to copy, one follow-up after a week.
 - **A calm Today list.** Follow-ups due, fresh strong fits, saved postings the company took down, and applications gone quiet for 21 days.
 
-No AI in the app and no paid data. Jobs come straight from company job boards (Greenhouse, Lever, Ashby) and a few free remote-job feeds.
+No AI in the app and no paid data. Jobs come straight from company job boards: tech companies on Greenhouse, Lever and Ashby, and builders, specialty contractors, homebuilders and supply houses on Workday, iCIMS, UKG, SmartRecruiters and Oracle, plus a few free remote-job feeds.
 
 ## How it's built
 - `app/`: one HTML file, Supabase for sign-in and saved jobs.
