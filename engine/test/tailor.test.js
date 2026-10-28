@@ -88,6 +88,10 @@ test("a reply moves a job forward, a clear no closes it, and nothing moves backw
   assert.equal(T.readReply("Re: Estimator", "We'd love to bring you in to meet the purchasing manager. Does Thursday at 9 am work?"), "interview");
   assert.equal(T.readReply("Thanks", "Unfortunately we can't respond to every applicant, but we received your application."), "applied");
   assert.equal(T.readReply("Your application", "We regret to inform you the position has been filled."), "closed");
+  assert.equal(T.readReply("Next steps", "If you're still interested, we'd like you to come in for an interview on Tuesday, November 4 at 10:00 AM."), "interview");
+  assert.equal(T.readReply("Buyer role", "We'd like to meet you Wednesday Nov. 5 at 9 am."), "interview");
+  assert.equal(T.readReply("Thanks for applying", "Unfortunately, we have decided to go in a different direction."), "closed");
+  assert.equal(T.readReply("Thank you", "Thanks for applying. We'll keep your resume on file in case a job offer opens up."), "applied");
   assert.equal(T.readReply("Lunch", "Team lunch on Friday"), null);
   assert.equal(T.nextStatus("applied", "interview"), "interview");
   assert.equal(T.nextStatus("interview", "applied"), null);

@@ -246,6 +246,7 @@ details>summary.section-h{cursor:pointer;list-style:none}
 .row-job:hover{background:var(--hover)}
 .row-job b{display:block;font-weight:700;font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row-job span{display:block;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-job span.st{white-space:normal;color:var(--ink2)}
 .row-job .r{text-align:right;font-size:13.5px;font-weight:700}
 .row-job .r .pill{margin-top:4px}
 .row-job.faded{opacity:.55}
@@ -459,7 +460,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
       <div class="chips" id="cCities"></div>
       <div class="chipin"><input type="text" id="iCities" placeholder="Add a city: Dallas, TX" enterkeyhint="done"><button class="btn small" data-add="cities">Add</button></div>
       <label class="label" for="iFloor">Lowest Yearly Pay You'd Take</label>
-      <input type="number" id="iFloor" min="0" step="1000" inputmode="numeric" placeholder="Optional, Like 65000">
+      <input type="number" id="iFloor" min="0" step="1000" inputmode="numeric" placeholder="Optional">
       <label class="label">Want Less Of</label>
       <label class="toggle"><input type="checkbox" id="iNoSales" checked> No Commission Sales Jobs (Quotas, Cold Calling)</label>
       <div class="err hidden" id="s2Err"></div>
@@ -605,7 +606,27 @@ function setAuthMode(m) {
   $("#aForgot").classList.toggle("hidden", authMode !== "in");
   $("#aErr").classList.add("hidden");
 }
-// Forgot it: Supabase emails a link back to this page, which signs them in and asks for a new password.
+// Forgot it: Supabase emails a link back to this page, which signs them in and opens this sheet for a new password.
+function newPasswordSheet() {
+  $("#sheetBody").dataset.job = "";
+  $("#sheetBody").innerHTML = `<div class="grab"><div style="min-width:0"><div class="co">Your Account</div></div>${X_BTN}</div>
+    <div class="sh-ttl">Set a New Password</div>
+    <label class="label" for="npOne">New Password</label><input type="password" id="npOne" autocomplete="new-password" minlength="8" placeholder="8 characters or more">
+    <label class="label" for="npTwo">Type It Again</label><input type="password" id="npTwo" autocomplete="new-password">
+    <div class="err hidden" id="npErr"></div>
+    <div class="stick"><button class="btn" id="npGo">Save New Password</button></div>`;
+  $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden"; $("#npOne").focus();
+  $("#npGo").onclick = async () => {
+    const a = $("#npOne").value, b = $("#npTwo").value, err = $("#npErr");
+    const bad = a.length < 8 ? "Use 8 characters or more." : a !== b ? "Those two don't match. Type them again." : "";
+    if (bad) { err.textContent = bad; err.classList.remove("hidden"); return; }
+    $("#npGo").disabled = true;
+    const { error } = await sb.auth.updateUser({ password: a });
+    $("#npGo").disabled = false;
+    if (error) { err.textContent = error.message; err.classList.remove("hidden"); return; }
+    $("#sheet [data-close]")?.click(); toast("New password saved.");
+  };
+}
 $("#aForgot").onclick = async () => {
   const email = $("#aEmail").value.trim(), err = $("#aErr");
   if (!email) { err.textContent = "Type your email above, then tap this again."; err.classList.remove("hidden"); return; }
@@ -732,6 +753,10 @@ async function readResume(text) {
   if (data.years && !$("#iYears").value) $("#iYears").value = data.years;
   if (data.pastCompanies?.length) draft.companies = data.pastCompanies;
   draft.resume = Tailor.readResume(text);   // read here in the browser; kept with your answers so every job can get its own version
+  // Where they want to work: the city they're moving to, else the one on the resume. A city chosen means local jobs first, so Remote starts off.
+  const moving = (draft.resume.city.match(/\((?:relocating|moving|relocation) to ([^)]+)\)/i) || [])[1];
+  const home = moving || draft.resume.city.replace(/\s*\(.*\)$/, "");
+  if (home && !draft.cities.length) { draft.cities.push(home.trim()); $("#iRemote").checked = false; }
   renderSetup();
   const n = (data.pastTitles?.length || 0) + (data.skills?.length || 0);
   msg.innerHTML = n ? `<span class="ok">Got it.</span> I filled in ${data.pastTitles.length} past jobs, ${data.years || "no"} years, ${data.skills.length} skills and ${data.industries.length} industries. Check them below and fix anything off.` : `<span class="err">I couldn't pick out your jobs from that. Fill this page in by hand.</span>`;
@@ -821,6 +846,8 @@ function placeText(j) {
 const openText = j => { const d = openDays(j); return d == null ? "" : `<span${d < 3 ? ' class="fresh"' : ""}>Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}</span>`; };
 const meta = j => `<div class="meta">${payText(j)}<span>${placeText(j)}</span>${openText(j)}</div>`;
 const openDays = j => { const t = Date.parse(j.firstPublished || j.postedAt); return Number.isFinite(t) ? Math.max(0, Math.floor((Date.now() - t) / 864e5)) : j.check?.openDays ?? null; };
+// Pay that rides on quota or commission is said up front, on the card, for everyone.
+const commissionPill = j => (j.flags || []).includes("Quota or Commission") ? `<span class="pill flag">Commission</span>` : "";
 const checkPill = (j, s) => s?.job?.goneAt ? `<span class="pill gone">Taken Down ${shortDay(s.job.goneAt)}</span>` : j.check && j.check.label !== "Looks Real" ? `<span class="pill ${CHECK[j.check.label]}">${esc(j.check.label)}</span>` : "";
 const trail = j => {
   const t = Date.parse(j.firstPublished || j.postedAt);
@@ -833,7 +860,7 @@ function jobCard(j, s) {
   return `<div class="job ${st === "passed" || st === "closed" ? "faded" : ""}" data-open="${esc(j.id)}" role="button" tabindex="0" aria-label="${esc(j.title)} at ${esc(j.company)}">
     ${logo(j.company)}
     <div style="min-width:0"><div class="co">${esc(j.company)}</div><p class="title">${esc(j.title)}</p><div class="meta">${payText(j)}<span>${placeText(j)}</span></div>
-      <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${checkPill(j, s)}</div>
+      <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${commissionPill(j)}${checkPill(j, s)}</div>
       ${s?.job?.goneAt ? "" : trail(j)}</div>
     <div class="side">${s ? `<span class="icon saved" role="img" aria-label="In My Jobs">${I.marked}</span>` : `<button class="icon" data-save="${esc(j.id)}" aria-label="Save">${I.mark}</button><button class="icon" data-pass="${esc(j.id)}" aria-label="Pass">${I.x}</button>`}</div>
   </div>`;
@@ -899,12 +926,12 @@ function renderMatches() {
   const ask = learnQuestion();
   const list = jobs.filter(j => filter === "all" || j.fit === filter);
   const n = f => jobs.filter(j => j.fit === f).length;
-  const sourcesOk = r.sources.filter(s => s.ok).length;
+  const sites = new Set(r.sources.filter(s => s.ok).map(s => String(s.name).split(/[:(·]/)[0].trim())).size;
   const hidden = Object.entries(r.hidden || {}).sort((a, b) => b[1] - a[1]);
   const dropped = r.dropped || {};
   $("#mSub").textContent = `${jobs.length ? `${jobs.length} fit your background` : "Nothing fits yet"} · ${shortDay(r.ranAt)}`;
   const leftOut = `
-      <details class="filtered"><summary>What Was Left Out</summary><ul><li>Searched ${sourcesOk} job sources; every job links to the company's own posting</li>
+      <details class="filtered"><summary>What Was Left Out</summary><ul><li>Read ${sites} job ${sites === 1 ? "source" : "sources"}; every job links to where you apply</li>
         ${dropped.tooOld ? `<li>${dropped.tooOld} older than 30 days</li>` : ""}
         ${dropped.wrongPlace ? `<li>${dropped.wrongPlace} not remote in the US or not in your cities</li>` : ""}
         ${dropped.duplicate ? `<li>${dropped.duplicate} duplicates posted on more than one site</li>` : ""}
@@ -912,6 +939,7 @@ function renderMatches() {
         ${hidden.map(([why, c]) => `<li>${c} right-sounding titles hidden: ${esc(why.toLowerCase())}</li>`).join("")}
         <li>The rest didn't match a role you want or a job you've held</li></ul></details>`;
   const segs = [["all", "All", jobs.length], ["strong", "Strong", n("strong")], ["good", "Good", n("good")], ["reach", "Reach", n("reach")], ["sales", "Sales", n("sales")]].filter(([f, , c]) => f === "all" || c);
+  if (segs.length === 2 && segs[1][2] === jobs.length) segs.splice(1);   // every job is in one bucket: "All 8 / Strong 8" says nothing
   if (!segs.some(([f]) => f === filter)) filter = "all";
   $("#mBody").innerHTML = `
     <div class="summary">${segs.length > 1 ? `<div class="segf" role="radiogroup" aria-label="Fit">${segs.map(([f, l, c]) => `<button role="radio" aria-checked="${filter === f}" class="${filter === f ? "on" : ""}" data-filter="${f}">${l}<span>${c}</span></button>`).join("")}</div>` : ""}</div>
@@ -985,7 +1013,7 @@ function statusLine(s) {
 }
 const payShort = j => !j.payMax && !j.payMin ? "" : (j.payMin && j.payMax && j.payMin !== j.payMax ? `${k(j.payMin)}–${k(j.payMax)}` : k(j.payMax || j.payMin));
 const rowJob = s => `<div class="row-job ${s.status === "closed" ? "faded" : ""}" data-open="${esc(s.job_key)}" role="button" tabindex="0">${logo(s.job.company, true)}
-  <div style="min-width:0"><b>${esc(s.job.title)}</b><span>${esc(s.job.company)} · ${statusLine(s)}</span></div>
+  <div style="min-width:0"><b>${esc(s.job.title)}</b><span>${esc(s.job.company)}</span><span class="st">${statusLine(s)}</span></div>
   <div class="r">${payShort(s.job)}${s.job.goneAt ? `<div><span class="pill gone">Taken Down</span></div>` : ""}</div></div>`;
 function renderMine() {
   const live = saved.filter(s => s.status !== "passed");
@@ -1429,11 +1457,11 @@ function insider(j) {   // same moves the engine makes, built here so a saved jo
   const past = (profile?.data?.pastTitles || [])[0], name = profile?.data?.name || "";
   const out = [];
   if (j.check?.fresh) out.push(`<div class="move"><b>Apply While It's New</b><p>Open ${days === 0 ? "since today" : days + (days === 1 ? " day" : " days")}. Most applications on a posting come in its first four days.</p></div>`);
-  const note = [`Hey, I saw ${j.company} is hiring ${a} ${j.title}.`, past ? `I've been working as ${/^[aeiou]/i.test(past) ? "an" : "a"} ${past} and it lines up well.` : "It lines up well with what I've been doing.",
+  const note = [`Hey, I saw ${j.company} is hiring ${a} ${j.title}.`, past ? `I've been working ${Tailor.asRole(past)} and it lines up well.` : "It lines up well with what I've been doing.",
     "Would you be up for putting me in through your referral system, or passing my name to the hiring manager?", `Thanks either way${name ? ", " + name : ""}.`].join(" ");
-  out.push(`<div class="move"><b>Who Do You Know at ${esc(j.company)}?</b><p>In hiring data from Ashby, referred applicants got interviews 40% of the time and cold applicants 3%. Past vendors, customers, subs and old coworkers all count.</p>
+  out.push(`<div class="move"><b>Who Do You Know at ${esc(j.company)}?</b><p>A referral is the surest way past the stack of applications. Past vendors, customers, subs and old coworkers all count.</p>
     <div class="note" id="refNote">${esc(note)}</div>
-    <div class="row" style="margin-top:8px"><button class="btn small" data-copy="refNote">Copy Note</button><a class="btn ghost small" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(j.company)}">Find People There</a></div></div>`);
+    <div class="row" style="margin-top:8px"><button class="btn ghost small" data-copy="refNote">Copy Note</button><a class="btn ghost small" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(j.company)}">Find People There</a></div></div>`);
   out.push(`<div class="move"><b>Follow Up, Then Let It Go</b><p>Recruiters are swamped, so silence isn't a no. Send one short note after a week and one more the week after. Nothing by day 21, close it out and move on.</p></div>`);
   return out.join("");
 }
@@ -1447,7 +1475,7 @@ function openSheet(id, keep) {
     <div class="sh-ttl">${esc(j.title)}</div>
     ${meta(j)}
     ${j.payMax || j.payMin ? `<div class="paysrc">Pay as listed by ${esc(j.company)}</div>` : ""}
-    <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${s && s.status !== "passed" ? `<span class="pill">In My Jobs</span>` : ""}</div>
+    <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${commissionPill(j)}${s && s.status !== "passed" ? `<span class="pill">In My Jobs</span>` : ""}</div>
     ${askApplied(j, s)}
     ${s && s.status !== "passed" ? `<h3>Where It Stands</h3>${trackBox(s)}` : ""}
     <h3>Paper Trail</h3>
@@ -1458,8 +1486,10 @@ function openSheet(id, keep) {
     ${j.reasons?.filter(r => r !== "Remote").length ? `<h3>Why It Fits</h3><ul class="why">${j.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
     <h3>Your Resume For This Job</h3>${madeFor(j)}
     <h3>Insider Moves</h3>${insider(j)}
-    ${j.description ? `<details><summary class="section-h">The Posting, Saved ${s ? shortDay(s.created_at) : "Today"}</summary><p class="desc">${esc(j.description)}</p></details>` : ""}
-    <div class="stick"><a class="btn" href="${esc(j.applyUrl)}" target="_blank" rel="noopener" data-applyout="${esc(j.id)}">Apply on ${esc(possessive(j.company))} Site ${I.out}</a>${s ? "" : `<button class="icon" data-save="${esc(j.id)}" aria-label="Save">${I.mark}</button>`}</div>`;
+    ${j.description ? `<details><summary class="section-h">${s ? `The Posting, Saved ${shortDay(s.created_at)}` : "The Posting"}</summary><p class="desc">${esc(j.description)}</p></details>` : ""}
+    <div class="stick">${s && ["applied", "interview", "offer"].includes(s.status)
+      ? `<a class="btn ghost" href="${esc(j.applyUrl)}" target="_blank" rel="noopener">Open the Posting ${I.out}</a>`   // already applied: no second Apply
+      : `<a class="btn" href="${esc(j.applyUrl)}" target="_blank" rel="noopener" data-applyout="${esc(j.id)}">Apply on ${esc(possessive(j.company))} Site ${I.out}</a>`}${s ? "" : `<button class="icon" data-save="${esc(j.id)}" aria-label="Save">${I.mark}</button>`}</div>`;
   $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
   $("#sheetBody").scrollTop = top; titleShow();
 }
@@ -1626,12 +1656,7 @@ async function load() {
 }
 let loadedFor = null, guestResult = null;
 sb.auth.onAuthStateChange((event, session) => {
-  if (event === "PASSWORD_RECOVERY") setTimeout(async () => {
-    const pw = prompt("Type a new password, 8 characters or more.");
-    if (!pw) return;
-    const { error } = pw.length < 8 ? { error: { message: "That's under 8 characters. Use Forgot Your Password? again." } } : await sb.auth.updateUser({ password: pw });
-    toast(error ? error.message : "New password saved.");
-  }, 300);
+  if (event === "PASSWORD_RECOVERY") setTimeout(newPasswordSheet, 300);
   const was = user;
   user = session?.user || null;
   if (!user) {

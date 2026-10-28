@@ -245,7 +245,8 @@ test("Dallas, TX takes in the whole DFW area and not Dallas, GA", async () => {
   const { inCity } = await import("../src/places.js");
   for (const l of ["Fort Worth, TX", "Irving, Texas", "DFW Metroplex", "Plano, TX, US"]) assert.ok(inCity(l, "Dallas, TX"), l);
   for (const l of ["Dallas, GA", "Arlington, VA", "Houston, TX"]) assert.ok(!inCity(l, "Dallas, TX"), l);
-  for (const c of ["Dallas", "DFW"]) assert.ok(!inCity("Dallas, GA", c) && inCity("Irving, TX", c), c);
+  for (const c of ["Dallas", "DFW", "Dallas-Fort Worth", "Dallas/Fort Worth", "Dallas TX"])
+    for (const [l, ok] of [["Dallas, GA", false], ["US-GA-Dallas", false], ["Irving, TX", true], ["US-TX-Plano", true], ["Fort Worth, Texas, United States", true]]) assert.equal(inCity(l, c), ok, `${l} for ${c}`);
 });
 
 test("sales titles stay for someone who has sold or asked for quoting work", async () => {

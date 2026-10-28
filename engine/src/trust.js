@@ -107,7 +107,7 @@ export function insiderMoves(job, profile = {}) {
   const a = /^[aeiou]/i.test(job.title || "") ? "an" : "a";
   moves.push({ key: "referral", title: `Who Do You Know at ${job.company}?`,
     text: "In hiring data from Ashby, referred applicants got interviews 40% of the time and cold applicants 3%. Past vendors, customers, subs and old coworkers all count.",
-    note: [`Hey, I saw ${job.company} is hiring ${a} ${job.title}.`, past ? `I've been working as ${/^[aeiou]/i.test(past || "") ? "an" : "a"} ${past} and it lines up well.` : "It lines up well with what I've been doing.",
+    note: [`Hey, I saw ${job.company} is hiring ${a} ${job.title}.`, past ? `I've been working ${/\b(sales|counter|desk|yard|warehouse|purchasing|estimating|operations|inventory|procurement|dispatch|receiving|shipping)$/i.test(past) ? "in" : /^[aeiou]/i.test(past) ? "as an" : "as a"} ${past} and it lines up well.` : "It lines up well with what I've been doing.",
       "Would you be up for putting me in through your referral system, or passing my name to the hiring manager?", `Thanks either way${name ? ", " + name : ""}.`].join(" "),
     search: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(job.company)}` });
   moves.push({ key: "follow", title: "Follow Up, Then Let It Go", text: "Recruiters are swamped, so silence isn't a no. Send one short note after a week and one more the week after. Nothing by day 21, close it out and move on." });

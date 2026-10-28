@@ -186,7 +186,7 @@ for (const dark of [false, true]) {
     await card.locator(".title").click();
     await page.waitForSelector("#sheet:not(.hidden)");
     const text = await page.textContent("#sheetBody");
-    for (const want of ["Your Resume For This Job", "Add My Resume", "Paper Trail", "First Posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working as a Counter Sales"])
+    for (const want of ["Your Resume For This Job", "Add My Resume", "Paper Trail", "First Posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working in Counter Sales"])
       assert.ok(text.includes(want), "sheet is missing: " + want);
     await page.waitForTimeout(400);
     await shot(page, `phone-${tag}-sheet`);

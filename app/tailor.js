@@ -135,7 +135,8 @@
       if (!skillPool.some(x => norm(x) === norm(s1))) skillPool.push(s1);
     }
     // "Inventory" next to "Inventory Control", or "OSHA" next to "OSHA 30", says the same thing twice: keep the longer one.
-    for (let i = skillPool.length - 1; i >= 0; i--) if (skillPool.some(x => x !== skillPool[i] && norm(x).startsWith(norm(skillPool[i])))) skillPool.splice(i, 1);
+    for (let i = skillPool.length - 1; i >= 0; i--) if (skillPool.some(x => x !== skillPool[i] && norm(x).startsWith(norm(skillPool[i])))
+      || (r.education || []).some(e => norm(e).startsWith(norm(skillPool[i])))) skillPool.splice(i, 1);   // "OSHA" when Certifications says "OSHA 10"
     const skills = [...skillPool.filter(s => want.some(w => hasAny(norm(s), w))), ...skillPool.filter(s => !want.some(w => hasAny(norm(s), w)))].slice(0, 14);
     // Posting words that appear in their own lines but not in their skills list go in the skills line too.
     for (const w of said) if (skills.length < 16 && !skills.some(s => norm(s).includes(norm(w).trim())) && /^[A-Z]|^(purchasing|procurement|estimating|takeoffs|scheduling|inventory|quoting|pricing|onboarding|implementation|training|vendor management|purchase orders)$/.test(w)) skills.push(/^[a-z]/.test(w) ? tc(w) : w);
@@ -144,7 +145,7 @@
     const titles = [...new Set(jobs.map(j => clean(j.title)).filter(Boolean))].slice(0, 2);
     const strong = said.filter(w => !/^(contractors|accounts|software|support|plans|quotes|estimates|relationships|communication)$/.test(w)).slice(0, 3);
     const headline = [titles.join(" · "), years ? `${years} Years` : ""].filter(Boolean).join(" · ");
-    const recent = jobs[0]?.title ? `most recently as ${/^[aeiou]/i.test(jobs[0].title) ? "an" : "a"} ${jobs[0].title}${jobs[0].company ? " at " + jobs[0].company : ""}` : "";
+    const recent = jobs[0]?.title ? `most recently ${asRole(jobs[0].title)}${jobs[0].company ? " at " + jobs[0].company : ""}` : "";
     const summary = [
       years || recent ? `${years ? years + " years of experience" : "Experience"}${recent ? ", " + recent : ""}.` : "",
       strong.length ? `Hands-on with ${list(strong.map(w => /^[A-Z]/.test(w) ? w : w.toLowerCase()))}.` : "",
@@ -156,6 +157,9 @@
   // The resume's look, shared by the page and the PDF: Bright Office ink, gray and hairline (design/PERSONALITY.md).
   const PAPER = { ink: [18, 20, 23], muted: [95, 99, 107], line: [228, 225, 218] };
   const SECTIONS = { summary: "Summary", skills: "Skills", work: "Work Experience", education: "Education and Certifications" };
+  // "as a Purchasing Agent", but "in Counter Sales": some titles name the work, not the person.
+  const asRole = title => /\b(sales|counter|desk|yard|warehouse|purchasing|estimating|operations|inventory|procurement|dispatch|receiving|shipping)$/i.test(String(title).trim())
+    ? `in ${title}` : `as ${/^[aeiou]/i.test(title) ? "an" : "a"} ${title}`;
   const list = a => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
 
   // ---------- The email ----------
@@ -164,12 +168,16 @@
     const first = (t.name || "").split(" ")[0];
     const subject = `Application: ${job.title}${t.name ? " - " + t.name : ""}`;
     const why = (t.said || t.matched).slice(0, 3).map(w => /^[A-Z]/.test(w) ? w : w.toLowerCase());
+    // Name the job where those words actually show up, and take the example from that same job.
+    const used = j => why.filter(w => norm(j.bullets.join(" ")).includes(norm(w).trim())).length;
+    const at = [...(t.jobs || [])].sort((a, b) => used(b) - used(a))[0];
+    const covered = at ? why.filter(w => norm(at.bullets.join(" ")).includes(norm(w).trim())) : [];
     const body = [
       `Hello ${job.company} hiring team,`,
       "",
-      `I'm applying for the ${job.title} role. ${t.jobs[0]?.title ? `I've worked as ${/^[aeiou]/i.test(t.jobs[0].title) ? "an" : "a"} ${t.jobs[0].title}${t.jobs[0].company ? " at " + t.jobs[0].company : ""}` : "My background is hands-on"}${why.length ? `, where my work covered ${list(why)}` : ""}.`,
+      `I'm applying for the ${job.title} role. ${at?.title ? `I've worked ${asRole(at.title)}${at.company ? " at " + at.company : ""}` : "My background is hands-on"}${covered.length ? `, where my work covered ${list(covered)}` : ""}.`,
       "",
-      t.jobs[0]?.bullets?.[0] ? `One example: ${t.jobs[0].bullets[0].replace(/\.?$/, ".")}` : "",
+      at?.bullets?.[0] ? `One example: ${at.bullets[0].replace(/\.?$/, ".")}` : "",
       "",
       "My resume is attached. I'd welcome a short call about the role.",
       "",
@@ -236,18 +244,21 @@
   // What an email from a company says about an application. Only plain, common phrasing counts.
   // A form letter ("we'll contact you to schedule an interview if you're selected") is an acknowledgement, not an interview,
   // and "unfortunately" alone isn't a no ("unfortunately Friday won't work, could we do Monday?").
-  const NO = /\b(not (to )?(move|moving) forward with your|decided (to )?(pursue|proceed|move forward) with other|other candidates whose|position has been filled|no longer (being )?consider|not (been )?selected|will not be moving forward|regret to inform|won'?t be moving forward)\b/;
-  const OFFER = /\b(offer letter|pleased to offer|extend (you )?an offer|job offer)\b/;
-  const FORM = /\b(if (your|you are|you're|we)[^.]{0,60}(selected|qualifications|experience|background|match|interested|fit)|will (contact|reach out to|be in touch with) (you|candidates|applicants)[^.]{0,40}(if|should|whose)|unable to respond|can'?t respond to (every|each|all)|high volume of (applications|applicants)|only (candidates|applicants) (selected|who))/;
-  const ASK = /\b((schedule|set up|arrange|book) (a |an |some |your |a quick )?(time|call|interview|phone screen|phone interview|video interview|chat|meeting)|(phone|video|in-person|onsite|on-site|zoom|teams) interview|invite you (to|for)|are you (free|available)|your availability|times that work|calendly|(bring|have) you in|come in (to|for)|meet with (our|the|me)|phone screen with)\b/;
-  const WHEN = /\b(mon|tues|wednes|thurs|fri)day\b[^.]{0,40}\b\d{1,2}(:\d\d)?\s*(am|pm|a\.m\.|p\.m\.)/;
+  const NO = /\b(not (to )?(move|moving) forward with your|decided (to )?(pursue|proceed|move forward|go) (with other|in a different direction)|different direction|other (candidates|applicants) (whose|who)|position has been filled|no longer (being )?consider|not (been )?selected|will not be moving forward|regret to inform|won'?t be moving forward|not (a|the right) (fit|match) for this)\b/;
+  const OFFER = /\b(offer letter|pleased to offer|extend (you )?an offer|(attached|here) is your offer|verbal offer)\b/;
+  const FORM = /\b(if (your|you are|you're|we)[^.]{0,60}(selected|qualifications|experience|background|match)|will (contact|reach out to|be in touch with) (you|candidates|applicants)[^.]{0,40}(if|should|whose)|unable to respond|can'?t respond to (every|each|all)|high volume of (applications|applicants)|only (candidates|applicants) (selected|who))/;
+  const ASK = /\b((schedule|set up|arrange|book) (a |an |some |your |a quick )?(time|call|interview|phone screen|phone interview|video interview|chat|meeting)|(phone|video|in-person|onsite|on-site|zoom|teams) interview|come in for an interview|invite you (to|for)|are you (free|available)|your availability|times that work|calendly|(bring|have) you in|come in (to|for)|meet (with )?(you|our|the|me)\b|phone screen with)\b/;
+  const WHEN = /\b(mon|tues|wednes|thurs|fri|satur|sun)day\b[\s\S]{0,40}?\b\d{1,2}(:\d\d)?\s*(am|pm|a\.m\.|p\.m\.)/;
   const ACK = /\b((received|receipt of) your application|thank(s| you) for (applying|your application|your interest)|application (has been )?(received|submitted))\b/;
+  // A reply is read in this order: an offer, a clear no, a day and time, a form letter, a real ask, then a plain thank-you.
   function readReply(subject, snippet) {
     const t = `${subject || ""} ${snippet || ""}`.toLowerCase();
     if (OFFER.test(t)) return "offer";
     if (NO.test(t)) return "closed";
-    if (FORM.test(t)) return "applied";
-    if (ASK.test(t) || WHEN.test(t)) return "interview";
+    if (WHEN.test(t)) return "interview";   // a day and a time is an invite, whatever else it says
+    if (FORM.test(t)) return "applied";      // "we'll contact you to schedule an interview if..." is a form letter
+    if (ASK.test(t)) return "interview";
+    if (/\bunfortunately\b/.test(t)) return null;   // something went wrong, but not clearly a no: let them read it
     if (ACK.test(t)) return "applied";
     return null;
   }
@@ -257,6 +268,6 @@
     : ORDER.indexOf(kind) > ORDER.indexOf(now) && now !== "closed" ? kind : null;
   const gmailQuery = (job, since) => `"${String(job.company).replace(/"/g, "")}" -from:me -in:chats${since ? " after:" + since.slice(0, 10).replace(/-/g, "/") : " newer_than:90d"}`;
 
-  const api = { readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS, TITLE_WORD };
+  const api = { readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS, TITLE_WORD, asRole };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else window.Tailor = api;
 })();

@@ -13,6 +13,9 @@ export const METROS = {
   "san antonio": ["san antonio", "new braunfels", "schertz", "boerne", "seguin", "converse", "selma"],
 };
 
+// Whole names people type for a metro.
+const ALIASES = { dfw: ["dallas fort worth", "dallas ft worth", "dfw metroplex", "dfw area", "north texas"] };
+
 // The state each metro is in, so "Dallas" or "DFW" with no state still means Texas.
 const METRO_STATE = { dfw: "tx", houston: "tx", austin: "tx", "san antonio": "tx" };
 
@@ -30,14 +33,21 @@ const word = (text, w) => new RegExp(`(^|[^a-z])${w.replace(/ /g, "[ -]")}($|[^a
 // The states a location names: "Dallas, TX" or "Dallas, Texas" -> ["tx"].
 export function statesIn(location) {
   const raw = String(location || ""), t = clean(raw), out = new Set();
-  for (const m of raw.matchAll(/(?:,|\s|^)([A-Z]{2})(?=$|[\s,;)\-/])/g)) if (STATES[m[1].toLowerCase()]) out.add(m[1].toLowerCase());
+  for (const m of raw.matchAll(/(?:,|\s|^|-)([A-Z]{2})(?=$|[\s,;)\-/])/g)) if (m[1] !== "US") if (STATES[m[1].toLowerCase()]) out.add(m[1].toLowerCase());
   for (const [name, code] of Object.entries(NAME_TO_CODE)) if (word(t, name)) out.add(code);
   return [...out];
 }
 
 // Every place name that counts as the city someone typed.
+// "Dallas-Fort Worth", "Dallas/Fort Worth", "Dallas TX": the city part, without the state.
+export function cityPart(city) {
+  const whole = clean(String(city || "").replace(/[\/\u2013\u2014-]/g, " "));
+  if (Object.values(METROS).some(l => l.includes(whole))) return whole;
+  for (const [k, list] of Object.entries(METROS)) if (ALIASES[k]?.some(a => whole.startsWith(a))) return list[0];
+  return clean(String(city || "").split(",")[0]).replace(/\s+(tx|texas|[a-z]{2})$/, (m, st) => STATES[st] || NAME_TO_CODE[st] ? "" : m).trim();
+}
 export function placeNames(city) {
-  const c = clean(String(city || "").split(",")[0]);
+  const c = cityPart(city);
   const metro = Object.values(METROS).find(list => list.includes(c));
   return metro || (c ? [c] : []);
 }
@@ -46,9 +56,9 @@ export function placeNames(city) {
 export function inCity(location, city) {
   const t = clean(location);
   if (!placeNames(city).some(n => word(t, n))) return false;
-  const c = clean(String(city || "").split(",")[0]);
+  const c = cityPart(city);
   const metro = Object.keys(METROS).find(k => METROS[k].includes(c));
-  const typed = statesIn(String(city || "").split(",").slice(1).join(","));
+  const typed = statesIn(String(city || "").replace(/^[^,]*?(?=\s+[A-Z]{2}$)/, "").split(",").slice(-1).join(",")).filter(() => /,|\s[A-Z]{2}$/.test(String(city || "")));
   const want = typed.length ? typed : metro ? [METRO_STATE[metro]] : [];
   const has = statesIn(location);
   return !want.length || !has.length || has.some(s => want.includes(s));
