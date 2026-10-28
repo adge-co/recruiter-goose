@@ -64,5 +64,17 @@ export function inCity(location, city) {
   return !want.length || !has.length || has.some(s => want.includes(s));
 }
 
+// A posting that names only the state ("Texas", "TX, US") or "Multiple Locations": it may be near them, so it's shown
+// as a long shot to check rather than dropped. Missing a real job costs more than one extra card.
+export function vagueIn(location, city) {
+  const t = clean(location).replace(/\b(us|usa|united states( of america)?)\b/g, "").replace(/[ ,]+/g, " ").trim();
+  if (/^(multiple|various|several) locations?$/.test(t)) return true;
+  const st = NAME_TO_CODE[t] || (STATES[t] ? t : null);
+  if (!st) return false;
+  const c = cityPart(city), metro = Object.keys(METROS).find(k => METROS[k].includes(c));
+  const typed = statesIn(String(city || "").split(",").slice(1).join(","));
+  return (typed.length ? typed : metro ? [METRO_STATE[metro]] : []).includes(st);
+}
+
 // Texas, for reading Texas postings first on the big boards.
 export const isTexas = location => statesIn(location).includes("tx") || [...METROS.dfw, ...METROS.houston, ...METROS.austin, ...METROS["san antonio"]].some(n => word(clean(location), n)) && !statesIn(location).some(s => s !== "tx");

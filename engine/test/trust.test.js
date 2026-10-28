@@ -1,7 +1,7 @@
 // Posting check, knockouts, insider moves, background reading, reposts and the saved-posting re-check.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { postingCheck, knockouts, insiderMoves, payLawState } from "../src/trust.js";
+import { postingCheck, knockouts, payLawState } from "../src/trust.js";
 import { readBackground, suggestedRoles } from "../src/translate.js";
 import { parseResume } from "../src/resume.js";
 import { match, verify, checkJob, signature } from "../src/match.js";
@@ -14,7 +14,7 @@ test("a fresh company-board posting with pay looks real", () => {
   const c = postingCheck({ title: "Implementation Specialist", source: "Company Site", firstPublished: ago(2), payMin: 80000, payMax: 95000, description: LONG, location: "Remote - US", remote: true }, null, NOW);
   assert.equal(c.label, "Looks Real");
   assert.ok(c.fresh);
-  assert.ok(c.good.some(g => g.startsWith("Open 2 Days, First Posted 10-22-2026")));
+  assert.ok(c.good.some(g => g.startsWith("Open 2 days, first posted 10-22-2026")));
   assert.ok(c.good.includes("Pay Listed"));
   assert.deepEqual(c.warn, []);
 });
@@ -23,7 +23,7 @@ test("old, reposted and thin postings are called likely stale, with the reasons"
   const c = postingCheck({ title: "Project Coordinator", source: "Company Site", firstPublished: ago(120), description: "Join us." },
     { lastSeen: ago(0), reposts: 2, repostFirstSeen: ago(200) }, NOW);
   assert.equal(c.label, "Likely Stale");
-  assert.ok(c.warn.some(w => w.startsWith("Open 120 Days")));
+  assert.ok(c.warn.some(w => w.startsWith("Open 120 days")));
   assert.ok(c.warn.some(w => w.startsWith("Reposted 2 Times Since")));
   assert.ok(c.warn.some(w => w.startsWith("Thin Description")));
 });
@@ -65,16 +65,6 @@ test("knockouts compare the posting to the person", () => {
   const withCert = knockouts({ description: d }, { years: 4, skills: ["OSHA 30"] });
   assert.equal(withCert.find(x => x.need === "OSHA 30").status, "ok");
   assert.equal(withCert.find(x => x.need === "5+ Years").status, "check");
-});
-
-test("insider moves: fresh nudge, referral note with the right article, one follow-up", () => {
-  const m = insiderMoves({ title: "Implementation Specialist", company: "Fieldwire", firstPublished: new Date(Date.now() - 864e5).toISOString(), description: LONG }, { name: "Gus", pastTitles: ["Estimator"] });
-  assert.deepEqual(m.map(x => x.key), ["fresh", "referral", "follow"]);
-  const ref = m.find(x => x.key === "referral");
-  assert.match(ref.note, /hiring an Implementation Specialist/);
-  assert.match(ref.note, /working as an Estimator/);
-  assert.match(ref.note, /Gus\.$/);
-  assert.match(ref.search, /linkedin\.com\/search\/results\/people\/\?keywords=Fieldwire/);
 });
 
 test("reads trades, counter and purchasing backgrounds the way a recruiter would", () => {

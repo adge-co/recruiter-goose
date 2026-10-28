@@ -37,9 +37,9 @@ export function postingCheck(job, seen = null, now = Date.now()) {
   let pipeline = false, stale = 0;
 
   if (open !== null) {
-    if (open <= 14) good.push(`Open ${open === 0 ? "Since Today" : open === 1 ? "1 Day" : open + " Days"}, First Posted ${mdy(opened)}`);
-    else if (open <= 60) good.push(`Open ${open} Days, First Posted ${mdy(opened)}`);
-    else { warn.push(`Open ${open} Days. Most real openings fill or close well before that.`); stale++; }
+    if (open <= 14) good.push(`Open ${open === 0 ? "since today" : open === 1 ? "1 day" : open + " days"}, first posted ${mdy(opened)}`);
+    else if (open <= 60) good.push(`Open ${open} days, first posted ${mdy(opened)}`);
+    else { warn.push(`Open ${open} days. Most real openings fill or close well before that.`); stale++; }
   }
   if (job.source === "Company Site") good.push(`On the Company's Own Job Board as of ${mdy(seen?.lastSeen || now)}`);
   if (seen?.reposts) { warn.push(`Reposted ${seen.reposts === 1 ? "Once" : seen.reposts + " Times"} Since ${mdy(seen.repostFirstSeen)}`); stale += seen.reposts >= 2 ? 2 : 1; }
@@ -97,19 +97,4 @@ export function knockouts(job, profile = {}) {
   return out;
 }
 
-// The moves an insider makes on a job worth going after.
-export function insiderMoves(job, profile = {}) {
-  const check = postingCheck(job);
-  const name = String(profile.name || "").trim();
-  const past = (profile.pastTitles || [])[0];
-  const moves = [];
-  if (check.fresh) moves.push({ key: "fresh", title: "Apply While It's New", text: `Open ${check.openDays === 0 ? "since today" : check.openDays + (check.openDays === 1 ? " day" : " days")}. Most applications on a posting come in its first four days.` });
-  const a = /^[aeiou]/i.test(job.title || "") ? "an" : "a";
-  moves.push({ key: "referral", title: `Who Do You Know at ${job.company}?`,
-    text: "In hiring data from Ashby, referred applicants got interviews 40% of the time and cold applicants 3%. Past vendors, customers, subs and old coworkers all count.",
-    note: [`Hey, I saw ${job.company} is hiring ${a} ${job.title}.`, past ? `I've been working ${/\b(sales|counter|desk|yard|warehouse|purchasing|estimating|operations|inventory|procurement|dispatch|receiving|shipping)$/i.test(past) ? "in" : /^[aeiou]/i.test(past) ? "as an" : "as a"} ${past} and it lines up well.` : "It lines up well with what I've been doing.",
-      "Would you be up for putting me in through your referral system, or passing my name to the hiring manager?", `Thanks either way${name ? ", " + name : ""}.`].join(" "),
-    search: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(job.company)}` });
-  moves.push({ key: "follow", title: "Follow Up, Then Let It Go", text: "Recruiters are swamped, so silence isn't a no. Send one short note after a week and one more the week after. Nothing by day 21, close it out and move on." });
-  return moves;
-}
+// The insider moves (apply while new, a referral note, follow up) live in app/index.html insider(), where the note uses Tailor.asRole.

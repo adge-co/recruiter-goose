@@ -139,8 +139,11 @@ for (const dark of [false, true]) {
     const labels = await page.$$eval("#bgSetup .bg > b", els => els.map(e => e.textContent));
     assert.deepEqual(labels, ["Counter Sales", "Purchasing and Buying"]);
     assert.equal(await page.$('#bgSetup [data-tog]'), null, "the cards don't repeat the role chips");
+    assert.ok(await page.$('#cRoles .chip.on[data-tog="roles:purchasing"]'), "the roles the background points to start picked");
     await page.click('#cRoles [data-tog="roles:purchasing"]');
-    assert.ok(await page.$('#cRoles .chip.on[data-tog="roles:purchasing"]'), "role shows as picked");
+    assert.equal(await page.$('#cRoles .chip.on[data-tog="roles:purchasing"]'), null, "a tap turns one off");
+    await page.click('#cRoles [data-tog="roles:purchasing"]');
+    assert.ok(await page.$('#cRoles .chip.on[data-tog="roles:purchasing"]'), "and back on");
     const offered = await page.$$eval('#cRoles [data-tog]', els => els.map(e => e.dataset.tog.slice(6)));
     assert.ok(offered.includes("quoting") && !offered.includes("safety"), "roles come from the background: " + offered);
     await page.click("#moreRoles");
@@ -186,7 +189,7 @@ for (const dark of [false, true]) {
     await card.locator(".title").click();
     await page.waitForSelector("#sheet:not(.hidden)");
     const text = await page.textContent("#sheetBody");
-    for (const want of ["Your Resume For This Job", "Add My Resume", "Paper Trail", "First Posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working in Counter Sales"])
+    for (const want of ["Your Resume For This Job", "Add My Resume", "Paper Trail", "first posted", "On the Company's Own Job Board", "Check Before You Apply", "OSHA 10", "Insider Moves", "Who Do You Know at BuildCo?", "hiring a Purchasing Coordinator", "working in Counter Sales"])
       assert.ok(text.includes(want), "sheet is missing: " + want);
     await page.waitForTimeout(400);
     await shot(page, `phone-${tag}-sheet`);
@@ -383,7 +386,7 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
   await step("[resume] Me shows the resume and Gmail, and edits save", async () => {
     await page.click('.tab[data-tab="me"]');
     await page.waitForSelector("#resumeBody .kv");
-    assert.ok((await page.textContent("#resumeBody")).includes("Purchasing Agent, Counter Sales"));
+    assert.ok((await page.textContent("#resumeBody")).includes("2 jobs"), "the resume card counts jobs; the titles show once, above");
     assert.ok((await page.textContent("#gmailBody")).includes("Check for Replies"));
     await page.click("#editResume");
     await page.waitForSelector("#rjB1");
@@ -393,6 +396,7 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     await page.click("#rSave");
     await page.waitForFunction(() => window.__db.profiles[0].data.resume.jobs.length === 3);
     assert.equal(await page.evaluate(() => window.__db.profiles[0].data.resume.jobs[1].bullets.length), 3);
+    assert.ok((await page.evaluate(() => window.__db.profiles[0].data.pastTitles)).includes("Warehouse Associate"), "a job added to the resume joins Jobs You've Held");
     await noSideScroll(page);
     await shot(page, "phone-light-resume-me");
   });

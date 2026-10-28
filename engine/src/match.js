@@ -3,7 +3,7 @@
 
 import * as S from "./sources/index.js";
 import { postingCheck, knockouts } from "./trust.js";
-import { inCity } from "./places.js";
+import { inCity, vagueIn } from "./places.js";
 
 // Words people use for the same kind of role. A role the person types that isn't here is used as-is.
 export const ROLE_WORDS = {
@@ -182,7 +182,7 @@ export function vet(jobs, p) {
 function placeFits(j, p) {
   // Remote means remote from where they live: a "remote" job hiring only in Germany or Pakistan doesn't count.
   if (p.wants.remote && j.remote) return p.wants.country !== "US" || !NON_US.test(norm(j.location)) || US_OK.test(norm(j.location));
-  return p.wants.cities.some(c => inCity(j.location, c));   // Dallas, TX takes in Fort Worth, Irving and Plano, not Dallas, GA
+  return p.wants.cities.some(c => inCity(j.location, c) || vagueIn(j.location, c));   // Dallas, TX takes in Fort Worth, Irving and Plano, not Dallas, GA
 }
 
 // ---------- 3. Score how well each one fits ----------
@@ -258,7 +258,7 @@ export function score(j, p, common) {
   else if (field.myHits.length === 1) fieldPts = 12;
   else if (field.companyShared.length) fieldPts = 8;
   const hitWords = field.myHits.filter(w => !field.myHits.includes(w + "s"));   // "contractors", not "contractor, contractors"
-  if (hitWords.length) reasons.push(`${titleCase(hitWords.slice(0, 2).join(", "))} work, like your background`);
+  if (hitWords.length) reasons.push(`${hitWords.slice(0, 2).join(" and ").replace(/^\w/, c => c.toUpperCase())} work, like your background`);
   else if (field.companyShared.length) reasons.push(`Company works in ${fieldName(field.companyShared[0])}`);
   s += fieldPts;
 
@@ -312,6 +312,9 @@ export function score(j, p, common) {
   let fit = (salesy && avoid.includes("sales")) ? "sales" : s >= 70 ? "strong" : s >= 50 ? "good" : s >= 35 ? "reach" : null;
   if (!fieldPts && (fit === "strong" || fit === "good")) { fit = "reach"; flags.push("Outside Your Field"); }   // the right title in an unrelated industry is a long shot, not a match
   if ((stretch || underFloor || entry || technical) && (fit === "strong" || fit === "good")) fit = "reach";   // a stretch is never sold as a sure thing
+  if (!j.remote && p.wants.cities.length && !p.wants.cities.some(c => inCity(j.location, c)) && p.wants.cities.some(c => vagueIn(j.location, c))) {
+    flags.push("Check the Location"); if (fit === "strong" || fit === "good") fit = "reach";   // "Texas" might be Dallas, or might be El Paso
+  }
   if (fit === "strong" && COMMISSION_ONLY.test(j.description)) { fit = "good"; flags.push("Commission Only"); }   // no base pay is never a strong fit
   return { ...j, score: s, raw, fit, reasons, flags, ageDays: age === null ? null : Math.floor(age) };
 }
@@ -331,10 +334,12 @@ export function checkJob(job, profile) {
   if (yrs.length && Math.max(...yrs) > p.years) gaps.push(`Asks for ${Math.max(...yrs)}+ years; you have ${p.years}`);
   const travel = j.description.match(/travel[^.]{0,40}?(\d{2})\s*%|(\d{2})\s*%[^.]{0,30}travel/i);
   if (travel && Number(travel[1] || travel[2]) >= 25) headsUp.push(`Travel up to ${travel[1] || travel[2]}%`);
-  if (SALESY.test(j.description)) headsUp.push("Has quota or commission language");
+  if (SALESY.test(j.description) && !r.flags.some(f => /Commission|Sales/.test(f))) headsUp.push("Has quota or commission language");
+  const kos = knockouts(j, p);
+  if (kos.some(k => /years/i.test(k.need))) gaps.splice(0, gaps.length, ...gaps.filter(g => !/years/.test(g)));   // the checklist already says it
   const verdict = r.fit === "strong" ? "Strong fit" : r.fit === "good" ? "Good fit" : r.fit === "reach" ? "A reach" : r.fit === "sales" ? "Sales role" : "Not a fit";
   return { verdict, fit: r.fit, score: r.score, reasons: r.reasons, flags: r.flags, hiddenBecause: r.hiddenBecause || null, gaps, headsUp,
-    check: postingCheck({ ...j, remote: !!job.remote }), knockouts: knockouts(j, p) };
+    check: postingCheck({ ...j, remote: !!job.remote }), knockouts: kos };
 }
 
 // ---------- The whole run ----------

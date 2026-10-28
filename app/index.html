@@ -633,7 +633,7 @@ $("#aForgot").onclick = async () => {
   if (!email) { err.textContent = "Type your email above, then tap this again."; err.classList.remove("hidden"); return; }
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
   if (error) { err.textContent = error.message; err.classList.remove("hidden"); return; }
-  toast("Check your email for a link to set a new password.");
+  err.classList.add("hidden"); toast("Check your email for a link to set a new password.");
 };
 $("#authForm").onsubmit = async e => {
   e.preventDefault();
@@ -835,13 +835,29 @@ function payText(j) {
 }
 // Hiring systems write places their own way: "US-TX-Irving", "Grand Prairie, Texas, United States". Shown as "Irving, TX".
 const STATE_CODE = Object.fromEntries("AL Alabama|AK Alaska|AZ Arizona|AR Arkansas|CA California|CO Colorado|CT Connecticut|DE Delaware|FL Florida|GA Georgia|HI Hawaii|ID Idaho|IL Illinois|IN Indiana|IA Iowa|KS Kansas|KY Kentucky|LA Louisiana|ME Maine|MD Maryland|MA Massachusetts|MI Michigan|MN Minnesota|MS Mississippi|MO Missouri|MT Montana|NE Nebraska|NV Nevada|NH New Hampshire|NJ New Jersey|NM New Mexico|NY New York|NC North Carolina|ND North Dakota|OH Ohio|OK Oklahoma|OR Oregon|PA Pennsylvania|RI Rhode Island|SC South Carolina|SD South Dakota|TN Tennessee|TX Texas|UT Utah|VT Vermont|VA Virginia|WA Washington|WV West Virginia|WI Wisconsin|WY Wyoming".split("|").map(x => [x.slice(3).toLowerCase(), x.slice(0, 2)]));
-const tidyPlace = loc => String(loc || "").split(/\s*;\s*/).map(p => p.trim()
-  .replace(/^US-([A-Z]{2})-(.+)$/, "$2, $1")
-  .replace(/,\s*(United States( of America)?|USA|US)$/i, "")
-  .replace(/,\s*([A-Za-z ]+)$/, (m, st) => STATE_CODE[st.trim().toLowerCase()] ? `, ${STATE_CODE[st.trim().toLowerCase()]}` : m)).join("; ");
+const CODE_STATE = Object.fromEntries(Object.entries(STATE_CODE).map(([n, c]) => [c, n.replace(/\b\w/g, x => x.toUpperCase())]));
+const tidyOne = raw => {
+  let p = raw.trim()
+    .replace(/^(remote|hybrid|on-?site)\s*[-–:,|]\s*/i, "")              // the kind is shown on its own
+    .replace(/\s*\b\d{5}(-\d{4})?\b/g, "")                             // ZIP codes
+    .replace(/\bFt\.?\s+(?=[A-Z])/g, "Fort ")
+    .replace(/^US-([A-Z]{2})-(.+)$/, "$2, $1")
+    .replace(/^([A-Z]{2})-([A-Za-z .]+)$/, (m, st, c) => CODE_STATE[st] ? `${c}, ${st}` : m)
+    .replace(/,\s*(United States( of America)?|USA|US)$/i, "")
+    .replace(/,\s*([A-Za-z ]+)$/, (m, st) => STATE_CODE[st.trim().toLowerCase()] ? `, ${STATE_CODE[st.trim().toLowerCase()]}` : m);
+  if (!p.includes(",")) {   // "Cleburne Texas" or "Cleburne TX"
+    const m = p.match(/^(.+?)\s+([A-Za-z]+(?: [A-Za-z]+)?)$/);
+    const st = m && (STATE_CODE[m[2].toLowerCase()] || (CODE_STATE[m[2]] && m[2]));
+    if (st) p = `${m[1]}, ${st}`;
+    else if (STATE_CODE[p.toLowerCase()] || CODE_STATE[p]) p = `${CODE_STATE[p] || CODE_STATE[STATE_CODE[p.toLowerCase()]]}, City Not Listed`;
+  }
+  return p.replace(/,\s*,/g, ",").replace(/^[\s,]+|[\s,]+$/g, "");
+};
+const tidyPlace = loc => String(loc || "").split(/\s*;\s*/).map(tidyOne).join("; ");
+const tidyReason = r => r.startsWith("In ") ? "In " + tidyPlace(r.slice(3)) : r;
 function placeText(j) {
   const loc = tidyPlace(j.location), plain = /^[\s,]*(remote|usa?|united states|anywhere|[\s,-])*$/i.test(loc);
-  const kind = j.remote ? "Remote" : /hybrid/i.test(loc) ? "Hybrid" : "On-Site";
+  const kind = j.remote ? "Remote" : /hybrid/i.test(j.location || "") ? "Hybrid" : "On-Site";
   return esc(j.remote && plain ? kind : `${kind} · ${loc}`);
 }
 const openText = j => { const d = openDays(j); return d == null ? "" : `<span${d < 3 ? ' class="fresh"' : ""}>Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}</span>`; };
@@ -869,7 +885,7 @@ function jobCard(j, s) {
 const longDay = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 function trackBox(s) {
   const m = s.job?.mail;
-  return `${m ? `<div class="verdict ${m.kind === "closed" ? "" : "real"}" style="margin-bottom:12px"><b>${MAIL_WORD[m.kind]}${String(m.msgId || "").startsWith("paste-") ? "" : " in Gmail"}</b><p>${esc(m.from)}, ${shortDay(m.at)}: “${esc(m.subject)}”</p></div>` : ""}<div class="track">
+  return `${m ? `<div class="verdict ${m.kind === "closed" ? "" : "real"}" style="margin-bottom:12px"><b>${MAIL_WORD[m.kind]}${String(m.msgId || "").startsWith("paste-") ? "" : " in Gmail"}</b><p>${esc(m.from)}, ${shortDay(m.at)}${m.subject ? `: “${esc(m.subject)}”` : ""}</p></div>` : ""}<div class="track">
     <div><div class="statusseg" role="radiogroup" aria-label="Where It Stands">${STATUS.map(([v, l]) => `<button type="button" role="radio" aria-checked="${s.status === v}" class="${s.status === v ? "on" : ""}" data-status="${s.id}" data-val="${v}">${l}</button>`).join("")}</div></div>
     <div><span class="tl">Follow Up</span><div class="fuline">${s.follow_up ? `<span class="when" data-fuwhen="${s.id}">${longDay(s.follow_up)}</span>` : ""}${[[3, "In 3 Days"], [7, "In a Week"], [14, "In 2 Weeks"]].map(([n, l]) => `<button type="button" class="chip" data-follow="${s.id}" data-days="${n}">${l}</button>`).join("")}${s.follow_up ? `<button type="button" class="chip" data-follow="${s.id}" data-days="">Clear</button>` : ""}</div></div>
   </div>`;
@@ -1084,7 +1100,8 @@ document.addEventListener("click", async e => {
 
 // ---------- Big moments ----------
 function celebrate(kind, s) {
-  const applied = saved.filter(x => ["applied", "interview", "offer", "closed"].includes(x.status)).length;
+  // Once saved jobs carry applied_at, a job closed before applying doesn't count; until then every closed job does.
+  const applied = saved.filter(x => x.applied_at || ["applied", "interview", "offer"].includes(x.status) || (x.status === "closed" && !("applied_at" in x))).length;
   const div = document.createElement("div"); div.className = "party";
   div.innerHTML = kind === "offer"
     ? `<div class="card"><img class="mascot" src="img/cheer.webp" alt=""><div class="big" id="countUp">0</div><p class="hint" style="margin:0 0 6px">${applied === 1 ? "application" : "applications"} sent to get here</p><h1>You Got an Offer!</h1><p>${esc(s.job.title)} at ${esc(s.job.company)}. Honk honk.</p><button class="btn wide">Back to My Jobs</button></div>`
@@ -1145,7 +1162,7 @@ $("#cGo").onclick = async () => {
   const good = data.fit === "strong" || data.fit === "good";
   out.innerHTML = `<div style="margin-top:14px"><div class="pills"><span class="pill ${data.fit || "flag"}">${esc(FIT[data.fit] || tc(data.verdict || ""))}</span></div>
     ${data.hiddenBecause ? `<p><b>Why not:</b> ${esc(data.hiddenBecause)}</p>` : ""}
-    ${data.reasons?.length ? `<div class="label">${good ? "Why It Fits" : "What Lines Up"}</div><ul class="why">${data.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+    ${data.reasons?.length ? `<div class="label">${good ? "Why It Fits" : "What Lines Up"}</div><ul class="why">${data.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(tidyReason(r))}</li>`).join("")}</ul>` : ""}
     ${[...data.gaps, ...data.headsUp, ...data.flags.filter(f => !/Pay Not|Date Not/.test(f))].length ? `<div class="label">Watch For</div><ul class="why">${[...data.gaps, ...data.headsUp, ...data.flags.filter(f => !/Pay Not|Date Not/.test(f))].map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
     ${data.knockouts?.length ? `<div class="label">Check Before You Apply</div><ul class="ev">${data.knockouts.map(k => `<li><span class="dot ${k.status}"></span><div style="flex:1" class="ko"><span><b>${esc(k.need)}</b></span><span class="n">${KO_WORD[k.status]} · ${esc(k.note)}</span></div></li>`).join("")}</ul>` : ""}
     ${data.check?.warn?.filter(w => !/^Open|Thin/.test(w)).length ? `<div class="label">About the Posting</div><ul class="ev">${data.check.warn.filter(w => !/^Open|Thin/.test(w)).map(w => `<li><span class="dot check"></span>${esc(w)}</li>`).join("")}</ul>` : ""}</div>`;
@@ -1166,8 +1183,7 @@ function renderResumeCard() {
   const lines = r.jobs.reduce((n, j) => n + (j.bullets || []).length, 0);
   $("#resumeBody").innerHTML =
     `<div class="kv"><div class="k">Name</div><div class="v">${esc(r.name || profile.data.name || "")}${r.email || r.phone ? `<br><span style="color:var(--muted)">${esc([r.phone, r.email].filter(Boolean).join(" · "))}</span>` : ""}</div></div>` +
-    `<div class="kv"><div class="k">Jobs</div><div class="v">${r.jobs.map(j => esc(j.title || j.company)).join(", ")}</div></div>` +
-    `<div class="kv"><div class="k">On It</div><div class="v">${lines} ${lines === 1 ? "line" : "lines"} about your work · ${(r.skills || []).length} skills</div></div>` +
+    `<div class="kv"><div class="k">On It</div><div class="v">${r.jobs.length} ${r.jobs.length === 1 ? "job" : "jobs"}, ${lines} ${lines === 1 ? "line" : "lines"} about your work · ${(r.skills || []).length} skills</div></div>` +
     `<div class="btnrow"><button class="btn ghost small" data-resume-file>Replace From a File</button></div>`;
 }
 document.addEventListener("click", e => {
@@ -1227,7 +1243,10 @@ function openResumeEditor(back, from) {
     $("#rSave").onclick = async () => {
       const next = read(); next.jobs = next.jobs.filter(j => j.title || j.company || j.bullets.length);
       if (!next.jobs.length) { toast("Add at least one job."); return; }
-      profile.data = { ...profile.data, resume: next };
+      // One list of jobs held: titles on the resume join the ones typed at setup, so Me never shows two lists that disagree.
+      const held = profile.data.pastTitles || [], seen = new Set(held.map(t => t.toLowerCase()));
+      const added = next.jobs.map(j => j.title).filter(t => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+      profile.data = { ...profile.data, resume: next, pastTitles: [...held, ...added] };
       $("#rSave").disabled = true;
       const { error } = await saveProfile({ data: profile.data });
       $("#rSave").disabled = false;
@@ -1323,7 +1342,7 @@ document.addEventListener("click", e => {
     if (!pick || text.length < 20) { toast(live.length ? "Pick the job and paste the email." : "Save a job first."); return; }
     const s = saved.find(x => x.id === pick.dataset.prjob), kind = Tailor.readReply("", text), to = Tailor.nextStatus(s.status, kind);
     if (!to) { toast(kind ? "That doesn't change where this job stands." : "I couldn't tell what that email means. Move it yourself in the job."); return; }
-    const subject = (text.match(/^subject:\s*(.+)$/im) || [])[1] || MAIL_WORD[kind];
+    const subject = (text.match(/^subject:\s*(.+)$/im) || [])[1] || "";   // never quote words the company didn't write
     mailSuggest = [{ sid: s.id, msgId: "paste-" + Date.now(), to, kind, from: s.job.company, subject, snippet: text.replace(/^subject:.*$/im, "").replace(/\s+/g, " ").trim().slice(0, 160), at: new Date().toISOString() }, ...mailSuggest];
     closeSheet(); renderMine();
   };
@@ -1402,7 +1421,7 @@ const STAGE_WORD = { applied: "Applied", interview: "Interviewing", offer: "Offe
 function mailCards() {
   if (!mailSuggest.length) return "";
   return `<div class="today">${mailSuggest.map((m, i) => { const s = saved.find(x => x.id === m.sid); if (!s) return "";
-    return `<div class="nudge go mailnudge"><div class="ni">${I.send}</div><div><b>${esc(s.job.title)} at ${esc(s.job.company)}</b><span>${esc(m.from)} wrote ${shortDay(m.at)}: “${esc(m.subject)}.” ${esc(m.snippet)}</span>
+    return `<div class="nudge go mailnudge"><div class="ni">${I.send}</div><div><b>${esc(s.job.title)} at ${esc(s.job.company)}</b><span>${esc(m.from)} wrote ${shortDay(m.at)}${m.subject ? `: “${esc(m.subject)}.”` : ":"} ${esc(m.snippet)}</span>
       <div class="btnrow" style="margin-top:8px"><button class="btn small" data-mailyes="${i}">Move to ${STAGE_WORD[m.to]}</button><button class="btn ghost small" data-mailno="${i}">Not Now</button></div></div></div>`; }).join("")}
     ${mailSuggest.length > 1 ? `<button class="btn ghost small" data-mailall style="margin-top:8px">Move All ${mailSuggest.length}</button>` : ""}</div>`;
 }
@@ -1484,7 +1503,7 @@ function openSheet(id, keep) {
     <ul class="ev">${gone ? `<li><span class="dot miss"></span>No longer on ${esc(j.company)}'s job board as of ${shortDay(gone)}.</li>` : ""}${c.good.map(g => `<li><span class="dot ok"></span>${esc(niceDates(g))}</li>`).join("")}${c.warn.map(w => `<li><span class="dot check"></span>${esc(niceDates(w))}</li>`).join("")}</ul>
     ${ko.length ? `<h3>Check Before You Apply</h3><div class="kos">${ko.map(k => `<div class="ko"><span>${esc(k.need)}</span><span class="n"><b class="${k.status}">${KO_WORD[k.status]}</b> · ${esc(k.note)}</span></div>`).join("")}</div>` : ""}
     ${(j.flags || []).length ? `<h3>Watch For</h3><ul class="why">${j.flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
-    ${j.reasons?.filter(r => r !== "Remote").length ? `<h3>Why It Fits</h3><ul class="why">${j.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+    ${j.reasons?.filter(r => r !== "Remote").length ? `<h3>Why It Fits</h3><ul class="why">${j.reasons.filter(r => r !== "Remote").map(r => `<li>${esc(tidyReason(r))}</li>`).join("")}</ul>` : ""}
     <h3>Your Resume For This Job</h3>${madeFor(j)}
     <h3>Insider Moves</h3>${insider(j)}
     ${j.description ? `<details><summary class="section-h">${s ? `The Posting, Saved ${shortDay(s.created_at)}` : "The Posting"}</summary><p class="desc">${esc(j.description)}</p></details>` : ""}
@@ -1593,6 +1612,7 @@ function bgHtml(list, compact) {
 }
 async function renderBgSetup() {
   const el = $("#bgSetup"), list = await loadBackground(draft.titles);
+  if (!draft.roles.length) draft.roles = [...new Set(list.flatMap(b => b.roles))].filter(r => ROLES.includes(r)).slice(0, 4);   // typed titles get the same head start a resume does
   renderRoleChips();
   el.classList.toggle("hidden", !draft.titles.length);
   if (!list.length) el.innerHTML = `<b style="font-size:17px">No Read on That Background Yet</b><p class="hint" style="margin:6px 0 0">Recruiter Goose is built for people coming from the trades, counter sales, purchasing, warehouses and the jobsite. You can still pick roles below or type the exact title you want, and I'll search for it.</p>`;

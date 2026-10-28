@@ -143,7 +143,9 @@ test("checks one posting someone pastes in", () => {
   assert.ok(forma.headsUp.includes("Travel up to 50%"));
   const hotel = checkJob({ title: "Account Manager", company: "BedCo", description: "Sell mattresses to hotels and resorts across the hospitality industry." }, { ...GUS, wants: { ...GUS.wants, roles: [...GUS.wants.roles, "customer success"] } });
   assert.equal(hotel.verdict, "Not a fit");
-  assert.ok(checkJob({ title: "Implementation Lead", description: "10+ years required." }, GUS).gaps[0].startsWith("Asks for 10+ years"));
+  const lead = checkJob({ title: "Implementation Lead", description: "10+ years required." }, GUS);
+  assert.ok(lead.knockouts.some(k => /years/i.test(k.need)) || lead.gaps[0].startsWith("Asks for 10+ years"), "the years gap shows once");
+  assert.ok(!(lead.knockouts.some(k => /years/i.test(k.need)) && lead.gaps.some(g => /years/.test(g))), "not twice");
 });
 
 test("JSearch only runs when a key is set", async () => {
@@ -247,6 +249,19 @@ test("Dallas, TX takes in the whole DFW area and not Dallas, GA", async () => {
   for (const l of ["Dallas, GA", "Arlington, VA", "Houston, TX"]) assert.ok(!inCity(l, "Dallas, TX"), l);
   for (const c of ["Dallas", "DFW", "Dallas-Fort Worth", "Dallas/Fort Worth", "Dallas TX"])
     for (const [l, ok] of [["Dallas, GA", false], ["US-GA-Dallas", false], ["Irving, TX", true], ["US-TX-Plano", true], ["Fort Worth, Texas, United States", true]]) assert.equal(inCity(l, c), ok, `${l} for ${c}`);
+});
+
+test("a posting that only says Texas or Multiple Locations is a long shot to check, not dropped", async () => {
+  const { vagueIn } = await import("../src/places.js");
+  for (const c of ["Dallas, TX", "DFW", "Dallas"]) {
+    for (const l of ["Texas", "TX, US", "Multiple Locations"]) assert.ok(vagueIn(l, c), `${l} for ${c}`);
+    for (const l of ["Georgia", "Houston, TX", "Dallas, GA"]) assert.ok(!vagueIn(l, c), `${l} for ${c}`);
+  }
+  const { checkJob } = await import("../src/match.js");
+  const r = checkJob({ title: "Purchasing Agent", company: "BuildCo", location: "Texas", remote: false, description: "Buy lumber, doors and windows for builders and contractors. Purchase orders, vendors, takeoffs.", postedAt: new Date().toISOString() },
+    { years: 7, pastTitles: ["Purchasing Agent"], industries: ["building-materials"], wants: { roles: ["purchasing"], remote: false, cities: ["Dallas, TX"] } });
+  assert.ok(r.flags.includes("Check the Location"));
+  assert.ok(!["strong", "good"].includes(r.fit), "never sold as a sure thing: " + r.fit);
 });
 
 test("sales titles stay for someone who has sold or asked for quoting work", async () => {
