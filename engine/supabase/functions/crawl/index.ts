@@ -20,6 +20,9 @@ const rest = async (path: string, init: RequestInit = {}) => {
 // The board is marked tried before it is read, so one that runs out of time can't hold up the rest.
 async function deepPass() {
   const started = new Date().toISOString();
+  // The anon key can call this, so it runs at most once every 4 minutes no matter who calls it.
+  const recent = await rest(`boards?select=token&last_tried_at=gt.${encodeURIComponent(new Date(Date.now() - 4 * 60e3).toISOString())}&limit=1`);
+  if (recent.length) return { skipped: "Read a big board less than 4 minutes ago" };
   const boards = await rest(`boards?select=ats,token,name,industries&active=eq.true&ats=in.(${[...S.DEEP].join(",")})&order=last_tried_at.asc.nullsfirst&limit=1`);
   if (!boards.length) return { boards: 0 };
   for (const b of boards) await rest(`boards?ats=eq.${b.ats}&token=eq.${encodeURIComponent(b.token)}`, { method: "PATCH", body: JSON.stringify({ last_tried_at: started }) });

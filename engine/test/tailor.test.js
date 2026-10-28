@@ -136,3 +136,91 @@ Inventory, Inventory Control, OSHA, OSHA 30`);
   assert.ok(t.jobs[0].bullets.some(b => /99%/.test(b)), t.jobs[0].bullets.join(" | "));
   assert.ok(!t.skills.includes("Inventory") && !t.skills.includes("OSHA"), t.skills.join(", "));
 });
+
+// Resumes as people actually write them: all caps, no bullet marks, tab columns, dates first, headings on the same line.
+const ODD = {
+CAPS: `TONY RIVERA
+GRAND PRAIRIE TX 75050 | (972) 555-0144 | TRIVERA@GMAIL.COM
+
+PROFESSIONAL EXPERIENCE
+YARD LEAD
+84 LUMBER - GRAND PRAIRIE TX
+JAN 2021 - PRESENT
+- RAN A CREW OF 6 LOADING CONTRACTOR ORDERS
+- KEPT INVENTORY ACCURATE WITH WEEKLY CYCLE COUNTS
+- RECEIVED FREIGHT AND CHECKED PURCHASE ORDERS
+COUNTER SALES
+HOME DEPOT PRO - ARLINGTON TX
+MAR 2017 - DEC 2020
+- QUOTED LUMBER AND MILLWORK FOR 40+ CONTRACTOR ACCOUNTS
+- PROCESSED SPECIAL ORDERS IN SAP
+
+SKILLS
+INVENTORY, FORKLIFT, SAP, QUOTING
+`,
+NOMARK: `Dana Brooks
+Fort Worth Texas
+dana.brooks@outlook.com  817-555-0177
+
+Experience
+Inside Sales Rep, Builders Supply Co    2020 - Present
+Quoted doors, windows and millwork for builders
+Handled 30 calls a day from contractors
+Set up new accounts in Epicor
+Warehouse Associate, Lowe's    2016 - 2020
+Pulled and staged contractor orders
+Ran the forklift and kept the yard clean
+
+Skills: Epicor, Excel, Quoting, Customer Service
+Education: Weatherford High School
+`,
+INLINE: `Ray Okafor | Mesquite TX | ray.okafor@gmail.com | 469 555 0100
+Skills: BisTrack; Excel; Takeoffs; Purchase Orders
+Experience:
+Estimator — Lone Star Truss, Mesquite TX   2019 – Present
+• Built takeoffs from plans for 25 bids a week
+• Priced trusses and managed vendor lead times
+Framer — Self employed   2012 – 2019
+• Framed 120+ homes for DFW builders
+• Read blueprints and specs every day
+Certifications: OSHA 30, Forklift
+`,
+TABCO: `Luis Garza
+Arlington, TX | luis.garza@yahoo.com
+
+EMPLOYMENT
+Ferguson Enterprises\tCounter Sales Associate\t2019 - Present
+o\tQuoted plumbing supplies for 50 contractors a week
+o\tProcessed orders and returns in SAP
+Winsupply\tWarehouse Clerk\t2016 - 2019
+o\tReceived freight and checked purchase orders
+`,
+DATEFIRST: `KELLY NGUYEN
+Plano TX
+kelly.n@gmail.com
+
+WORK HISTORY
+2021 – Present   Purchasing Agent, Acme Supply, Dallas TX
+• Managed purchase orders for 40 active jobs
+• Negotiated pricing with 25 vendors, saved 8%
+2018 – 2021   Project Coordinator, Beck Group
+• Tracked submittals and RFIs for $30M projects
+`,
+};
+
+test("odd resume formats keep every job, the current one first, with its own lines", () => {
+  const want = {
+    CAPS: [["Yard Lead", "84 Lumber", 3], ["Counter Sales", "Home Depot Pro", 2]],
+    NOMARK: [["Inside Sales Rep", "Builders Supply Co", 3], ["Warehouse Associate", "Lowe's", 2]],
+    INLINE: [["Estimator", "Lone Star Truss", 2], ["Framer", "Self employed", 2]],
+    TABCO: [["Counter Sales Associate", "Ferguson Enterprises", 2], ["Warehouse Clerk", "Winsupply", 1]],
+    DATEFIRST: [["Purchasing Agent", "Acme Supply", 2], ["Project Coordinator", "Beck Group", 1]],
+  };
+  for (const [k, jobs] of Object.entries(want)) {
+    const r = T.readResume(ODD[k]);
+    assert.deepEqual(r.jobs.map(j => [j.title, j.company, j.bullets.length]), jobs, k);
+  }
+  assert.equal(T.readResume(ODD.NOMARK).city, "Fort Worth, TX");
+  assert.equal(T.readResume(ODD.CAPS).city, "Grand Prairie, TX");
+  assert.deepEqual(T.readResume(ODD.NOMARK).education, ["Weatherford High School"]);
+});

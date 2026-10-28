@@ -1,4 +1,15 @@
-# Recruiter Goose: Handoff (10-24-2026)
+# Recruiter Goose: Handoff (10-24-2026, current state updated 10-28-2026)
+
+## Current state (10-28-2026), read this first
+- Repo `adge-co/recruiter-goose` (public), branch `main`. Tests: `cd engine && npm test` (51 tests, including 75 real-world reply wordings in `engine/test/reply-cases.js` and 5 odd resume formats) and `node test-ui/app.ui.mjs` (34 Playwright checks with a fake backend).
+- Live functions: `match` v13 and `crawl` v9, both importing the engine from jsDelivr at commit 8f39ed9 or later (see "Recruiter Goose 2" below for how to redeploy). `crawl` fills `postings` every 4 hours (`crawl-jobs`) and reads one big employer board every 5 minutes (`crawl-deep`, rotating by `boards.last_tried_at`). Boards whose robots.txt says no are turned off, never worked around.
+- One resume reader: `app/tailor.js` `readResume` (browser). The server's `parseResume` only adds skills, industries, years and suggested roles. The tailored resume PDF and the application email come from `app/tailor.js` too.
+- Replies: `app/tailor.js` `readReply` reads a sentence at a time (store hours and form-letter "if" sentences are set aside first; sales emails, invoices and job alerts are ignored). Add new wordings to `engine/test/reply-cases.js` before changing the rules.
+- Settings Gus fills in, in `app/config.js`: `RG_GOOGLE_CLIENT_ID` (Gmail drafts and reply reading; empty = Gmail card hidden, Paste a Reply still works) and `RG_RESET_MAIL` (turn on after Supabase has an SMTP sender; until then Forgot Your Password is hidden).
+- Gmail scopes `gmail.readonly` and `gmail.compose` are restricted: without Google's verification only listed test users can connect, so Paste a Reply stays the main path for everyone else.
+- Pending migration (needs approval): `engine/supabase/migrations/20261028_saved_jobs_applied_at.sql`. The app falls back without it.
+
+---
 
 For a fresh Claude picking this up in the ADGE project. Gus = Gus Johnson (GitHub `thunderbob34-boop`). Dates go Month-Day-Year. Section labels in the UI stay large, bold and dark. Gus put the design pass off until he can do it with you.
 
@@ -29,7 +40,7 @@ A web app: anyone makes an account, drops in a resume (or types their background
 ## What's left after hosting
 - Live test on the real URL: make an account, upload a resume, search, save, change status.
 - Design pass with Gus.
-- Known gaps: no "forgot password" (needs an email sender; Supabase's built-in one only mails project members), no Google sign-in (needs a Google Cloud OAuth client), pass reasons don't change the server search (only filter in the app), Outreach Log and Draft Email from PLAN.md aren't built (need Gmail API and Google verification).
+- Known gaps (10-24; see Current state above for what changed since): no Google sign-in, pass reasons only filter in the app.
 - Engine: Arrive Logistics' board sometimes times out at 12 seconds; consider a longer timeout for big boards.
 
 ## Files (project files, `/mnt/project-files/job-hunt/recruiter-goose/`)

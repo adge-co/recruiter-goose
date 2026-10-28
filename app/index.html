@@ -475,6 +475,16 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
   <section id="vMatches" class="hidden">
     <div class="lt"><div><h1>Matches</h1><div class="sub" id="mSub"></div></div><button class="icon" id="rerun" aria-label="Search Again" title="Search Again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4.5V11h-6.5"/></svg></button></div>
     <div id="mBody"></div>
+    <div class="group" id="checkCard">
+      <h2>Found a Job Somewhere Else?</h2>
+      <p class="hint" style="margin:4px 0 0">Paste it and see how it fits you, with the same read your matches get.</p>
+      <label class="label" for="cTitle">Job Title</label>
+      <input type="text" id="cTitle" placeholder="Implementation Consultant">
+      <label class="label" for="cText">The Posting</label>
+      <textarea id="cText" placeholder="Paste the job description"></textarea>
+      <button class="btn ghost wide" style="margin-top:12px" id="cGo">Check It</button>
+      <div id="cOut"></div>
+    </div>
   </section>
 
   <!-- My jobs -->
@@ -489,6 +499,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
     <div class="group">
       <div class="row"><h2>Your Background</h2><div class="spacer"></div><button class="btn ghost small" id="editMe">Edit</button></div>
       <div id="meBody"></div>
+      <div id="bgCard" class="hidden"><div class="lbl" style="margin-top:16px">How a Recruiter Reads It</div><div id="bgBody"></div></div>
     </div>
     <div class="group" id="resumeCard">
       <div class="row"><h2>My Resume</h2><div class="spacer"></div><button class="btn ghost small" id="editResume">Edit</button></div>
@@ -498,19 +509,6 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
     <div class="group hidden" id="gmailCard">
       <h2>Gmail</h2>
       <div id="gmailBody"></div>
-    </div>
-    <div class="group" id="bgCard">
-      <h2>How a Recruiter Reads Your Background</h2>
-      <div id="bgBody"></div>
-    </div>
-    <div class="group">
-      <h2>Check a Job From Anywhere</h2>
-      <label class="label" for="cTitle">Job Title</label>
-      <input type="text" id="cTitle" placeholder="Implementation Consultant">
-      <label class="label" for="cText">The Posting</label>
-      <textarea id="cText" placeholder="Paste a job description from any site to see how it fits you"></textarea>
-      <button class="btn wide" style="margin-top:12px" id="cGo">Check It</button>
-      <div id="cOut"></div>
     </div>
     <div class="group">
       <h2>Appearance</h2>
@@ -749,18 +747,27 @@ async function readResume(text) {
   const { data, error } = await sb.functions.invoke("match", { body: { resume: text } });
   if (error || data?.error) { msg.innerHTML = `<span class="err">${esc(data?.error || error.message)}</span>`; return; }
   const merge = (key, vals) => { for (const v of vals || []) if (!draft[key].some(x => x.toLowerCase() === String(v).toLowerCase())) draft[key].push(v); };
-  merge("titles", data.pastTitles); merge("skills", (data.skills || []).map(w => /^[a-z]/.test(w) ? titled(w) : w)); merge("industries", data.industries);
-  if (!draft.roles.length) merge("roles", data.suggestedRoles);
-  if (data.years && !$("#iYears").value) $("#iYears").value = data.years;
-  if (data.pastCompanies?.length) draft.companies = data.pastCompanies;
+  // One reader for the jobs: the same one that builds each tailored resume, so setup, Me and the PDF always agree.
+  // The server adds what it reads from the whole text: skills, industries, years and the roles those point to.
   draft.resume = Tailor.readResume(text);   // read here in the browser; kept with your answers so every job can get its own version
+  const jobs = draft.resume.jobs.filter(j => j.title);
+  merge("titles", jobs.length ? jobs.map(j => j.title) : data.pastTitles);
+  merge("skills", [...draft.resume.skills, ...(data.skills || [])].map(w => /^[a-z]/.test(w) ? titled(w) : w === w.toUpperCase() && w.length > 4 ? titled(w.toLowerCase()) : w));
+  merge("industries", data.industries);
+  if (!draft.roles.length) merge("roles", (data.suggestedRoles || []).filter(r => r !== "sales" || Tailor.soldBefore(draft.titles)));
+  if (data.years && !$("#iYears").value) $("#iYears").value = data.years;
+  const companies = jobs.map(j => j.company).filter(Boolean);
+  if (companies.length || data.pastCompanies?.length) draft.companies = companies.length ? companies : data.pastCompanies;
   // Where they want to work: the city they're moving to, else the one on the resume. A city chosen means local jobs first, so Remote starts off.
   const moving = (draft.resume.city.match(/\((?:relocating|moving|relocation) to ([^)]+)\)/i) || [])[1];
   const home = moving || draft.resume.city.replace(/\s*\(.*\)$/, "");
   if (home && !draft.cities.length) { draft.cities.push(home.trim()); $("#iRemote").checked = false; }
+  if (!profile?.data?.wants?.avoid) $("#iNoSales").checked = !Tailor.soldBefore(draft.titles);
   renderSetup();
-  const n = (data.pastTitles?.length || 0) + (data.skills?.length || 0);
-  msg.innerHTML = n ? `<span class="ok">Got it.</span> I filled in ${data.pastTitles.length} past jobs, ${data.years || "no"} years, ${data.skills.length} skills and ${data.industries.length} industries. Check them below and fix anything off.` : `<span class="err">I couldn't pick out your jobs from that. Fill this page in by hand.</span>`;
+  const many = (n, one, more = one + "s") => `${n} ${n === 1 ? one : more}`;
+  msg.innerHTML = draft.titles.length
+    ? `<span class="ok">Got it.</span> I filled in ${many(draft.titles.length, "past job")}${data.years ? `, ${many(data.years, "year")}` : ""}, ${many(draft.skills.length, "skill")} and ${many(draft.industries.length, "industry", "industries")}. Check them below and fix anything off.`
+    : `<span class="err">I couldn't pick out your jobs from that. Type them in below.</span>`;
 }
 async function onResumeFile(file) {
   if (!file) return;
@@ -782,7 +789,7 @@ $("#next1").onclick = () => {
   if (!draft.titles.length) { err.textContent = "Add at least one job you've held."; err.classList.remove("hidden"); return; }
   err.classList.add("hidden");
   // Someone who has sold (counter sales, outside sales) keeps sales jobs unless they turn this on themselves.
-  if (!profile?.data?.wants?.avoid) $("#iNoSales").checked = !draft.titles.some(t => /\bsales\b/i.test(t));
+  if (!profile?.data?.wants?.avoid) $("#iNoSales").checked = !Tailor.soldBefore(draft.titles);   // counter sales still starts checked
   $("#setup1").classList.add("hidden"); $("#setup2").classList.remove("hidden"); $("#st2").classList.add("on"); scrollTo(0, 0);
   renderBgSetup();
 };
@@ -841,15 +848,19 @@ const tidyOne = raw => {
     .replace(/^(remote|hybrid|on-?site)\s*[-–:,|]\s*/i, "")              // the kind is shown on its own
     .replace(/\s*\b\d{5}(-\d{4})?\b/g, "")                             // ZIP codes
     .replace(/\bFt\.?\s+(?=[A-Z])/g, "Fort ")
-    .replace(/^US-([A-Z]{2})-(.+)$/, "$2, $1")
+    .replace(/^(?:US|USA)\s*-\s*/i, "US-").replace(/\s*-\s*/g, m => m.includes(" ") ? " - " : "-")
+    .replace(/^US-([A-Za-z ]+)-(.+)$/, (m, st, c) => STATE_CODE[st.trim().toLowerCase()] ? `${c}, ${STATE_CODE[st.trim().toLowerCase()]}` : CODE_STATE[st.trim()] ? `${c}, ${st.trim()}` : m)
+    .replace(/^US - ([A-Z]{2}) - (.+)$/, "$2, $1")
+    .replace(/^US:\s*/i, "").replace(/,(?=\S)/g, ", ")
+    .replace(/\s+(US|USA)$/i, "")
     .replace(/^([A-Z]{2})-([A-Za-z .]+)$/, (m, st, c) => CODE_STATE[st] ? `${c}, ${st}` : m)
     .replace(/,\s*(United States( of America)?|USA|US)$/i, "")
     .replace(/,\s*([A-Za-z ]+)$/, (m, st) => STATE_CODE[st.trim().toLowerCase()] ? `, ${STATE_CODE[st.trim().toLowerCase()]}` : m);
   if (!p.includes(",")) {   // "Cleburne Texas" or "Cleburne TX"
-    const m = p.match(/^(.+?)\s+([A-Za-z]+(?: [A-Za-z]+)?)$/);
+    const m = p.match(/^(.+)\s+([A-Z]{2})$/) || p.match(/^(.+?)\s+([A-Za-z]+(?: [A-Za-z]+)?)$/);
     const st = m && (STATE_CODE[m[2].toLowerCase()] || (CODE_STATE[m[2]] && m[2]));
     if (st) p = `${m[1]}, ${st}`;
-    else if (STATE_CODE[p.toLowerCase()] || CODE_STATE[p]) p = `${CODE_STATE[p] || CODE_STATE[STATE_CODE[p.toLowerCase()]]}, City Not Listed`;
+    else if (STATE_CODE[p.toLowerCase()] || CODE_STATE[p]) p = CODE_STATE[p] || CODE_STATE[STATE_CODE[p.toLowerCase()]];   // "TX" -> "Texas"; the card flags it to check
   }
   return p.replace(/,\s*,/g, ",").replace(/^[\s,]+|[\s,]+$/g, "");
 };
@@ -864,7 +875,8 @@ const openText = j => { const d = openDays(j); return d == null ? "" : `<span${d
 const meta = j => `<div class="meta">${payText(j)}<span>${placeText(j)}</span>${openText(j)}</div>`;
 const openDays = j => { const t = Date.parse(j.firstPublished || j.postedAt); return Number.isFinite(t) ? Math.max(0, Math.floor((Date.now() - t) / 864e5)) : j.check?.openDays ?? null; };
 // Pay that rides on quota or commission is said up front, on the card, for everyone.
-const commissionPill = j => (j.flags || []).includes("Quota or Commission") ? `<span class="pill flag">Commission</span>` : "";
+// A posting that only says "Texas" might be Dallas or El Paso: said on the card too.
+const commissionPill = j => { const f = j.flags || []; return (f.some(x => /Commission|Partly Sales/.test(x)) ? `<span class="pill flag">Commission</span>` : "") + (f.includes("Check the Location") ? `<span class="pill flag">Check Location</span>` : ""); };
 const checkPill = (j, s) => s?.job?.goneAt ? `<span class="pill gone">Taken Down ${shortDay(s.job.goneAt)}</span>` : j.check && j.check.label !== "Looks Real" ? `<span class="pill ${CHECK[j.check.label]}">${esc(j.check.label)}</span>` : "";
 const trail = j => {
   const t = Date.parse(j.firstPublished || j.postedAt);
@@ -1129,7 +1141,7 @@ function renderMe() {
     line("Roles You Want", esc((w.roles || []).map(tc).join(", "))) +
     line("Where", esc([w.remote !== false ? "Remote (US)" : "", ...(w.cities || [])].filter(Boolean).join(", "))) +
     line("Pay Floor", w.payFloor ? k(w.payFloor) + " a year" : "") +
-    line("Want Less Of", esc([(w.avoid || []).includes("sales") ? "Sales jobs" : "", p.prefs?.hideSenior ? "Senior, Lead and Director titles" : "", p.prefs?.hideUnderFloor ? "Jobs under your pay floor" : "", ...(p.prefs?.hideCompanies || []).map(c => "Jobs at " + c)].filter(Boolean).join(", "))) +
+    line("Want Less Of", esc([(w.avoid || []).includes("sales") ? "Commission sales jobs" : "", p.prefs?.hideSenior ? "Senior, Lead and Director titles" : "", p.prefs?.hideUnderFloor ? "Jobs under your pay floor" : "", ...(p.prefs?.hideCompanies || []).map(c => "Jobs at " + c)].filter(Boolean).join(", "))) +
     (p.prefs && (p.prefs.hideSenior || p.prefs.hideUnderFloor || p.prefs.hideCompanies?.length) ? `<button class="btn ghost small" style="margin-top:10px" id="unlearn">Show Everything Again</button>` : "");
   $("#meEmail").textContent = user ? "Signed in as " + user.email : "You're looking without an account. Your answers are kept on this device only.";
   $("#meAcct").classList.toggle("hidden", !user); $("#meJoin").classList.toggle("hidden", !!user);
@@ -1569,8 +1581,8 @@ const PAGES = {
     <p>If you add a resume, it's read in your browser. Its text is sent once to fill in your answers, and the parts you can edit (your jobs, lines, skills and contact details) are kept with your answers: in this browser without an account, or in your account if you have one. The file itself is not kept. Resumes made for each job are built in your browser.</p>
     <h2>Gmail</h2>
     <p>If you connect Gmail, your browser talks to Google directly. Recruiter Goose looks only for emails that name a company in My Jobs, to move that job to Applied, Interviewing, Offer or Closed, and it saves drafts only when you tap Save as Gmail Draft. Your email never passes through our server, and nothing is sent without you. Disconnect any time in Me, or at myaccount.google.com/permissions.</p>
-    <h2>No Phone Number</h2>
-    <p>Recruiter Goose never asks for your phone number, so nobody can call or text you from it. A phone number only goes on your resume if you type it there.</p>
+    <h2>Your Phone Number Stays on Your Resume</h2>
+    <p>Recruiter Goose never asks for your phone number and never calls or texts you. If your resume has one, it's kept with your resume so it prints on the PDF you send. It's never shown to anyone else, and you can change or remove it in My Resume.</p>
     <h2>What We Never Do</h2>
     <p>We never sell or share your information, never send it to employers or recruiters, and never email you marketing.</p>
     <h2>Deleting Your Data</h2>

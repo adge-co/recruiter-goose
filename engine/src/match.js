@@ -39,9 +39,10 @@ const AVOID_WORDS = {
 // in from the field, so they aren't marked down; internships and graduate programs are.
 const ENTRY = /\b(graduate|intern|internship|trainee|apprentice)\b/i;
 // A past title that carried a quota. Counter and inside sales usually didn't, so they don't lift a no to sales.
-const SOLD_BEFORE = /\b(outside sales|territory|account (manager|executive)|business development|sales (rep|representative|manager|executive|consultant))\b/i;
+export const SOLD_BEFORE = /\b(outside sales|territory|account (manager|executive)|business development|sales (rep|representative|manager|executive|consultant))\b/i;
 const COMMISSION_ONLY = /\b(commission[- ]only|100% commission|straight commission|uncapped commission)\b/i;
-const SALESY = /\b(quota|commission|cold call|outbound prospecting|book of business|ote\b|on-target earnings)\b/i;
+// Pay that rides on selling. "Commission" alone isn't enough: postings mention the EEO Commission, and HVAC crews commission new units.
+const SALESY = /\b(quotas?|cold call(s|ing)?|outbound prospecting|book of business|ote|on-target earnings|(base( pay| salary)?|salary|hourly) ?(plus|\+|and|with) ?(uncapped )?commissions?|commissions? (on|based|structure|plan|potential|earnings|only|paid)|plus commissions?|\+ ?commissions?|uncapped commissions?|earn(ing)? (uncapped )?commissions?|commissions? (and|plus|\+) bonus(es)?|commission[- ]only|100% commission|straight commission)\b/i;
 
 // What work in each field sounds like. A job's own duties naming these is what makes it fit someone's background,
 // not a title word it happens to share (an Account Manager selling beds to hotels is not a construction job).
@@ -285,7 +286,8 @@ export function score(j, p, common) {
   // A kind of role they ruled out, unless they asked for that very kind of title (Inside Sales under Quoting).
   // Someone who has carried a quota before isn't ruling out sales; a counter or inside sales title doesn't count.
   const avoid = p.wants.avoid.filter(a => !p.pastTitles.some(t => a === "sales" ? SOLD_BEFORE.test(t) && !/\b(counter|inside)\b/i.test(t) : (AVOID_WORDS[a] || [a]).some(w => has(t, w))));
-  const asked = p.wants.roles.flatMap(r => ROLE_WORDS[r] || [r]);
+  // A role that only means sales doesn't override "no commission sales"; one that holds a sales-sounding desk title (Quoting: Inside Sales) does.
+  const asked = p.wants.roles.filter(r => !(r === "sales" && avoid.includes("sales"))).flatMap(r => ROLE_WORDS[r] || [r]);
   const avoidHit = avoid.find(a => { const ws = AVOID_WORDS[a] || [a];
     return ws.some(w => has(title, w)) && !asked.some(r => has(title, r) && ws.some(w => has(r, w)))
       && !(a === "sales" && /\b(inside sales|counter)\b/i.test(title) && p.pastTitles.some(t => /\b(counter|inside)\b/i.test(t))); });   // counter people can still take inside sales desks

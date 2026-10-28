@@ -20,3 +20,12 @@ test("the app's resume reader and the server's spot job titles with the same wor
   const T = createRequire(import.meta.url)("../../app/tailor.js");
   assert.equal(T.TITLE_WORD.source, TITLE_WORD.source);
 });
+
+test("the app and the engine agree on which past titles carried a quota", async () => {
+  const { SOLD_BEFORE } = await import("../src/match.js");
+  const { createRequire } = await import("node:module");
+  const T = createRequire(import.meta.url)("../../app/tailor.js");
+  assert.equal(T.SOLD_BEFORE.source, SOLD_BEFORE.source);
+  assert.equal(T.soldBefore(["Counter Sales"]), false);
+  assert.equal(T.soldBefore(["Outside Sales Rep"]), true);
+});

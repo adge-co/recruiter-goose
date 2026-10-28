@@ -275,3 +275,15 @@ test("sales titles stay for someone who has sold or asked for quoting work", asy
   assert.equal(checkJob(outside, { ...base, pastTitles: ["Counter Sales"] }).hiddenBecause, "Sales role", "counter sales isn't a yes to outside sales");
   assert.equal(checkJob(outside, { ...base, pastTitles: ["Outside Sales Rep"] }).hiddenBecause, null, "has carried a quota");
 });
+
+test("commission means pay, not the EEO Commission or commissioning a rooftop unit", async () => {
+  const { checkJob } = await import("../src/match.js");
+  const prof = { years: 7, pastTitles: ["Purchasing Agent"], industries: ["building-materials"], wants: { roles: ["purchasing"], remote: true, avoid: ["sales"] } };
+  const base = { title: "Purchasing Agent", company: "AirCo", location: "Dallas, TX", postedAt: new Date().toISOString() };
+  const eeo = checkJob({ ...base, description: "Buy HVAC equipment and parts from vendors. Purchase orders for contractors. We follow the Equal Employment Opportunity Commission guidelines." }, prof);
+  const unit = checkJob({ ...base, description: "Buy HVAC equipment for crews who install and commission new rooftop units. Purchase orders and vendors." }, prof);
+  const paid = checkJob({ ...base, description: "Buy HVAC equipment. Purchase orders and vendors. Base salary plus commission on sales." }, prof);
+  assert.ok(!eeo.flags.some(f => /Sales|Commission/.test(f)), eeo.flags.join());
+  assert.ok(!unit.flags.some(f => /Sales|Commission/.test(f)), unit.flags.join());
+  assert.ok(paid.flags.some(f => /Sales|Commission/.test(f)), paid.flags.join());
+});

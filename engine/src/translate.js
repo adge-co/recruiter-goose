@@ -7,7 +7,7 @@ export const BACKGROUNDS = [
   {
     key: "counter", label: "Counter Sales",
     match: /\b(counter|inside sales|showroom|parts (sales|specialist|associate)|sales associate|yard sales)\b/i,
-    roles: ["quoting", "purchasing", "estimating", "sales", "customer success"],
+    roles: ["quoting", "purchasing", "estimating", "customer success"],
     why: "You quoted, priced and fixed order problems for contractors all day. Supplier-side and construction software teams want people who already speak contractor.",
     say: [["Helped customers at the counter", "Quoted and processed orders for contractor accounts"], ["Looked up parts", "Matched specs and found substitutes from supplier catalogs"]],
     numbers: ["Orders or quotes per day", "Dollars sold per month", "Number of contractor accounts"],

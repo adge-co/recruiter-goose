@@ -81,6 +81,10 @@ export function parseResume(text, now = new Date()) {
   const industries = Object.entries(FIELD_WORDS)
     .map(([field, list]) => [field, new Set(list.filter(w => has(w))).size])
     .filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).map(([f]) => f);
+  // The counter, the yard and the supply house are building supply, even when the resume says "plumbing supplies" or "will-call"
+  // and never "building materials". Without this a Ferguson counter person reads as logistics only.
+  if (!industries.includes("building-materials") && /\b(counter sales|parts counter|will-?call|lumber ?yard|yard (lead|hand|associate)|supply (house|co|company)|building supply|plumbing (supply|supplies)|electrical supply|pro desk|contractor (accounts|orders|desk))\b/i.test(text))
+    industries.unshift("building-materials");
 
   // Roles worth a look: ones their past titles or skills already point at.
   const titleText = words(titles.join(" "));

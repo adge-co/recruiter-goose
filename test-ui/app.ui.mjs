@@ -233,6 +233,7 @@ for (const dark of [false, true]) {
     await page.waitForSelector("#bgCard:not(.hidden) .say");
     const bg = await page.textContent("#bgCard");
     assert.ok(bg.includes("Say This Instead") && bg.includes("Numbers to Put on Your Resume"));
+    await page.click('.tab[data-tab="matches"]');
     await page.fill("#cTitle", "Buyer");
     await page.fill("#cText", "Buy fittings and fixtures for our branches. 5+ years in purchasing. CDL required. Travel up to 60%. Pay not listed." + LONG);
     await page.click("#cGo");
@@ -240,6 +241,8 @@ for (const dark of [false, true]) {
     const out = await page.textContent("#cOut");
     assert.ok(out.includes("Check Before You Apply") && out.includes("CDL") && out.includes("Missing"), out);
     await noSideScroll(page);
+    await shot(page, `phone-${tag}-check`);
+    await page.click('.tab[data-tab="me"]');
     await shot(page, `phone-${tag}-me`);
     await page.click('[data-theme-pick="dark"]');
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");

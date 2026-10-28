@@ -7,7 +7,9 @@
   const RANGE = new RegExp(`(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2}\\s*(?:-|–|—|to)\\s*(?:present|current|now|today|(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2})`, "i");
   const HEADING = /^(profile|summary|professional summary|objective|experience|work experience|professional experience|employment|work history|education|skills|core skills|key skills|technical skills|skills and tools|certifications|licenses|certifications and licenses|references|projects|training|certs|skills & tools|skills and certifications|licenses and certifications)\s*:?$/i;
   // A heading with its list on the same line: "Skills & Tools: Procore; Excel".
-  const HEAD_INLINE = /^(skills|core skills|key skills|technical skills|skills and tools|skills & tools|tools|certs|certifications|licenses)\s*:\s*(.+)$/i;
+  const HEAD_INLINE = /^(skills|core skills|key skills|technical skills|skills and tools|skills & tools|tools|certs|certifications|licenses|education|training)\s*:\s*(.+)$/i;
+  // A line that starts with what someone did ("Quoted doors…", "Ran the forklift…") is a line about the work, marked or not.
+  const DID = /^(?:[a-z]+ed|ran|set|led|built|kept|made|took|sold|bought|grew|won|cut|wrote|drove|ran|taught|met|oversaw|handle[ds]?|manage[ds]?|run|own(?:ed)?|help(?:ed)?|work(?:ed)?|answer(?:ed)?|load(?:ed)?|pull(?:ed)?|train(?:ed)?|quote[ds]?|price[ds]?|order(?:ed)?)\b/i;
   const STATE_CODES = "AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC";
   const BULLET = /^\s*(?:[-•·*▪●◦‣–o]|\d+[.)])\s+/;   // "o" is what Word turns hollow bullets into when pasted
   const TITLE_WORD = /\b(manager|agent|specialist|coordinator|buyer|estimator|analyst|consultant|supervisor|lead|director|representative|rep|associate|engineer|technician|foreman|superintendent|administrator|assistant|owner|planner|purchaser|salesperson|sales|counter|desk|yard|clerk|dispatcher|scheduler|trainer|advisor|officer|president|founder|operator|installer|designer|developer|accountant|controller|expeditor|merchandiser|driver|server|bartender|carpenter|electrician|plumber|apprentice|journeyman|laborer|warehouse)\b/i;
@@ -52,11 +54,15 @@
     const top = lines.slice(0, 6).flatMap(l => l.split(/\s+[~|•·]\s+/)).map(clean);
     const name = top.find(l => /^[A-Za-z][A-Za-z.'-]+(?: [A-Za-z][A-Za-z.'-]+){1,3}$/.test(l) && !HEADING.test(l) && !TITLE_WORD.test(l)) || "";
     out.name = name === name.toUpperCase() || name === name.toLowerCase() ? tc(name.toLowerCase()) : name;   // "MARCUS DELGADO" -> "Marcus Delgado"
-    const place = top.join(" | ").match(new RegExp(`\\b([A-Z][a-zA-Z.]+(?: [A-Z][a-zA-Z.]+){0,2}),? (${STATE_CODES})\\b(?! ?\\d{3}[\\s.-]\\d)`));
-    out.city = place ? `${place[1]}, ${place[2]}` : "";
+    const STATE_NAMES = { texas: "TX", oklahoma: "OK", louisiana: "LA", arkansas: "AR", "new mexico": "NM", arizona: "AZ", colorado: "CO", florida: "FL", georgia: "GA", tennessee: "TN", california: "CA" };
+    const place = top.join(" | ").match(new RegExp(`\\b([A-Z][a-zA-Z.]+(?: [A-Z][a-zA-Z.]+){0,2}),? (${STATE_CODES}|${Object.keys(STATE_NAMES).map(tc).join("|")}|${Object.keys(STATE_NAMES).join("|").toUpperCase()})\\b(?! ?\\d{3}[\\s.-]\\d)`));
+    const caps = x => x === x.toUpperCase() ? tc(x.toLowerCase()) : x;
+    out.city = place ? `${caps(place[1])}, ${STATE_NAMES[place[2].toLowerCase()] || place[2]}` : "";   // "GRAND PRAIRIE TX", "Fort Worth Texas" -> "Grand Prairie, TX", "Fort Worth, TX"
     const moving = top.join(" ").match(/\((?:relocating|moving|relocation) to [^)]{2,40}\)/i);   // "Shreveport, LA (relocating to Dallas-Fort Worth)"
     if (out.city && moving) out.city += " " + moving[0];
 
+    // "84 LUMBER - GRAND PRAIRIE TX" -> "84 Lumber": the place isn't part of the name, and all caps reads as shouting.
+    const tidyCompany = c => { c = clean(c).replace(new RegExp(`\\s*[,–—-]\\s*[A-Za-z .]+,? (?:${STATE_CODES})$`, "i"), "").replace(new RegExp(`,? (?:${STATE_CODES})$`), ""); return c === c.toUpperCase() && /[A-Z]{3}/.test(c) ? tc(c.toLowerCase()) : c; };
     let section = "", job = null;
     const startJob = (head, next) => {
       const dates = (head.match(RANGE) || (next || "").match(RANGE) || [""])[0];
@@ -65,17 +71,19 @@
       if (company && !TITLE_WORD.test(title) && TITLE_WORD.test(company)) [title, company] = [company, title];
       title = clean(title);
       if (title === title.toUpperCase() && /[A-Z]{3}/.test(title)) title = tc(title.toLowerCase());   // "PURCHASING AGENT" -> "Purchasing Agent"
-      job = { title, company: clean(company || ""), dates: clean(dates), bullets: [] };
+      job = { title, company: tidyCompany(company || ""), dates: clean(dates), bullets: [] };
       out.jobs.push(job);
     };
     lines.forEach((raw, i) => {
       const line = clean(raw);
       if (HEADING.test(line)) { section = line.toLowerCase(); job = null; return; }
       const inline = line.match(HEAD_INLINE);
-      if (inline) { section = inline[1].toLowerCase(); job = null; if (/cert|licens/.test(section)) out.education.push(inline[2]); else inline[2].split(/\s*[,;|•·]\s*/).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
+      if (inline) { section = inline[1].toLowerCase(); job = null; if (/cert|licens|education|training/.test(section)) out.education.push(inline[2]); else inline[2].split(/\s*[,;|•·]\s*/).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
       if (/skill|tool/.test(section) && !/cert|licens/.test(section)) { line.replace(BULLET, "").split(/\s*[,;|•·]\s*/).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
       if (/education|cert|licens|training/.test(section)) { out.education.push(line.replace(BULLET, "")); return; }
       if (/summary|profile|objective|references/.test(section)) return;
+      if (/@|\d{3}[\s.)-]+\d{3}[\s.-]\d{4}/.test(line) && !RANGE.test(line)) return;   // contact lines
+      if (!section && i < 5 && !RANGE.test(line)) return;   // the name and address block above the first heading
       const bullet = BULLET.test(raw), text = line.replace(BULLET, "");
       const last = job?.bullets[job.bullets.length - 1];
       if (!bullet && last && !/[.!]$/.test(last) && /^[a-z]/.test(text)) { job.bullets[job.bullets.length - 1] += " " + text; return; }   // a wrapped line
@@ -86,16 +94,18 @@
         const dates = clean((line.match(RANGE) || [""])[0]);
         if (job && !job.bullets.length) {   // the lines under a title: its company, its dates
           if (!bare) { job.dates ||= dates; return; }
-          if (!job.company && !TITLE_WORD.test(bare)) { job.company = bare; job.dates ||= dates; return; }
+          if (!job.company && !TITLE_WORD.test(bare) && !DID.test(bare)) { job.company = tidyCompany(bare); job.dates ||= dates; return; }
         }
-        if (/experience|employment|history/.test(section) || TITLE_WORD.test(line) || dates) {
-          if (bare) return startJob(line, lines[i + 1]);
-          return;
-        }
+        // A new job: the line has dates, or dates follow within two lines, or it names a title and isn't about what they did.
+        // Unmarked lines under a job ("Quoted doors and windows for builders") stay that job's lines.
+        const datesNext = [lines[i + 1], lines[i + 2]].some(l => l && RANGE.test(l) && !BULLET.test(l) && clean(l).length < 90);
+        const titled = (TITLE_WORD.test(line) || datesNext) && !DID.test(bare);
+        if (bare && (dates || titled || (!job && /experience|employment|history/.test(section)))) return startJob(line, lines[i + 1]);
+        if (!bare) return;
       }
-      if (job && (bullet || line.length > 30)) job.bullets.push(text);
+      if (job && (bullet || line.length > 30 || DID.test(text) || text.split(" ").length > 3)) job.bullets.push(text);
     });
-    out.jobs = out.jobs.filter(j => j.title || j.bullets.length).slice(0, 8);
+    out.jobs = out.jobs.filter(j => j.title || j.bullets.length).slice(0, 12);
     out.skills = out.skills.slice(0, 24);
     out.education = out.education.slice(0, 6);
     return out;
@@ -181,7 +191,8 @@
     const why = (t.said || t.matched).slice(0, 3).map(w => /^[A-Z]/.test(w) ? w : w.toLowerCase());
     // Name the job where those words actually show up, and take the example from that same job.
     const used = j => why.filter(w => norm(j.bullets.join(" ")).includes(norm(w).trim())).length;
-    const at = [...(t.jobs || [])].sort((a, b) => used(b) - used(a))[0];
+    // The current job leads unless an older one covers clearly more (two words or more), since recruiters read the newest first.
+    const at = (t.jobs || []).reduce((best, j) => !best || used(j) >= used(best) + 2 ? j : best, null);
     const covered = at ? why.filter(w => norm(at.bullets.join(" ")).includes(norm(w).trim())) : [];
     const body = [
       `Hello ${job.company} hiring team,`,
@@ -252,26 +263,28 @@
       `--${B}--`,
     ].join("\r\n");
   }
-  // What an email from a company says about an application. Only plain, common phrasing counts.
-  // A form letter ("we'll contact you to schedule an interview if you're selected") is an acknowledgement, not an interview,
-  // and "unfortunately" alone isn't a no ("unfortunately Friday won't work, could we do Monday?").
-  const NO = /\b(not (to )?(move|moving) forward with your|decided (to )?(pursue|proceed|move forward|go) (with other|in a different direction)|different direction|other (candidates|applicants) (whose|who)|position has been filled|no longer (being )?consider|not (been )?selected|will not be moving forward|regret to inform|won'?t be moving forward|not (a|the right) (fit|match) for this|(another|an internal|a different|other) candidate|(filled|closed) the (role|position|opening)|not (been )?successful|(unable|not able|won'?t be able|will not be able) to offer you)\b/;
-  const OFFER = /\b(offer letter|pleased to offer|extend (you )?an offer|(attached|here) is your offer|verbal offer|(excited|happy|delighted|thrilled|glad) to offer you|make you an offer|offer of employment)\b/;
-  const FORM = /\b(if (your|you are|you're|we)[^.]{0,60}(selected|qualifications|experience|background|match)|will (contact|reach out to|be in touch with) (you|candidates|applicants)[^.]{0,40}(if|should|whose)|unable to respond|can'?t respond to (every|each|all)|high volume of (applications|applicants)|only (candidates|applicants) (selected|who))/;
-  const ASK = /\b((schedule|set up|arrange|book) (a |an |some |your |a quick )?(time|call|interview|phone screen|phone interview|video interview|chat|meeting)|(phone|video|in-person|onsite|on-site|zoom|teams) interview|come in for an interview|invite you (to|for)|are you (free|available)|your availability|times that work|calendly|(bring|have) you in|come in (to|for)|meet (with )?(you|our|the|me)\b|phone screen with|(quick|short|brief) (call|chat)|hop on a call|(swing|stop|come) by)\b/;
-  const WHEN = /\b(mon|tues|wednes|thurs|fri|satur|sun)day\b[\s\S]{0,40}?\b\d{1,2}(:\d\d)?\s*(am|pm|a\.m\.|p\.m\.)/;
-  const ACK = /\b((received|receipt of) your application|thank(s| you) for (applying|your application|your interest)|application (has been )?(received|submitted))\b/;
-  // A reply is read in this order: an offer, a clear no, a day and time, a form letter, a real ask, then a plain thank-you.
+  // What an email from a company says about an application. Only plain, common phrasing counts, and it's read a sentence
+  // at a time: a form letter's "if you're selected we'll contact you" or the office hours under a thank-you aren't an invite,
+  // and a rejection that adds "if another position opens we'll reach out" is still a no. Tested against engine/test/reply-cases.js.
+  const DAY = "(?:mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?|sun)(?:day)?";
+  const NO = /\b(not (to )?(move|moving) forward|(won'?t|will not|not) be moving forward|decided (to )?(pursue|proceed|move forward|go) (with )?(other|another|a different)|(pursue|proceed with|move forward with|went with|go with|chosen|chose|decided to hire|hire|hired|offer the (role|position|job) to) (other|another|a different|an internal|someone|someone else)|(another|a different|other) direction|whose (qualifications|experience|background|skills)[^.]{0,30} (match|align|fit)\w*|no longer (being )?(under )?consider\w*|(proceed|move forward|go|move ahead) with (a|another|other|an internal) (candidate|applicant)s?|not (been )?selected|not (be )?proceeding|regret to inform|respectfully decline|decline your|not (a|the right) (fit|match) for (this|the)|(has been|was|is now|have) (filled|closed|cancell?ed)|filled the (role|position|opening|job)|no longer hiring|not (been )?successful|(unable|not able|won'?t be able|will not be able) to offer you|(another|an internal|other) (candidate|applicant)s? (whose|who|for|was)|other (candidates|applicants))\b/;
+  const OFFER = /\b(offer letter|formal offer|extend (you )?an offer|(attached|here) is your( formal)? offer|verbal offer|(pleased|excited|happy|delighted|thrilled|glad|like|love|want|going) to offer you|make you an offer|offer of employment|contingent offer|you got the (job|position)|(the )?(job|position|role) is yours|welcome aboard)\b/;
+  const FORM = /\b(if (you are|you're) (selected|chosen|not selected|a (good |strong )?(fit|match))|if your (qualifications|experience|background|skills|application)|if we (decide|feel|determine|think|need|have|find)|if (another|other) (candidate|applicant)|if there (is|'s) a (fit|match)|only (candidates|applicants|those)|due to (the )?(high )?volume|high volume of|unable to respond|can'?t respond to|reach out if|contact you if|keep your resume on file)\b/;
+  const ASK = /\b((schedule|set up|arrange|book|pick|select|choose) (a |an |some |your |a quick |a time for )?(time|call|interview|phone screen|phone interview|video interview|video call|chat|meeting|conversation)|(phone|video|in-person|onsite|on-site|zoom|teams|second|final|next) (round )?interview|interview you|come in for an interview|invite you (to|for)|are you (free|available)|would you be (free|available)|when are you (free|available)|your availability|times that work|calendly|(bring|have|get) you in|come in (to|for|on)|can you come in|meet (with )?(you|me)\b|meet (with )?(the|our) (hiring|purchasing|branch|operations|team lead|manager)|phone screen|(quick|short|brief) (call|chat)|hop on a call|(swing|stop|come) by (the|our|my|this)|give me a call|call me (back|at)|like to (speak|talk|chat) with you|next step: a|to the next (step|round)|time to (talk|chat|speak))\b/;
+  const WHEN = new RegExp(`\\b${DAY}\\b[^.?!]{0,40}?\\b\\d{1,2}(:\\d\\d)?\\s*(am|pm|a\\.m\\.|p\\.m\\.)|\\b\\d{1,2}/\\d{1,2}\\b[^.?!]{0,12}\\bat \\d{1,2}(:\\d\\d)?`);
+  const ACK = /\b((received|receipt of) your (application|resume)|thank(s| you) for (applying|your application|your interest|submitting)|application (for [^.]{0,40})?(has been |was )?(received|submitted)|reviewing (it|your))\b/;
+  // Store hours, order updates, sales and job alerts mention days, times and "offers" too.
+  const HOURS = new RegExp(`\\b(hours|we'?re open|open ${DAY}|staffed|questions\\?)|\\b${DAY}\\s*(-|–|to|through|thru)\\s*${DAY}\\b`);
+  const NOT_ABOUT_IT = /\b(unsubscribe|% off|free (delivery|shipping|breakfast|lunch)|special offer|this weekend only|webinar|newsletter|order #|has shipped|invoice|payment is due|new jobs|job alert|jobs (you may|for you|matching)|recommended jobs)\b/;
   function readReply(subject, snippet) {
-    const t = `${subject || ""} ${snippet || ""}`.toLowerCase();
-    if (OFFER.test(t)) return "offer";
-    if (NO.test(t)) return "closed";
-    // A day and a time is an invite, whatever else it says; office hours ("Monday through Friday, 8 a.m. to 5 p.m.") aren't.
-    if (WHEN.test(t.replace(/\b(mon|tues|wednes|thurs|fri|satur|sun)day\s*(through|thru|to|-|–)\s*(mon|tues|wednes|thurs|fri|satur|sun)day\b/g, "weekdays"))) return "interview";
-    if (FORM.test(t)) return "applied";      // "we'll contact you to schedule an interview if..." is a form letter
-    if (ASK.test(t)) return "interview";
-    if (/\bunfortunately\b/.test(t)) return null;   // something went wrong, but not clearly a no: let them read it
-    if (ACK.test(t)) return "applied";
+    const t = `${subject || ""}. ${snippet || ""}`.toLowerCase().replace(/\s+/g, " ");
+    if (NOT_ABOUT_IT.test(t)) return null;
+    const sents = t.split(/(?<=[.!?;])\s+/).filter(x => x.trim() && !HOURS.test(x));
+    const firm = sents.filter(x => !FORM.test(x)).join(" "), said = sents.join(" ");
+    if (OFFER.test(firm)) return "offer";
+    if (NO.test(firm)) return "closed";
+    if (ASK.test(firm) || WHEN.test(firm)) return "interview";
+    if (FORM.test(said) || ACK.test(t)) return "applied";
     return null;
   }
   const ORDER = ["saved", "applied", "interview", "offer"];
@@ -280,6 +293,10 @@
     : ORDER.indexOf(kind) > ORDER.indexOf(now) && now !== "closed" ? kind : null;
   const gmailQuery = (job, since) => `"${String(job.company).replace(/"/g, "")}" -from:me -in:chats${since ? " after:" + since.slice(0, 10).replace(/-/g, "/") : " newer_than:90d"}`;
 
-  const api = { readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS, TITLE_WORD, asRole };
+  // A past title that carried a quota (the engine has the same list in match.js). Counter and inside sales usually didn't,
+  // so they don't turn off No Commission Sales Jobs.
+  const SOLD_BEFORE = /\b(outside sales|territory|account (manager|executive)|business development|sales (rep|representative|manager|executive|consultant))\b/i;
+  const soldBefore = titles => (titles || []).some(t => SOLD_BEFORE.test(t) && !/\b(counter|inside)\b/i.test(t));
+  const api = { soldBefore, SOLD_BEFORE, readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS, TITLE_WORD, asRole };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else window.Tailor = api;
 })();
