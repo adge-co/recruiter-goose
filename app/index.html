@@ -189,8 +189,8 @@ textarea{min-height:150px;resize:vertical}
 .logo.sm{width:40px;height:40px;font-size:14px;border-radius:11px}
 .co{font-size:13.5px;color:var(--muted);font-weight:500}
 .job .title{font-family:var(--display);font-weight:700;font-size:18.5px;line-height:1.22;letter-spacing:-.01em;margin:2px 0 6px}
-/* Dots sit in each item's left margin; the one that would start a wrapped line is clipped off. */
-.meta{font-size:14px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;margin-left:-15px;overflow:hidden}
+/* Dots sit in each item's left margin; the box starts 15px early and that strip is clipped, so no line starts with a dot. */
+.meta{font-size:14px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;margin-left:-15px;clip-path:inset(-4px 0 -4px 15px)}
 .meta>span{position:relative;margin-left:15px}
 .meta>span::before{content:"";position:absolute;left:-9px;top:50%;width:3px;height:3px;margin-top:-1.5px;border-radius:50%;background:currentColor;opacity:.6}
 .meta b{font-weight:700;color:var(--ink)}
