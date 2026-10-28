@@ -70,15 +70,17 @@ const has = (list, re) => list.some(s => re.test(String(s)));
 
 export function knockouts(job, profile = {}) {
   const d = String(job.description || ""), out = [];
-  const mine = [...(profile.skills || []), ...(profile.certs || []), ...(profile.pastTitles || [])];
+  const mine = [...(profile.skills || []), ...(profile.certs || []), ...(profile.pastTitles || []), ...(profile.education || []), ...(profile.resume?.education || [])];
   const yrs = [...d.matchAll(/(\d{1,2})\s*\+?\s*(?:or more\s+)?years/gi)].map(m => Number(m[1])).filter(n => n > 0 && n < 30);
   if (yrs.length) {
     const need = Math.max(...yrs), have = Number(profile.years) || 0;
     out.push({ need: `${need}+ Years`, status: have >= need ? "ok" : have >= need - 2 ? "check" : "miss", note: have ? `You have ${have}` : "Add your years on the Me tab" });
   }
+  // OSHA 30 covers an OSHA 10 ask.
+  const holds = re => has(mine, re) || (re.source.includes("10") && has(mine, /\bosha[ -]?30\b/i));
   for (const [name, re] of CERTS) if (re.test(d)) {
     const required = new RegExp(`(required|must have|must hold)[^.]{0,60}${re.source}|${re.source}[^.]{0,40}(required|is a must)`, "i").test(d);
-    out.push({ need: name, status: has(mine, re) ? "ok" : required ? "miss" : "check", note: has(mine, re) ? "You listed it" : required ? "Required" : "Preferred" });
+    out.push({ need: name, status: holds(re) ? "ok" : required ? "miss" : "check", note: holds(re) ? "You listed it" : required ? "Required" : "Preferred" });
   }
   if (/\b(bachelor'?s|4[- ]year degree|b\.?s\.? in|b\.?a\.? in)\b/i.test(d)) {
     const equiv = /\bor (equivalent|related) (work )?experience\b/i.test(d);

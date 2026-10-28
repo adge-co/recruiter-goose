@@ -13,6 +13,9 @@ export const METROS = {
   "san antonio": ["san antonio", "new braunfels", "schertz", "boerne", "seguin", "converse", "selma"],
 };
 
+// The state each metro is in, so "Dallas" or "DFW" with no state still means Texas.
+const METRO_STATE = { dfw: "tx", houston: "tx", austin: "tx", "san antonio": "tx" };
+
 const STATES = { al: "alabama", ak: "alaska", az: "arizona", ar: "arkansas", ca: "california", co: "colorado", ct: "connecticut", de: "delaware",
   fl: "florida", ga: "georgia", hi: "hawaii", id: "idaho", il: "illinois", in: "indiana", ia: "iowa", ks: "kansas", ky: "kentucky", la: "louisiana",
   me: "maine", md: "maryland", ma: "massachusetts", mi: "michigan", mn: "minnesota", ms: "mississippi", mo: "missouri", mt: "montana",
@@ -43,7 +46,10 @@ export function placeNames(city) {
 export function inCity(location, city) {
   const t = clean(location);
   if (!placeNames(city).some(n => word(t, n))) return false;
-  const want = statesIn(String(city || "").split(",").slice(1).join(","));
+  const c = clean(String(city || "").split(",")[0]);
+  const metro = Object.keys(METROS).find(k => METROS[k].includes(c));
+  const typed = statesIn(String(city || "").split(",").slice(1).join(","));
+  const want = typed.length ? typed : metro ? [METRO_STATE[metro]] : [];
   const has = statesIn(location);
   return !want.length || !has.length || has.some(s => want.includes(s));
 }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Recruiter Goose</title>
-<meta name="description" content="Office and construction-tech jobs for people from the trades, the counter, purchasing and the jobsite. Matched to the jobs you've held, straight from company job boards.">
+<meta name="description" content="Office, construction and supply jobs for people from the trades, the counter, purchasing and the jobsite. Matched to the jobs you've held, straight from company job boards.">
 <meta name="theme-color" content="#0F1114" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#F6F5F1" media="(prefers-color-scheme: light)">
 <script>try { const t = localStorage.getItem("rg.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}</script>
@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Recruiter Goose">
 <meta property="og:title" content="Recruiter Goose">
-<meta property="og:description" content="Office and construction-tech jobs matched to the jobs you've held, straight from company job boards.">
+<meta property="og:description" content="Office, construction and supply jobs matched to the jobs you've held, straight from company job boards.">
 <meta property="og:image" content="img/icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Manrope:wght@700;800&display=swap">
@@ -146,6 +146,7 @@ textarea{min-height:150px;resize:vertical}
 
 /* Segmented controls */
 .seg,.segf,.statusseg{display:flex;padding:3px;border-radius:12px;background:var(--surface);gap:2px;border:1px solid var(--edge)}
+.moment{display:flex;align-items:center;gap:12px}
 .seg button,.segf button,.statusseg button{flex:1 0 auto;appearance:none;border:0;background:transparent;border-radius:9px;min-height:40px;padding:6px 8px;font-weight:600;font-size:14px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:background .2s,color .2s}
 .seg button.on,.segf button.on,.statusseg button.on{background:var(--seg-on);color:var(--ink);box-shadow:var(--seg-on-sh)}
 .segf{margin:14px 0 4px}
@@ -407,7 +408,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
         <p class="hint" style="text-align:center;margin-top:12px">No account needed to look. Have one? <button class="linkbtn" id="showSignIn" type="button">Sign In</button></p>
       </div>
       <div id="authSlot"><div class="card hidden" id="authCard">
-        <div class="seg"><button class="on" data-mode="up">Make An Account</button><button data-mode="in">Sign In</button></div>
+        <div class="seg"><button class="on" data-mode="up">Make an Account</button><button data-mode="in">Sign In</button></div>
         <form id="authForm">
           <label class="label" for="aName" id="aNameL">First Name</label>
           <input type="text" id="aName" autocomplete="given-name">
@@ -417,6 +418,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
           <input type="password" id="aPass" autocomplete="new-password" minlength="8" required placeholder="8 characters or more">
           <div class="err hidden" id="aErr"></div>
           <button class="btn wide" style="margin-top:16px" id="aGo">Make My Account</button>
+          <button type="button" class="linkbtn hidden" id="aForgot" style="margin-top:10px">Forgot Your Password?</button>
         </form>
       </div></div>
     </div>
@@ -457,7 +459,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
       <div class="chips" id="cCities"></div>
       <div class="chipin"><input type="text" id="iCities" placeholder="Add a city: Dallas, TX" enterkeyhint="done"><button class="btn small" data-add="cities">Add</button></div>
       <label class="label" for="iFloor">Lowest Yearly Pay You'd Take</label>
-      <input type="number" id="iFloor" min="0" step="1000" inputmode="numeric" placeholder="80000">
+      <input type="number" id="iFloor" min="0" step="1000" inputmode="numeric" placeholder="Optional, Like 65000">
       <label class="label">Want Less Of</label>
       <label class="toggle"><input type="checkbox" id="iNoSales" checked> No Commission Sales Jobs (Quotas, Cold Calling)</label>
       <div class="err hidden" id="s2Err"></div>
@@ -546,11 +548,15 @@ const STATUS = [["saved", "Saved"], ["applied", "Applied"], ["interview", "Inter
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// "Austin Industries' Site", "Builders FirstSource's Site".
+const possessive = name => `${name}${/s$/i.test(name) ? "'" : "'s"}`;
 const tc = s => String(s).replace(/\b\w/g, c => c.toUpperCase());
 // Title Case for labels: small words stay small unless they lead ("Not My Kind of Work").
 const titled = s => tc(s).replace(/(?!^)\b(A|An|And|Of|Or|The|To|In|On|For|At|By|From)\b/g, w => w.toLowerCase());
 const k = n => "$" + Math.round(n / 1000) + "k";
 const niceDates = t => String(t).replace(/\b(\d{2})-(\d{2})-(\d{4})\b/g, (_, m, d, y) => shortDay(`${y}-${m}-${d}`));
+// When they applied: set once by the database, so later edits don't move it (older rows fall back to the last change).
+const appliedOn = s => s.applied_at || s.updated_at;
 const shortDay = iso => { const d = new Date(String(iso).length === 10 ? iso + "T12:00:00" : iso); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); };
 // Each company gets its own muted tile color, picked from its name, so a list of jobs reads at a glance.
 const TILES = ["#3B6E8F", "#8A5A3C", "#4D5B3A", "#5B4F8A", "#2F6F68", "#8A3F4F", "#5E6670", "#7A6A2E"];
@@ -589,15 +595,24 @@ const draft = { titles: [], skills: [], roles: [], cities: [], industries: [] };
 function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.add("hidden"), 2600); }
 
 // ---------- Sign in ----------
-document.querySelectorAll(".seg button").forEach(b => b.onclick = () => setAuthMode(b.dataset.mode));
+document.querySelectorAll("#authCard .seg button").forEach(b => b.onclick = () => setAuthMode(b.dataset.mode));
 function setAuthMode(m) {
   authMode = m;
-  document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x.dataset.mode === m));
+  document.querySelectorAll("#authCard .seg button").forEach(x => x.classList.toggle("on", x.dataset.mode === m));
   $("#aName").classList.toggle("hidden", authMode === "in"); $("#aNameL").classList.toggle("hidden", authMode === "in");
   $("#aPass").autocomplete = authMode === "in" ? "current-password" : "new-password";
   $("#aGo").textContent = authMode === "in" ? "Sign In" : "Make My Account";
+  $("#aForgot").classList.toggle("hidden", authMode !== "in");
   $("#aErr").classList.add("hidden");
 }
+// Forgot it: Supabase emails a link back to this page, which signs them in and asks for a new password.
+$("#aForgot").onclick = async () => {
+  const email = $("#aEmail").value.trim(), err = $("#aErr");
+  if (!email) { err.textContent = "Type your email above, then tap this again."; err.classList.remove("hidden"); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  if (error) { err.textContent = error.message; err.classList.remove("hidden"); return; }
+  toast("Check your email for a link to set a new password.");
+};
 $("#authForm").onsubmit = async e => {
   e.preventDefault();
   const email = $("#aEmail").value.trim(), password = $("#aPass").value, err = $("#aErr"), go = $("#aGo");
@@ -792,8 +807,14 @@ function payText(j) {
   const lo = j.payMin || j.payMax, hi = j.payMax || j.payMin;
   return `<span><b>${lo === hi ? k(hi) : k(lo) + "–" + k(hi)}</b> a year</span>`;
 }
+// Hiring systems write places their own way: "US-TX-Irving", "Grand Prairie, Texas, United States". Shown as "Irving, TX".
+const STATE_CODE = Object.fromEntries("AL Alabama|AK Alaska|AZ Arizona|AR Arkansas|CA California|CO Colorado|CT Connecticut|DE Delaware|FL Florida|GA Georgia|HI Hawaii|ID Idaho|IL Illinois|IN Indiana|IA Iowa|KS Kansas|KY Kentucky|LA Louisiana|ME Maine|MD Maryland|MA Massachusetts|MI Michigan|MN Minnesota|MS Mississippi|MO Missouri|MT Montana|NE Nebraska|NV Nevada|NH New Hampshire|NJ New Jersey|NM New Mexico|NY New York|NC North Carolina|ND North Dakota|OH Ohio|OK Oklahoma|OR Oregon|PA Pennsylvania|RI Rhode Island|SC South Carolina|SD South Dakota|TN Tennessee|TX Texas|UT Utah|VT Vermont|VA Virginia|WA Washington|WV West Virginia|WI Wisconsin|WY Wyoming".split("|").map(x => [x.slice(3).toLowerCase(), x.slice(0, 2)]));
+const tidyPlace = loc => String(loc || "").split(/\s*;\s*/).map(p => p.trim()
+  .replace(/^US-([A-Z]{2})-(.+)$/, "$2, $1")
+  .replace(/,\s*(United States( of America)?|USA|US)$/i, "")
+  .replace(/,\s*([A-Za-z ]+)$/, (m, st) => STATE_CODE[st.trim().toLowerCase()] ? `, ${STATE_CODE[st.trim().toLowerCase()]}` : m)).join("; ");
 function placeText(j) {
-  const loc = String(j.location || ""), plain = /^[\s,]*(remote|usa?|united states|anywhere|[\s,-])*$/i.test(loc);
+  const loc = tidyPlace(j.location), plain = /^[\s,]*(remote|usa?|united states|anywhere|[\s,-])*$/i.test(loc);
   const kind = j.remote ? "Remote" : /hybrid/i.test(loc) ? "Hybrid" : "On-Site";
   return esc(j.remote && plain ? kind : `${kind} · ${loc}`);
 }
@@ -805,7 +826,7 @@ const trail = j => {
   const t = Date.parse(j.firstPublished || j.postedAt);
   const d = openDays(j);
   const rp = j.reposts ? ` · reposted ${j.reposts === 1 ? "once" : j.reposts + " times"}` : "";   // a repost is the most-asked-for warning sign
-  return `<div class="trail ${rp ? "rp" : ""}${d != null && d < 3 && !rp ? " fresh" : ""}">${rp ? I.clock : I.check}<span>${d == null ? "Still up" : `Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}, still up`} on ${esc(j.company)}${/s$/i.test(j.company) ? "'" : "'s"} own board${rp}</span></div>`;
+  return `<div class="trail ${rp ? "rp" : ""}${d != null && d < 3 && !rp ? " fresh" : ""}">${rp ? I.clock : I.check}<span>${d == null ? "Still up" : `Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}, still up`} on ${esc(possessive(j.company))} own board${rp}</span></div>`;
 };
 function jobCard(j, s) {
   const st = s?.status;
@@ -820,7 +841,7 @@ function jobCard(j, s) {
 const longDay = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 function trackBox(s) {
   const m = s.job?.mail;
-  return `${m ? `<div class="verdict ${m.kind === "closed" ? "" : "real"}" style="margin-bottom:12px"><b>${MAIL_WORD[m.kind]}</b><p>${esc(m.from)}, ${shortDay(m.at)}: “${esc(m.subject)}”</p></div>` : ""}<div class="track">
+  return `${m ? `<div class="verdict ${m.kind === "closed" ? "" : "real"}" style="margin-bottom:12px"><b>${MAIL_WORD[m.kind]}${String(m.msgId || "").startsWith("paste-") ? "" : " in Gmail"}</b><p>${esc(m.from)}, ${shortDay(m.at)}: “${esc(m.subject)}”</p></div>` : ""}<div class="track">
     <div><div class="statusseg" role="radiogroup" aria-label="Where It Stands">${STATUS.map(([v, l]) => `<button type="button" role="radio" aria-checked="${s.status === v}" class="${s.status === v ? "on" : ""}" data-status="${s.id}" data-val="${v}">${l}</button>`).join("")}</div></div>
     <div><span class="tl">Follow Up</span><div class="fuline">${s.follow_up ? `<span class="when" data-fuwhen="${s.id}">${longDay(s.follow_up)}</span>` : ""}${[[3, "In 3 Days"], [7, "In a Week"], [14, "In 2 Weeks"]].map(([n, l]) => `<button type="button" class="chip" data-follow="${s.id}" data-days="${n}">${l}</button>`).join("")}${s.follow_up ? `<button type="button" class="chip" data-follow="${s.id}" data-days="">Clear</button>` : ""}</div></div>
   </div>`;
@@ -957,8 +978,8 @@ function statusLine(s) {
   if (s.status === "offer") return "Offer in hand";
   if (s.status === "closed") return `Closed ${shortDay(s.updated_at)}`;
   if (s.follow_up && ["applied", "interview"].includes(s.status)) return `Follow up ${shortDay(s.follow_up)}`;
-  if (s.status === "applied" && daysAgo(s.updated_at) >= 14) return `Gone quiet · applied ${shortDay(s.updated_at)}`;
-  if (s.status === "applied") return `Applied ${shortDay(s.updated_at)}`;
+  if (s.status === "applied" && daysAgo(appliedOn(s)) >= 14) return `Gone Quiet · Applied ${shortDay(appliedOn(s))}`;
+  if (s.status === "applied") return `Applied ${shortDay(appliedOn(s))}`;
   if (s.status === "interview") return "Interviewing";
   return `Saved ${shortDay(s.created_at)}`;
 }
@@ -969,7 +990,7 @@ const rowJob = s => `<div class="row-job ${s.status === "closed" ? "faded" : ""}
 function renderMine() {
   const live = saved.filter(s => s.status !== "passed");
   $("#mineSub").textContent = "";
-  if (!user) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img class="mascot" src="img/papers.webp" alt=""><h2>Keep the jobs you like</h2><p class="hint">With a free account, saved jobs land here, and you can mark each one Applied, Interviewing or Offer and pick a follow-up day.</p><button class="btn" data-account="mine">Make a Free Account</button></div>`; return; }
+  if (!user) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img class="mascot" src="img/papers.webp" alt=""><h2>Keep the Jobs You Like</h2><p class="hint">With a free account, saved jobs land here, and you can mark each one Applied, Interviewing or Offer and pick a follow-up day.</p><button class="btn" data-account="mine">Make a Free Account</button></div>`; return; }
   if (!live.length) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img class="mascot" src="img/papers.webp" alt=""><h2>Nothing Saved Yet</h2><p class="hint">Save a match and it lands here. Then mark it Applied, Interviewing or Offer as it moves.</p></div>`; return; }
   const groups = [["offer", "Offers"], ["interview", "Interviewing"], ["applied", "Applied"], ["saved", "Saved, Not Applied Yet"], ["closed", "Closed"]];
   const by = (a, b) => (a.follow_up || "9999").localeCompare(b.follow_up || "9999");
@@ -998,8 +1019,8 @@ function todayItems() {
       items.push({ id: s.job_key, s, b: j.title, t: `No longer on ${j.company}'s job board as of ${shortDay(j.goneAt)}.`, act: "closeout" });
     else if (["applied", "interview"].includes(s.status) && s.follow_up && s.follow_up <= today)
       items.push({ id: s.job_key, s, b: j.title, t: `Follow-up day. One short note to the recruiter or hiring manager at ${j.company}.`, act: "follow" });
-    else if (s.status === "applied" && daysAgo(s.updated_at) >= 21)
-      items.push({ id: s.job_key, s, b: j.title, t: `Applied ${daysAgo(s.updated_at)} days ago with no word from ${j.company}. Time to close it out.`, act: "closeout" });
+    else if (s.status === "applied" && daysAgo(appliedOn(s)) >= 21)
+      items.push({ id: s.job_key, s, b: j.title, t: `Applied ${daysAgo(appliedOn(s))} days ago with no word from ${j.company}. Time to close it out.`, act: "closeout" });
     else if (s.status === "saved" && daysAgo(s.created_at) >= 10)
       items.push({ id: s.job_key, s, b: j.title, t: `Saved ${daysAgo(s.created_at)} days ago. Apply or let it go; ${j.company} may be close to picking someone.` });
   }
@@ -1019,7 +1040,7 @@ function todayCard() {
 document.addEventListener("click", async e => {
   const b = e.target.closest("[data-copyfu]"); if (!b) return;
   const s = saved.find(x => x.id === b.dataset.copyfu), j = s?.job || {};
-  const note = `Hi, I applied for the ${j.title} role at ${j.company} on ${shortDay(s.updated_at)} and wanted to check in. I'm still very interested and happy to share anything that helps. Thanks for your time.`;
+  const note = `Hi, I applied for the ${j.title} role at ${j.company} on ${shortDay(appliedOn(s))} and wanted to check in. I'm still very interested and happy to share anything that helps. Thanks for your time.`;
   try { await navigator.clipboard.writeText(note); toast("Copied. Paste it into an email or LinkedIn message."); } catch { toast(note); }
 });
 document.addEventListener("click", async e => {
@@ -1037,8 +1058,8 @@ function celebrate(kind, s) {
   const applied = saved.filter(x => ["applied", "interview", "offer", "closed"].includes(x.status)).length;
   const div = document.createElement("div"); div.className = "party";
   div.innerHTML = kind === "offer"
-    ? `<div class="card"><img class="mascot" src="img/cheer.webp" alt=""><div class="big" id="countUp">0</div><p class="hint" style="margin:0 0 6px">${applied === 1 ? "application" : "applications"} sent to get here</p><h1>You got an offer!</h1><p>${esc(s.job.title)} at ${esc(s.job.company)}. Honk honk.</p><button class="btn wide">Back To My Jobs</button></div>`
-    : `<div class="card"><img class="mascot" src="img/cheer.webp" alt=""><h1>Interview set!</h1><p>${esc(s.job.title)} at ${esc(s.job.company)}. Go get 'em.</p><button class="btn wide">Let's Go</button></div>`;
+    ? `<div class="card"><img class="mascot" src="img/cheer.webp" alt=""><div class="big" id="countUp">0</div><p class="hint" style="margin:0 0 6px">${applied === 1 ? "application" : "applications"} sent to get here</p><h1>You Got an Offer!</h1><p>${esc(s.job.title)} at ${esc(s.job.company)}. Honk honk.</p><button class="btn wide">Back to My Jobs</button></div>`
+    : `<div class="card"><img class="mascot" src="img/cheer.webp" alt=""><h1>Interview Set!</h1><p>${esc(s.job.title)} at ${esc(s.job.company)}. Go get 'em.</p><button class="btn wide">Let's Go</button></div>`;
   div.querySelector("button").onclick = () => { div.remove(); $("#confetti").classList.add("hidden"); };
   document.body.appendChild(div);
   if (kind === "offer") { let n = 0; const el = div.querySelector("#countUp"); const t = setInterval(() => { el.textContent = ++n; if (n >= Math.max(1, applied)) clearInterval(t); }, Math.max(30, 900 / Math.max(1, applied))); confetti(); }
@@ -1265,6 +1286,9 @@ document.addEventListener("click", e => {
     <div class="stick"><button class="btn" id="prGo">Read It</button></div>`;
   $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
   document.querySelectorAll("[data-prjob]").forEach(b => b.onclick = () => document.querySelectorAll("[data-prjob]").forEach(x => x.classList.toggle("on", x === b)));
+  // The email usually names the company: pick that job for them (they can still tap another).
+  $("#prText").oninput = () => { const t = $("#prText").value.toLowerCase(), hit = live.find(x => t.includes(String(x.job.company).toLowerCase()));
+    if (hit) document.querySelectorAll("[data-prjob]").forEach(x => x.classList.toggle("on", x.dataset.prjob === hit.id)); };
   $("#prGo").onclick = () => {
     const text = $("#prText").value.trim(), pick = document.querySelector("[data-prjob].on");
     if (!pick || text.length < 20) { toast(live.length ? "Pick the job and paste the email." : "Save a job first."); return; }
@@ -1279,7 +1303,7 @@ document.addEventListener("click", e => {
 // ---------- Gmail: drafts with the PDF, and replies that move a job along ----------
 // The browser gets a short-lived Google token and talks to Gmail directly. Off until the app has a Google client ID.
 const GOOGLE_CLIENT_ID = window.RG_GOOGLE_CLIENT_ID || "";
-const MAIL_WORD = { applied: "They Got Your Application", interview: "Interview Request in Gmail", offer: "Offer in Gmail", closed: "They Said No in Gmail" };
+const MAIL_WORD = { applied: "They Got Your Application", interview: "Interview Request", offer: "Offer", closed: "They Said No" };
 const gmail = {
   id: () => GOOGLE_CLIENT_ID,
   token: null,
@@ -1355,7 +1379,7 @@ function mailCards() {
 }
 async function acceptMail(m) {
   const s = saved.find(x => x.id === m.sid); if (!s) return null;
-  const job = { ...s.job, mail: { kind: m.kind, from: m.from, subject: m.subject, at: m.at }, mailSeen: [...(s.job.mailSeen || []), m.msgId].slice(-20) };
+  const job = { ...s.job, mail: { kind: m.kind, from: m.from, subject: m.subject, at: m.at, msgId: m.msgId }, mailSeen: [...(s.job.mailSeen || []), m.msgId].slice(-20) };
   const patch = { status: m.to, job, updated_at: new Date().toISOString(), ...(m.to === "applied" && !s.follow_up ? { follow_up: isoDay(7) } : {}) };
   const { data, error } = await sb.from("saved_jobs").update(patch).eq("id", s.id).select().single();
   if (error) { toast(error.message); return null; }
@@ -1435,7 +1459,7 @@ function openSheet(id, keep) {
     <h3>Your Resume For This Job</h3>${madeFor(j)}
     <h3>Insider Moves</h3>${insider(j)}
     ${j.description ? `<details><summary class="section-h">The Posting, Saved ${s ? shortDay(s.created_at) : "Today"}</summary><p class="desc">${esc(j.description)}</p></details>` : ""}
-    <div class="stick"><a class="btn" href="${esc(j.applyUrl)}" target="_blank" rel="noopener" data-applyout="${esc(j.id)}">Apply on ${esc(j.company)}'s Site ${I.out}</a>${s ? "" : `<button class="icon" data-save="${esc(j.id)}" aria-label="Save">${I.mark}</button>`}</div>`;
+    <div class="stick"><a class="btn" href="${esc(j.applyUrl)}" target="_blank" rel="noopener" data-applyout="${esc(j.id)}">Apply on ${esc(possessive(j.company))} Site ${I.out}</a>${s ? "" : `<button class="icon" data-save="${esc(j.id)}" aria-label="Save">${I.mark}</button>`}</div>`;
   $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
   $("#sheetBody").scrollTop = top; titleShow();
 }
@@ -1447,7 +1471,7 @@ $("#sheetBody").addEventListener("scroll", titleShow, { passive: true });
 let applyOut = null;
 document.addEventListener("click", e => { const a = e.target.closest("[data-applyout]"); if (a) applyOut = { id: a.dataset.applyout, at: Date.now() }; });
 const askApplied = (j, s) => applyOut?.id === j.id && applyOut.back && !["applied", "interview", "offer", "closed"].includes(s?.status)
-  ? `<div class="didapply"><b>Did you apply?</b><div class="btnrow" style="margin-top:8px"><button class="btn small" data-didapply="${esc(j.id)}">Yes, I Applied</button><button class="btn ghost small" data-notyet>Not Yet</button></div></div>` : "";
+  ? `<div class="didapply"><b>Did You Apply?</b><div class="btnrow" style="margin-top:8px"><button class="btn small" data-didapply="${esc(j.id)}">Yes, I Applied</button><button class="btn ghost small" data-notyet>Not Yet</button></div></div>` : "";
 function backFromSite() {
   if (!applyOut || applyOut.back || Date.now() - applyOut.at < 2500 || document.visibilityState !== "visible") return;
   applyOut.back = true;
@@ -1476,7 +1500,7 @@ function closeSheet() {
 }
 const PAGES = {
   about: `<h2 style="margin-top:0">About Recruiter Goose</h2>
-    <p>Recruiter Goose helps people from the trades, counter sales, purchasing and the jobsite find office and construction-tech jobs that their background already fits.</p>
+    <p>Recruiter Goose helps people from the trades, counter sales, purchasing and the jobsite find office, construction and supply jobs that their background already fits, including the same work in a new city.</p>
     <h2>Where the Jobs Come From</h2>
     <p>Public job boards that companies run themselves, plus a few remote job sites. Every job links to the company's own posting, and you apply there. Recruiter Goose never applies for you and never sends your information to an employer.</p>
     <h2>How Matching Works</h2>
@@ -1601,7 +1625,13 @@ async function load() {
   if (!result || Date.now() - Date.parse(result.ranAt) > 12 * 3600e3) runSearch(); else renderMatches();
 }
 let loadedFor = null, guestResult = null;
-sb.auth.onAuthStateChange((_e, session) => {
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === "PASSWORD_RECOVERY") setTimeout(async () => {
+    const pw = prompt("Type a new password, 8 characters or more.");
+    if (!pw) return;
+    const { error } = pw.length < 8 ? { error: { message: "That's under 8 characters. Use Forgot Your Password? again." } } : await sb.auth.updateUser({ password: pw });
+    toast(error ? error.message : "New password saved.");
+  }, 300);
   const was = user;
   user = session?.user || null;
   if (!user) {

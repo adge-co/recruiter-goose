@@ -8,7 +8,7 @@ Tell the goose what you've done and what you want. He reads real job postings st
 - Make an account with email and password (no confirmation email to wait on).
 - Drop in a resume (PDF, Word or text) and the profile fills itself in: past jobs, years, skills, industries. You fix anything off.
 - Pick the kinds of roles you want, remote and/or cities, a pay floor, and "no sales jobs".
-- Matches: every posting from the job index: about 55 tech and supply company boards, 26 builder, contractor and supply-house hiring systems (Workday, iCIMS, UKG, SmartRecruiters, Oracle) read one at a time every 5 minutes, plus Remotive, Jobicy and The Muse, checked for legit (employer apply link, under 30 days old, no scam signs, no duplicates), then judged on your background: Strong Fit, Good Fit, A Reach or Partly Sales, each with the reasons and anything to watch for.
+- Matches: every posting from the job index (as of Oct 28, 2026: 63 company boards on Greenhouse, Lever and Ashby, plus 24 builders, contractors and supply houses on Workday, iCIMS, UKG, SmartRecruiters and Oracle, read one at a time every 5 minutes; the live list is the `boards` table), plus Remotive, Jobicy and The Muse, checked for legit (employer apply link, under 30 days old, no scam signs, no duplicates), then judged on your background: Strong Fit, Good Fit, A Reach or Partly Sales, each with the reasons and anything to watch for.
 - My Jobs: Saved, Applied, Interviewing, Offer, Closed Out, with follow-up dates. An interview gets the cheering goose; an offer gets the full celebration.
 - Check a Job From Anywhere: paste a posting from anywhere and get the same verdict.
 

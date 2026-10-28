@@ -101,7 +101,8 @@ export function cleanProfile(p = {}) {
     pastTitles: (p.pastTitles || []).map(String).filter(Boolean),
     years: Number(p.years) || 0,
     skills: (p.skills || []).map(String).filter(Boolean),
-    industries: (p.industries || []).map(String).filter(Boolean),
+    // Skipped in setup: this app is for people from construction and supply, so that's the field to judge by.
+    industries: (p.industries || []).map(String).filter(Boolean).length ? p.industries.map(String).filter(Boolean) : ["contractors", "building-materials", "construction-tech"],
     wants: {
       roles: (w.roles || []).map(r => String(r).toLowerCase().trim()).filter(Boolean),
       remote: w.remote !== false,
@@ -289,6 +290,7 @@ export function score(j, p, common) {
   const salesy = SALESY.test(j.description);
   if (avoidHit) { s -= 40; flags.push(`${titleCase(avoidHit)} Role`); }
   else if (salesy && avoid.includes("sales")) { s -= 15; flags.push("Partly Sales"); }
+  else if (salesy) flags.push("Quota or Commission");   // fine for someone who sells, but never a surprise
 
   const theirWork = norm([...p.pastTitles, ...p.wants.roles].join(" "));
   const otherWork = Object.keys(OTHER_WORK).find(k => OTHER_WORK[k].test(norm(title)) && !OTHER_WORK[k].test(theirWork));

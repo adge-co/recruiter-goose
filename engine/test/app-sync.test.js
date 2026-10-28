@@ -13,3 +13,10 @@ test("the app's industries and roles match the engine's", () => {
   assert.deepEqual(grab("INDUSTRIES"), INDUSTRIES);
   assert.deepEqual([...grab("ROLES")].sort(), Object.keys(ROLE_WORDS).sort());
 });
+
+test("the app's resume reader and the server's spot job titles with the same words", async () => {
+  const { TITLE_WORD } = await import("../src/resume.js");
+  const { createRequire } = await import("node:module");
+  const T = createRequire(import.meta.url)("../../app/tailor.js");
+  assert.equal(T.TITLE_WORD.source, TITLE_WORD.source);
+});

@@ -8,7 +8,7 @@ const MONTH = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?
 const RANGE = new RegExp(`(?:${MONTH}\\s+|\\d{1,2}/)?((?:19|20)\\d{2})\\s*(?:-|–|—|to)\\s*(?:(present|current|now|today)|(?:${MONTH}\\s+|\\d{1,2}/)?((?:19|20)\\d{2}))`, "gi");
 
 // Words that make a short line read like a job title.
-const TITLE_WORD = /\b(manager|agent|specialist|coordinator|buyer|estimator|analyst|consultant|supervisor|lead|director|representative|rep|associate|engineer|technician|foreman|superintendent|administrator|assistant|owner|planner|purchaser|salesperson|clerk|dispatcher|scheduler|trainer|advisor|officer|president|founder|operator|installer|designer|developer|accountant|controller|expeditor|merchandiser)\b/i;
+export const TITLE_WORD = /\b(manager|agent|specialist|coordinator|buyer|estimator|analyst|consultant|supervisor|lead|director|representative|rep|associate|engineer|technician|foreman|superintendent|administrator|assistant|owner|planner|purchaser|salesperson|sales|counter|desk|yard|clerk|dispatcher|scheduler|trainer|advisor|officer|president|founder|operator|installer|designer|developer|accountant|controller|expeditor|merchandiser|driver|server|bartender|carpenter|electrician|plumber|apprentice|journeyman|laborer|warehouse)\b/i;
 const SECTION = /^(profile|summary|experience|work experience|professional experience|education|skills|core skills|certifications|references|projects|objective)\b/i;
 
 // Skills and tools people in the trades, building materials, logistics and ops list on resumes.

@@ -7,7 +7,7 @@
   const RANGE = new RegExp(`(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2}\\s*(?:-|–|—|to)\\s*(?:present|current|now|today|(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2})`, "i");
   const HEADING = /^(profile|summary|professional summary|objective|experience|work experience|professional experience|employment|work history|education|skills|core skills|key skills|technical skills|skills and tools|certifications|licenses|certifications and licenses|references|projects|training)\s*:?$/i;
   const BULLET = /^\s*(?:[-•·*▪●◦‣–]|\d+[.)])\s+/;
-  const TITLE_WORD = /\b(manager|agent|specialist|coordinator|buyer|estimator|analyst|consultant|supervisor|lead|director|representative|rep|associate|engineer|technician|foreman|superintendent|administrator|assistant|owner|planner|purchaser|salesperson|clerk|dispatcher|scheduler|trainer|advisor|officer|president|founder|operator|installer|designer|developer|accountant|controller|expeditor|merchandiser|driver|server|bartender|carpenter|electrician|plumber|apprentice|journeyman|laborer|warehouse)\b/i;
+  const TITLE_WORD = /\b(manager|agent|specialist|coordinator|buyer|estimator|analyst|consultant|supervisor|lead|director|representative|rep|associate|engineer|technician|foreman|superintendent|administrator|assistant|owner|planner|purchaser|salesperson|sales|counter|desk|yard|clerk|dispatcher|scheduler|trainer|advisor|officer|president|founder|operator|installer|designer|developer|accountant|controller|expeditor|merchandiser|driver|server|bartender|carpenter|electrician|plumber|apprentice|journeyman|laborer|warehouse)\b/i;
 
   // Words recruiters and job posts use for this kind of work. A posting word only counts if it's on this list,
   // so filler like "fast-paced" or "rockstar" never shows up as something to add.
@@ -48,6 +48,8 @@
     out.name = top.find(l => /^[A-Za-z][A-Za-z.'-]+(?: [A-Za-z][A-Za-z.'-]+){1,3}$/.test(l) && !HEADING.test(l) && !TITLE_WORD.test(l)) || "";
     const place = top.join(" | ").match(/\b([A-Z][a-zA-Z.]+(?: [A-Z][a-zA-Z.]+){0,2}, ?[A-Z]{2})\b(?! ?\d{3})/);
     out.city = place ? place[1].replace(/, ?/, ", ") : "";
+    const moving = top.join(" ").match(/\((?:relocating|moving|relocation) to [^)]{2,40}\)/i);   // "Shreveport, LA (relocating to Dallas-Fort Worth)"
+    if (out.city && moving) out.city += " " + moving[0];
 
     let section = "", job = null;
     const startJob = (head, next) => {
@@ -120,6 +122,9 @@
       // Lines that match nothing drop off, keeping at least three per job so it never looks thin.
       const fits = ranked.filter(x => x.n).length;
       const pick = ranked.slice(0, Math.max(fits, Math.min(3, ranked.length)));
+      // Their best number always makes the cut: a kept line with no number gives way to one with a number.
+      const numeric = ranked.find(x => /\d/.test(x.b));
+      if (numeric && !pick.slice(0, keep).some(x => /\d/.test(x.b))) pick.splice(Math.min(pick.length, keep) - 1, 1, numeric);
       return { title: j.title, company: j.company, dates: j.dates, bullets: pick.slice(0, keep).map(x => x.b), dropped: ranked.length - Math.min(pick.length, keep) };
     });
 
@@ -129,6 +134,8 @@
       const s1 = /^[a-z]/.test(s0) ? tc(s0) : s0;
       if (!skillPool.some(x => norm(x) === norm(s1))) skillPool.push(s1);
     }
+    // "Inventory" next to "Inventory Control", or "OSHA" next to "OSHA 30", says the same thing twice: keep the longer one.
+    for (let i = skillPool.length - 1; i >= 0; i--) if (skillPool.some(x => x !== skillPool[i] && norm(x).startsWith(norm(skillPool[i])))) skillPool.splice(i, 1);
     const skills = [...skillPool.filter(s => want.some(w => hasAny(norm(s), w))), ...skillPool.filter(s => !want.some(w => hasAny(norm(s), w)))].slice(0, 14);
     // Posting words that appear in their own lines but not in their skills list go in the skills line too.
     for (const w of said) if (skills.length < 16 && !skills.some(s => norm(s).includes(norm(w).trim())) && /^[A-Z]|^(purchasing|procurement|estimating|takeoffs|scheduling|inventory|quoting|pricing|onboarding|implementation|training|vendor management|purchase orders)$/.test(w)) skills.push(/^[a-z]/.test(w) ? tc(w) : w);
@@ -227,13 +234,21 @@
     ].join("\r\n");
   }
   // What an email from a company says about an application. Only plain, common phrasing counts.
+  // A form letter ("we'll contact you to schedule an interview if you're selected") is an acknowledgement, not an interview,
+  // and "unfortunately" alone isn't a no ("unfortunately Friday won't work, could we do Monday?").
+  const NO = /\b(not (to )?(move|moving) forward with your|decided (to )?(pursue|proceed|move forward) with other|other candidates whose|position has been filled|no longer (being )?consider|not (been )?selected|will not be moving forward|regret to inform|won'?t be moving forward)\b/;
+  const OFFER = /\b(offer letter|pleased to offer|extend (you )?an offer|job offer)\b/;
+  const FORM = /\b(if (your|you are|you're|we)[^.]{0,60}(selected|qualifications|experience|background|match|interested|fit)|will (contact|reach out to|be in touch with) (you|candidates|applicants)[^.]{0,40}(if|should|whose)|unable to respond|can'?t respond to (every|each|all)|high volume of (applications|applicants)|only (candidates|applicants) (selected|who))/;
+  const ASK = /\b((schedule|set up|arrange|book) (a |an |some |your |a quick )?(time|call|interview|phone screen|phone interview|video interview|chat|meeting)|(phone|video|in-person|onsite|on-site|zoom|teams) interview|invite you (to|for)|are you (free|available)|your availability|times that work|calendly|(bring|have) you in|come in (to|for)|meet with (our|the|me)|phone screen with)\b/;
+  const WHEN = /\b(mon|tues|wednes|thurs|fri)day\b[^.]{0,40}\b\d{1,2}(:\d\d)?\s*(am|pm|a\.m\.|p\.m\.)/;
+  const ACK = /\b((received|receipt of) your application|thank(s| you) for (applying|your application|your interest)|application (has been )?(received|submitted))\b/;
   function readReply(subject, snippet) {
     const t = `${subject || ""} ${snippet || ""}`.toLowerCase();
-    if (/\b(unfortunately|not (to )?(move|moving) forward|other candidates|decided to (pursue|proceed|move forward) with|position has been filled|no longer (being )?consider|not selected|will not be moving)\b/.test(t)) return "closed";
-    if (/\b(offer letter|pleased to offer|extend (you )?an offer|job offer)\b/.test(t)) return "offer";
-    // An interview means they asked to set one up. "We'll reach out if you're selected for an interview" is a form letter.
-    if (/\b(schedule (a |an |some |your )?(time|call|interview|phone screen)|set up (a |an )?(time|call|interview)|invite you (to|for) (an? )?(interview|phone screen|call)|your availability|times that work|calendly|meet with (our|the) team|phone screen with)\b/.test(t)) return "interview";
-    if (/\b((received|receipt of) your application|thank(s| you) for (applying|your application|your interest)|application (has been )?(received|submitted))\b/.test(t)) return "applied";
+    if (OFFER.test(t)) return "offer";
+    if (NO.test(t)) return "closed";
+    if (FORM.test(t)) return "applied";
+    if (ASK.test(t) || WHEN.test(t)) return "interview";
+    if (ACK.test(t)) return "applied";
     return null;
   }
   const ORDER = ["saved", "applied", "interview", "offer"];
@@ -242,6 +257,6 @@
     : ORDER.indexOf(kind) > ORDER.indexOf(now) && now !== "closed" ? kind : null;
   const gmailQuery = (job, since) => `"${String(job.company).replace(/"/g, "")}" -from:me -in:chats${since ? " after:" + since.slice(0, 10).replace(/-/g, "/") : " newer_than:90d"}`;
 
-  const api = { readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS };
+  const api = { readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS, TITLE_WORD };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else window.Tailor = api;
 })();

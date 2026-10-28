@@ -80,6 +80,14 @@ test("a reply moves a job forward, a clear no closes it, and nothing moves backw
   assert.equal(T.readReply("Next steps", "We'd like to schedule a phone screen. What is your availability?"), "interview");
   assert.equal(T.readReply("Your application", "Unfortunately we have decided to move forward with other candidates."), "closed");
   assert.equal(T.readReply("Thanks for applying to BuildCo", "We received your application"), "applied");
+  // The ones that are easy to get backwards.
+  assert.equal(T.readReply("Thank you for applying", "If your qualifications match our needs, we will contact you to schedule an interview."), "applied");
+  assert.equal(T.readReply("Application received", "Thank you for applying. We'll reach out if you are selected for an interview. Next steps will follow."), "applied");
+  assert.equal(T.readReply("Purchasing Agent", "I'd like to set up a phone interview this week. Are you free Tuesday at 10am?"), "interview");
+  assert.equal(T.readReply("Re: Buyer", "Unfortunately Friday won't work, could we schedule a call Monday?"), "interview");
+  assert.equal(T.readReply("Re: Estimator", "We'd love to bring you in to meet the purchasing manager. Does Thursday at 9 am work?"), "interview");
+  assert.equal(T.readReply("Thanks", "Unfortunately we can't respond to every applicant, but we received your application."), "applied");
+  assert.equal(T.readReply("Your application", "We regret to inform you the position has been filled."), "closed");
   assert.equal(T.readReply("Lunch", "Team lunch on Friday"), null);
   assert.equal(T.nextStatus("applied", "interview"), "interview");
   assert.equal(T.nextStatus("interview", "applied"), null);
@@ -94,4 +102,24 @@ test("the Gmail draft carries the email and the PDF", () => {
   assert.match(m, /Content-Type: application\/pdf; name="Me.pdf"/);
   assert.match(m, /JVBERi0=/);
   assert.equal(T.gmailQuery({ company: "BuildCo" }, "2026-10-01T00:00:00Z"), '"BuildCo" -from:me -in:chats after:2026/10/01');
+});
+
+test("the resume keeps a relocation note, its best number and one name per skill", () => {
+  const r = T.readResume(`Sam Lee
+Shreveport, LA (relocating to Dallas-Fort Worth) | sam@example.com
+
+EXPERIENCE
+Buyer | Ark Supply
+Jan 2020 - Present
+- Talked with vendors daily
+- Handled paperwork for orders
+- Helped the yard crew
+- Kept PO accuracy above 99%
+
+SKILLS
+Inventory, Inventory Control, OSHA, OSHA 30`);
+  assert.match(r.city, /relocating to Dallas-Fort Worth/);
+  const t = T.tailor(r, { title: "Purchasing Agent", company: "BuildCo", description: "Vendors and orders." }, {});
+  assert.ok(t.jobs[0].bullets.some(b => /99%/.test(b)), t.jobs[0].bullets.join(" | "));
+  assert.ok(!t.skills.includes("Inventory") && !t.skills.includes("OSHA"), t.skills.join(", "));
 });
