@@ -3,6 +3,7 @@
 // Keyless sources run for everyone. JSearch and Adzuna run only when their keys are set.
 
 import { DIRECTORY } from "../directory.js";
+import { isTexas } from "../places.js";
 
 const UA = { "User-Agent": "RecruiterGoose/0.1 (+job matching)" };
 
@@ -136,9 +137,8 @@ const DETAIL_CAP = 40;   // new postings read in full per board per run; the res
 // Which new postings get read in full first: office-role titles, then Texas. Some boards ignore the search
 // words and list every driver and stocker, so this keeps the per-run budget on the jobs this app is for.
 const OFFICE = new RegExp(DEEP_SEARCH.join("|") + "|coordinator|analyst|sales|account|manager|administrat|engineer", "i");
-const TEXAS = /\b(TX|Texas)\b|Dallas|Fort Worth|Arlington|Plano|Irving|Frisco|McKinney|Denton|Grapevine|Carrollton|Garland|Mesquite|Lewisville/i;
 export function firstToRead(list, title, place = () => "") {
-  const score = p => (OFFICE.test(title(p) || "") ? 2 : 0) + (TEXAS.test(place(p) || "") ? 1 : 0);
+  const score = p => (OFFICE.test(title(p) || "") ? 2 : 0) + (isTexas(place(p)) ? 1 : 0);
   return list.map((p, i) => [score(p), i, p]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map(x => x[2]).slice(0, DETAIL_CAP);
 }
 

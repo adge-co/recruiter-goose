@@ -61,7 +61,7 @@ test("the made-for-this-job resume puts fitting lines first and never adds what 
   assert.equal(t.jobs[0].bullets.length, 3);
   assert.match(t.summary, /^7 years of experience, most recently as a Purchasing Agent at Lone Star Mechanical\. Hands-on with purchasing, purchase orders and vendor management\./);
   assert.ok(!t.skills.includes("Procurement"), "their own word, not the posting's");
-  assert.match(t.summary, /Procurement Specialist role at BuildCo/);
+  assert.doesNotMatch(t.summary, /Applying for/, "the email says which job; the resume doesn't");
   assert.ok(t.fit > 0 && t.fit <= 100);
 });
 

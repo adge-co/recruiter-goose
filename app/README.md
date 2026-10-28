@@ -8,9 +8,9 @@ Tell the goose what you've done and what you want. He reads real job postings st
 - Make an account with email and password (no confirmation email to wait on).
 - Drop in a resume (PDF, Word or text) and the profile fills itself in: past jobs, years, skills, industries. You fix anything off.
 - Pick the kinds of roles you want, remote and/or cities, a pay floor, and "no sales jobs".
-- Matches: every posting from 46 company job boards plus Remotive, Jobicy and The Muse, checked for legit (employer apply link, under 30 days old, no scam signs, no duplicates), then judged on your background: Strong Fit, Good Fit, A Reach or Partly Sales, each with the reasons and anything to watch for.
+- Matches: every posting from the job index: about 55 tech and supply company boards, 26 builder, contractor and supply-house hiring systems (Workday, iCIMS, UKG, SmartRecruiters, Oracle) read one at a time every 5 minutes, plus Remotive, Jobicy and The Muse, checked for legit (employer apply link, under 30 days old, no scam signs, no duplicates), then judged on your background: Strong Fit, Good Fit, A Reach or Partly Sales, each with the reasons and anything to watch for.
 - My Jobs: Saved, Applied, Interviewing, Offer, Closed Out, with follow-up dates. An interview gets the cheering goose; an offer gets the full celebration.
-- Check A Job: paste a posting from anywhere and get the same verdict.
+- Check a Job From Anywhere: paste a posting from anywhere and get the same verdict.
 
 No AI runs in the live app. Matching and resume reading are plain rules, so it's fast, free to run and gives the same answer every time.
 

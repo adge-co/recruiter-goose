@@ -25,8 +25,8 @@
 :root{
   --bg:#F6F5F1; --desk:#EFEDE7; --surface:#FDFCF9; --raise:#EFEDE7; --line:#E4E1DA; --line2:#D6D2C8;
   --ink:#121417; --ink2:#2F3238; --muted:#5F636B;
-  --green:#2E44D9; --green-edge:#1F2FA3; --green-ink:#FFFFFF; --green-soft:#EEF0FB; --green-text:#121417;
-  --brass:#2E44D9; --brass-soft:#F4EEE2; --brass-text:#8A5300;
+  --action:#2E44D9; --action-edge:#1F2FA3; --action-ink:#FFFFFF; --action-soft:#EEF0FB; --action-text:#121417;
+  --mark:#2E44D9; --mark-soft:#F4EEE2; --mark-text:#8A5300;
   --amber-text:#8A5300; --amber-soft:#F7EEDD; --red-text:#B0322A; --red-soft:#FBECEA;
   --fresh:#177A43; --accent-text:#2E44D9;
   --hl:inset 0 1px 0 rgba(255,255,255,.9);
@@ -48,8 +48,8 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0F1114; --desk:#14171B; --surface:#181B20; --raise:#20242A; --line:#262A31; --line2:#323740;
   --ink:#F2F3F5; --ink2:#D3D6DB; --muted:#9A9FA8;
-  --green:#4F63F0; --green-edge:#2E44D9; --green-ink:#FFFFFF; --green-soft:rgba(111,128,255,.14); --green-text:#F2F3F5;
-  --brass:#6F80FF; --brass-soft:rgba(232,182,92,.12); --brass-text:#E8B65C;
+  --action:#4F63F0; --action-edge:#2E44D9; --action-ink:#FFFFFF; --action-soft:rgba(111,128,255,.14); --action-text:#F2F3F5;
+  --mark:#6F80FF; --mark-soft:rgba(232,182,92,.12); --mark-text:#E8B65C;
   --amber-text:#E8B65C; --amber-soft:rgba(232,182,92,.12); --red-text:#F0938A; --red-soft:rgba(240,147,138,.12);
   --fresh:#4CC985; --accent-text:#8E9BFF;
   --hl:inset 0 1px 0 rgba(255,255,255,.05);
@@ -67,8 +67,8 @@
 :root[data-theme="dark"]{
   --bg:#0F1114; --desk:#14171B; --surface:#181B20; --raise:#20242A; --line:#262A31; --line2:#323740;
   --ink:#F2F3F5; --ink2:#D3D6DB; --muted:#9A9FA8;
-  --green:#4F63F0; --green-edge:#2E44D9; --green-ink:#FFFFFF; --green-soft:rgba(111,128,255,.14); --green-text:#F2F3F5;
-  --brass:#6F80FF; --brass-soft:rgba(232,182,92,.12); --brass-text:#E8B65C;
+  --action:#4F63F0; --action-edge:#2E44D9; --action-ink:#FFFFFF; --action-soft:rgba(111,128,255,.14); --action-text:#F2F3F5;
+  --mark:#6F80FF; --mark-soft:rgba(232,182,92,.12); --mark-text:#E8B65C;
   --amber-text:#E8B65C; --amber-soft:rgba(232,182,92,.12); --red-text:#F0938A; --red-soft:rgba(240,147,138,.12);
   --fresh:#4CC985; --accent-text:#8E9BFF;
   --hl:inset 0 1px 0 rgba(255,255,255,.05);
@@ -98,9 +98,9 @@ h2{font-size:21px;line-height:1.22;margin:0 0 4px}
 .hint{font-size:14.5px;color:var(--muted);margin:0 0 8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:16px;box-shadow:var(--card-sh)}
 .btn{appearance:none;border:0;border-radius:var(--r-btn);padding:12px 18px;font-weight:700;cursor:pointer;min-height:50px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;
-  background:var(--green);color:var(--green-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 3px 0 var(--green-edge);transition:transform .12s ease,box-shadow .12s ease}
-.btn:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 var(--green-edge)}
-.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.icon:focus-visible,.linkbtn:focus-visible,.row-job:focus-visible,.job:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+  background:var(--action);color:var(--action-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 3px 0 var(--action-edge);transition:transform .12s ease,box-shadow .12s ease}
+.btn:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 var(--action-edge)}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.icon:focus-visible,.linkbtn:focus-visible,.row-job:focus-visible,.job:focus-visible{outline:2px solid var(--mark);outline-offset:3px}
 .btn:disabled{opacity:.5;cursor:default}
 .btn.ghost{background:var(--raise);color:var(--ink);box-shadow:var(--hl)}
 .btn.ghost:active{transform:scale(.97)}
@@ -110,7 +110,7 @@ h2{font-size:21px;line-height:1.22;margin:0 0 4px}
 .spacer{flex:1}
 input[type=text],input[type=email],input[type=password],input[type=number],textarea{width:100%;background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:12px 14px;min-height:50px;outline:none;transition:border-color .15s}
 input::placeholder,textarea::placeholder{color:var(--placeholder)}
-input:focus,textarea:focus{border-color:var(--brass)}
+input:focus,textarea:focus{border-color:var(--mark)}
 textarea{min-height:150px;resize:vertical}
 .err{color:var(--red-text);font-weight:600;font-size:15px;margin-top:10px}
 .linkbtn{border:0;background:none;padding:0;font:inherit;color:var(--ink);font-weight:600;cursor:pointer;text-decoration:underline;text-decoration-color:var(--link-ul);text-underline-offset:3px}
@@ -126,7 +126,6 @@ textarea{min-height:150px;resize:vertical}
 .tab .fill{display:none}
 .tab.on{color:var(--accent-text);background:transparent}
 .tab.on .fill{display:inline}.tab.on .line{display:none}
-.tab .n{display:none}
 @media (max-width:640px){
   .tabs{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:30;height:66px;border-radius:33px;display:grid;grid-template-columns:repeat(3,1fr);align-items:center;background:var(--glass);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);border:var(--glass-b);box-shadow:var(--glass-sh);gap:0}
   .tab{flex-direction:column;gap:3px;padding:6px 2px;font-size:11px;background:none!important;min-height:52px;justify-content:center}
@@ -168,17 +167,17 @@ textarea{min-height:150px;resize:vertical}
 /* Chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{appearance:none;border:1px solid var(--line2);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14.5px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;color:var(--ink2);min-height:40px;transition:background .15s,border-color .15s}
-.chip.on{background:var(--green-soft);border-color:var(--chip-on-b);color:var(--green-text)}
+.chip.on{background:var(--action-soft);border-color:var(--chip-on-b);color:var(--action-text)}
 .chip .x{font-weight:800;opacity:.6;padding-left:2px}
 .chipin{display:flex;gap:8px;margin-top:10px}
 .chipin input{flex:1}
 .steps{display:flex;gap:6px;margin:22px 0 18px}
 .steps i{flex:1;height:5px;border-radius:3px;background:var(--line)}
-.steps i.on{background:var(--brass)}
+.steps i.on{background:var(--mark)}
 .toggle{display:flex;align-items:center;gap:12px;font-weight:600;cursor:pointer;padding:8px 0}
-.toggle input{width:22px;height:22px;accent-color:var(--green)}
+.toggle input{width:22px;height:22px;accent-color:var(--action)}
 .drop{margin-top:16px;border-style:dashed;border-color:var(--line2)}
-.drop.over{border-color:var(--brass);background:var(--brass-soft)}
+.drop.over{border-color:var(--mark);background:var(--mark-soft)}
 .drop img{border-radius:12px}
 
 /* Matches: job cards */
@@ -190,15 +189,17 @@ textarea{min-height:150px;resize:vertical}
 .logo.sm{width:40px;height:40px;font-size:14px;border-radius:11px}
 .co{font-size:13.5px;color:var(--muted);font-weight:500}
 .job .title{font-family:var(--display);font-weight:700;font-size:18.5px;line-height:1.22;letter-spacing:-.01em;margin:2px 0 6px}
-.meta{font-size:14px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
-.meta>span+span::before{content:"";display:inline-block;width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.6;margin-right:8px;vertical-align:middle}
+/* Dots sit in each item's left margin; the one that would start a wrapped line is clipped off. */
+.meta{font-size:14px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;margin-left:-15px;overflow:hidden}
+.meta>span{position:relative;margin-left:15px}
+.meta>span::before{content:"";position:absolute;left:-9px;top:50%;width:3px;height:3px;margin-top:-1.5px;border-radius:50%;background:currentColor;opacity:.6}
 .meta b{font-weight:700;color:var(--ink)}
 .meta .na{color:var(--muted)}
 .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .pill{font-size:12.5px;font-weight:600;border-radius:999px;padding:3px 10px;background:var(--raise);color:var(--ink2);display:inline-flex;align-items:center;gap:6px;min-height:24px}
-.pill.strong{background:var(--green-soft);color:var(--green-text)}
-.pill.good{background:var(--pill-good);color:var(--green-text)}
-.pill.reach,.pill.sales,.pill.flag,.pill.checkfirst,.pill.pipeline{background:var(--brass-soft);color:var(--brass-text)}
+.pill.strong{background:var(--action-soft);color:var(--action-text)}
+.pill.good{background:var(--pill-good);color:var(--action-text)}
+.pill.reach,.pill.sales,.pill.flag,.pill.checkfirst,.pill.pipeline{background:var(--mark-soft);color:var(--mark-text)}
 .pill.stale,.pill.gone{background:var(--red-soft);color:var(--red-text)}
 .pill.checkfirst::before,.pill.pipeline::before,.pill.stale::before,.pill.gone::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .trail{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);margin-top:9px}
@@ -206,7 +207,7 @@ textarea{min-height:150px;resize:vertical}
 .job .side{display:flex;flex-direction:column;gap:6px}
 .job .icon{width:40px;height:40px}
 .job .icon svg{width:18px;height:18px}
-.job .icon.saved{color:var(--brass)}
+.job .icon.saved{color:var(--mark)}
 .passwhy{grid-column:1/-1}
 .passwhy .label{margin-top:4px}
 details.filtered{margin-top:22px;font-size:14.5px;color:var(--muted)}
@@ -223,7 +224,7 @@ details.filtered ul{margin:4px 0 0;padding-left:18px}
 /* My Jobs: pipeline */
 .facts{display:flex;gap:6px;margin-top:14px}
 .facts i{height:5px;border-radius:3px;background:var(--line)}
-.facts i.f-offer{background:var(--ink)}.facts i.f-interview{background:var(--green)}.facts i.f-applied{background:#8C97E8}.facts i.f-saved{background:var(--saved-bar)}
+.facts i.f-offer{background:var(--ink)}.facts i.f-interview{background:var(--action)}.facts i.f-applied{background:#8C97E8}.facts i.f-saved{background:var(--saved-bar)}
 .today{display:grid;gap:10px;margin-top:16px}
 .nudge{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--hl)}
 .nudge.warm{background:var(--nudge-warm);border-color:var(--nudge-warm-b)}
@@ -258,21 +259,21 @@ details>summary.section-h{cursor:pointer;list-style:none}
 .sheet .grab .gt{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:0;opacity:0;transition:opacity .2s,max-height .2s}
 .sheet .scrolled .grab .gt{max-height:22px;opacity:1}
 .stick .btn svg{width:18px;height:18px}
-.trail.rp svg{color:var(--brass-text)}
+.trail.rp svg{color:var(--mark-text)}
 .trail.fresh,.trail.fresh svg{color:var(--fresh)}
 .paysrc{font-size:13px;color:var(--muted);margin-top:4px}
 .mailnudge{align-items:flex-start}
 .mailnudge > div:nth-child(2){min-width:0;flex:1}
 .mailnudge span{display:block}
-.didapply{margin-top:14px;border-radius:14px;padding:12px 14px;background:var(--green-soft)}
+.didapply{margin-top:14px;border-radius:14px;padding:12px 14px;background:var(--action-soft)}
 .didapply b{font-size:15.5px}
 .sh-ttl{font-family:var(--display);font-weight:700;font-size:27px;line-height:1.12;letter-spacing:-.02em;margin:10px 0 6px}
 .sheet h3{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:-.01em;margin:26px 0 10px}
-.verdict{border-radius:14px;padding:12px 14px;margin-bottom:10px;background:var(--brass-soft)}
-.verdict b{font-weight:700;font-size:15.5px;display:flex;align-items:center;gap:8px;color:var(--brass-text)}
+.verdict{border-radius:14px;padding:12px 14px;margin-bottom:10px;background:var(--mark-soft)}
+.verdict b{font-weight:700;font-size:15.5px;display:flex;align-items:center;gap:8px;color:var(--mark-text)}
 .verdict b::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .verdict p{margin:3px 0 0;font-size:14px;color:var(--ink2)}
-.verdict.real{background:var(--green-soft)} .verdict.real b{color:var(--green-text)}
+.verdict.real{background:var(--action-soft)} .verdict.real b{color:var(--action-text)}
 .verdict.stale,.verdict.gone{background:var(--red-soft)} .verdict.stale b,.verdict.gone b{color:var(--red-text)}
 .ev{list-style:none;margin:0;padding:0 0 0 24px;position:relative;display:grid;gap:12px}
 .ev::before{content:"";position:absolute;left:5px;top:8px;bottom:8px;width:2px;border-radius:2px;background:var(--line2)}
@@ -320,13 +321,13 @@ details summary.section-h{margin:22px 0 0;font-size:17px}
 .bg .from{font-size:14px;color:var(--muted);font-weight:600}
 /* A resume made for one job */
 .fitline{display:flex;align-items:center;gap:12px;margin-top:2px}
-.fitline .big{white-space:nowrap;line-height:1;font-family:var(--num);font-size:30px;font-weight:800;letter-spacing:-.035em;font-feature-settings:"lnum","tnum";color:var(--green-text);font-variant-numeric:tabular-nums}
+.fitline .big{white-space:nowrap;line-height:1;font-family:var(--num);font-size:30px;font-weight:800;letter-spacing:-.035em;font-feature-settings:"lnum","tnum";color:var(--action-text);font-variant-numeric:tabular-nums}
 .fitline span{color:var(--ink2);font-size:14.5px}
 button.pill{border:0;cursor:pointer;font-family:inherit}
 .pill.on{outline:2px solid currentColor;outline-offset:1px}
 .kwctx{margin-top:10px;border-left:3px solid var(--line2);padding:4px 0 4px 12px}
 .kwctx p{margin:4px 0 0;color:var(--ink)}
-.pill.miss{background:var(--brass-soft);color:var(--brass-text)}
+.pill.miss{background:var(--mark-soft);color:var(--mark-text)}
 .paper{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:18px 18px 14px;margin-top:12px;font-size:13.5px;color:var(--ink);box-shadow:var(--hl)}
 .paper .nm{font-family:var(--display);font-size:20px;font-weight:600}
 .paper .ct{color:var(--muted);font-size:12.5px;margin-top:2px}
@@ -383,8 +384,8 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
     <div class="brand">Recruiter Goose</div>
     <div class="spacer"></div>
     <nav class="tabs" id="tabs" aria-label="Main">
-      <button class="tab on" data-tab="matches"><svg class="line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18"/></svg><svg class="fill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" fill="none"/><path d="M5.5 7h13A2.5 2.5 0 0 1 21 9.5V12H3V9.5A2.5 2.5 0 0 1 5.5 7zM3 13.6h18v3.9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z" fill="currentColor" stroke="none"/></svg>Matches <span class="n" id="nMatches"></span></button>
-      <button class="tab" data-tab="mine"><svg class="line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-3.8L6 21V4.5a1 1 0 0 1 1-1z"/></svg><svg class="fill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-3.8L6 21V4.5a1 1 0 0 1 1-1z" fill="currentColor"/></svg>My Jobs <span class="n" id="nMine"></span></button>
+      <button class="tab on" data-tab="matches"><svg class="line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18"/></svg><svg class="fill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" fill="none"/><path d="M5.5 7h13A2.5 2.5 0 0 1 21 9.5V12H3V9.5A2.5 2.5 0 0 1 5.5 7zM3 13.6h18v3.9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z" fill="currentColor" stroke="none"/></svg>Matches</button>
+      <button class="tab" data-tab="mine"><svg class="line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-3.8L6 21V4.5a1 1 0 0 1 1-1z"/></svg><svg class="fill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-3.8L6 21V4.5a1 1 0 0 1 1-1z" fill="currentColor"/></svg>My Jobs</button>
       <button class="tab" data-tab="me"><svg class="line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20.5c1.2-3.6 4.1-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></svg><svg class="fill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8" fill="currentColor"/><path d="M4.5 20.5c1.2-3.6 4.1-5.5 7.5-5.5s6.3 1.9 7.5 5.5z" fill="currentColor"/></svg>Me</button>
     </nav>
   </div>
@@ -398,8 +399,8 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
       <div class="mark"><img src="img/mark.png" alt=""><b>Recruiter Goose</b></div>
       <img class="mascot" src="img/wave.webp" alt="Recruiter Goose waving">
       <div>
-        <h1>Office and construction-tech jobs for people <em>from the field.</em></h1>
-        <p class="lead">For people moving from the trades, the counter, purchasing or the jobsite into office work. Tell it the jobs you've held, and it reads company job boards for roles your background already fits.</p>
+        <h1>Office, construction and supply-house jobs for people <em>from the field.</em></h1>
+        <p class="lead">For people from the trades, the counter, purchasing or the jobsite, whether you're moving into office work or doing the same work in a new city. Tell it the jobs you've held, and it reads builders', contractors' and suppliers' own job boards for roles your background already fits.</p>
       </div>
       <div>
         <button class="btn wide" id="tryIt">Find Jobs That Fit Me</button>
@@ -458,7 +459,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
       <label class="label" for="iFloor">Lowest Yearly Pay You'd Take</label>
       <input type="number" id="iFloor" min="0" step="1000" inputmode="numeric" placeholder="80000">
       <label class="label">Want Less Of</label>
-      <label class="toggle"><input type="checkbox" id="iNoSales" checked> No sales jobs (quota, commission, cold calling)</label>
+      <label class="toggle"><input type="checkbox" id="iNoSales" checked> No Commission Sales Jobs (Quotas, Cold Calling)</label>
       <div class="err hidden" id="s2Err"></div>
       <div class="row" style="margin-top:22px">
         <button class="btn ghost" id="back2">Back</button>
@@ -538,7 +539,7 @@ const INDUSTRIES = {
   "contractors": "Builders and Contractors", "construction-tech": "Construction Tech", "building-materials": "Building Materials", "trades-software": "Software for the Trades",
   "proptech": "Homebuilding and Property Tech", "logistics": "Logistics and Supply Chain", "energy": "Energy and Battery Storage", "hospitality": "Hospitality Tech", "saas": "General Software",
 };
-const ROLES = ["purchasing", "estimating", "implementation", "project manager", "coordinator", "operations", "customer success", "onboarding", "training", "scheduling", "inventory", "safety", "quality", "pricing", "support", "product manager", "warehouse", "quoting"];
+const ROLES = ["purchasing", "estimating", "implementation", "project manager", "coordinator", "operations", "customer success", "onboarding", "training", "scheduling", "inventory", "safety", "quality", "pricing", "support", "product manager", "warehouse", "quoting", "sales"];
 const CHECK = { "Looks Real": "real", "Check First": "checkfirst", "Pipeline": "pipeline", "Likely Stale": "stale" };
 const FIT = { strong: "Strong Fit", good: "Good Fit", reach: "A Reach", sales: "Partly Sales" };
 const STATUS = [["saved", "Saved"], ["applied", "Applied"], ["interview", "Interviewing"], ["offer", "Offer"], ["closed", "Closed"]];
@@ -546,7 +547,8 @@ const STATUS = [["saved", "Saved"], ["applied", "Applied"], ["interview", "Inter
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const tc = s => String(s).replace(/\b\w/g, c => c.toUpperCase());
-const mdy = iso => { const d = new Date(iso); return isNaN(d) ? "" : `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}-${d.getFullYear()}`; };
+// Title Case for labels: small words stay small unless they lead ("Not My Kind of Work").
+const titled = s => tc(s).replace(/(?!^)\b(A|An|And|Of|Or|The|To|In|On|For|At|By|From)\b/g, w => w.toLowerCase());
 const k = n => "$" + Math.round(n / 1000) + "k";
 const niceDates = t => String(t).replace(/\b(\d{2})-(\d{2})-(\d{4})\b/g, (_, m, d, y) => shortDay(`${y}-${m}-${d}`));
 const shortDay = iso => { const d = new Date(String(iso).length === 10 ? iso + "T12:00:00" : iso); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); };
@@ -710,7 +712,7 @@ async function readResume(text) {
   const { data, error } = await sb.functions.invoke("match", { body: { resume: text } });
   if (error || data?.error) { msg.innerHTML = `<span class="err">${esc(data?.error || error.message)}</span>`; return; }
   const merge = (key, vals) => { for (const v of vals || []) if (!draft[key].some(x => x.toLowerCase() === String(v).toLowerCase())) draft[key].push(v); };
-  merge("titles", data.pastTitles); merge("skills", data.skills); merge("industries", data.industries);
+  merge("titles", data.pastTitles); merge("skills", (data.skills || []).map(w => /^[a-z]/.test(w) ? titled(w) : w)); merge("industries", data.industries);
   if (!draft.roles.length) merge("roles", data.suggestedRoles);
   if (data.years && !$("#iYears").value) $("#iYears").value = data.years;
   if (data.pastCompanies?.length) draft.companies = data.pastCompanies;
@@ -738,6 +740,8 @@ $("#next1").onclick = () => {
   const err = $("#s1Err");
   if (!draft.titles.length) { err.textContent = "Add at least one job you've held."; err.classList.remove("hidden"); return; }
   err.classList.add("hidden");
+  // Someone who has sold (counter sales, outside sales) keeps sales jobs unless they turn this on themselves.
+  if (!profile?.data?.wants?.avoid) $("#iNoSales").checked = !draft.titles.some(t => /\bsales\b/i.test(t));
   $("#setup1").classList.add("hidden"); $("#setup2").classList.remove("hidden"); $("#st2").classList.add("on"); scrollTo(0, 0);
   renderBgSetup();
 };
@@ -766,7 +770,7 @@ $("#next2").onclick = async () => {
 // ---------- Search ----------
 async function runSearch() {
   $("#rerun").disabled = true; $("#rerun").classList.add("spin"); $("#mSub").textContent = "Searching company job boards…";
-  $("#mBody").innerHTML = `<div class="loading"><img class="mascot" src="img/papers.webp" alt=""><h2>Reading the postings</h2><p class="hint">Company job boards and remote job sites. This takes a few seconds.</p></div>`;
+  $("#mBody").innerHTML = `<div class="loading"><img class="mascot" src="img/papers.webp" alt=""><h2>Reading the Postings</h2><p class="hint">Company job boards and remote job sites. This takes a few seconds.</p></div>`;
   try {
     const { data, error } = await sb.functions.invoke("match", { body: { profile: profile.data } });
     if (error) { let msg = error.message; try { msg = (await error.context.json()).error || msg; } catch {} throw new Error(msg); }
@@ -775,7 +779,7 @@ async function runSearch() {
     await saveProfile({ last_result: data, last_run_at: data.ranAt });
   } catch (x) {
     $("#mSub").textContent = "";
-    $("#mBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img class="mascot" src="img/coffee.webp" alt=""><h2>The search hit a snag</h2><p class="hint">${esc(x.message)}</p><button class="btn" onclick="runSearch()">Try Again</button></div>`;
+    $("#mBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img class="mascot" src="img/coffee.webp" alt=""><h2>The Search Hit a Snag</h2><p class="hint">${esc(x.message)}</p><button class="btn" onclick="runSearch()">Try Again</button></div>`;
   }
   $("#rerun").disabled = false; $("#rerun").classList.remove("spin");
   if (result) renderMatches();
@@ -784,7 +788,7 @@ $("#rerun").onclick = () => { openApp("matches"); runSearch(); };
 
 const savedKeys = () => new Map(saved.map(s => [s.job_key, s]));
 function payText(j) {
-  if (!j.payMax && !j.payMin) return `<span class="na">Pay not listed</span>`;
+  if (!j.payMax && !j.payMin) return `<span class="na">Pay Not Listed</span>`;
   const lo = j.payMin || j.payMax, hi = j.payMax || j.payMin;
   return `<span><b>${lo === hi ? k(hi) : k(lo) + "–" + k(hi)}</b> a year</span>`;
 }
@@ -796,12 +800,12 @@ function placeText(j) {
 const openText = j => { const d = openDays(j); return d == null ? "" : `<span${d < 3 ? ' class="fresh"' : ""}>Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}</span>`; };
 const meta = j => `<div class="meta">${payText(j)}<span>${placeText(j)}</span>${openText(j)}</div>`;
 const openDays = j => { const t = Date.parse(j.firstPublished || j.postedAt); return Number.isFinite(t) ? Math.max(0, Math.floor((Date.now() - t) / 864e5)) : j.check?.openDays ?? null; };
-const checkPill = (j, s) => s?.job?.goneAt ? `<span class="pill gone">Taken Down ${mdy(s.job.goneAt)}</span>` : j.check && j.check.label !== "Looks Real" ? `<span class="pill ${CHECK[j.check.label]}">${esc(j.check.label)}</span>` : "";
+const checkPill = (j, s) => s?.job?.goneAt ? `<span class="pill gone">Taken Down ${shortDay(s.job.goneAt)}</span>` : j.check && j.check.label !== "Looks Real" ? `<span class="pill ${CHECK[j.check.label]}">${esc(j.check.label)}</span>` : "";
 const trail = j => {
   const t = Date.parse(j.firstPublished || j.postedAt);
   const d = openDays(j);
   const rp = j.reposts ? ` · reposted ${j.reposts === 1 ? "once" : j.reposts + " times"}` : "";   // a repost is the most-asked-for warning sign
-  return `<div class="trail ${rp ? "rp" : ""}${d != null && d < 3 && !rp ? " fresh" : ""}">${rp ? I.clock : I.check}<span>${d == null ? "Still up" : `Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}, still up`} on ${esc(j.company)}'s own board${rp}</span></div>`;
+  return `<div class="trail ${rp ? "rp" : ""}${d != null && d < 3 && !rp ? " fresh" : ""}">${rp ? I.clock : I.check}<span>${d == null ? "Still up" : `Open ${d === 0 ? "since today" : d === 1 ? "1 day" : d + " days"}, still up`} on ${esc(j.company)}${/s$/i.test(j.company) ? "'" : "'s"} own board${rp}</span></div>`;
 };
 function jobCard(j, s) {
   const st = s?.status;
@@ -855,7 +859,7 @@ function capped(list, keys) {
     const n = seen[j.company] = (seen[j.company] || 0) + 1;
     if (n > 3 && !opened.has(j.company)) return "";
     const more = n === 3 && total[j.company] > 3 && !opened.has(j.company)
-      ? `<button class="btn ghost wide" style="margin-top:10px" data-more="${esc(j.company)}">Show ${total[j.company] - 3} more from ${esc(j.company)}</button>` : "";
+      ? `<button class="btn ghost wide" style="margin-top:10px" data-more="${esc(j.company)}">Show ${total[j.company] - 3} More From ${esc(j.company)}</button>` : "";
     return jobCard(j, keys.get(j.id)) + more;
   }).join("");
 }
@@ -877,7 +881,6 @@ function renderMatches() {
   const sourcesOk = r.sources.filter(s => s.ok).length;
   const hidden = Object.entries(r.hidden || {}).sort((a, b) => b[1] - a[1]);
   const dropped = r.dropped || {};
-  $("#nMatches").textContent = jobs.length ? `(${jobs.length})` : "";
   $("#mSub").textContent = `${jobs.length ? `${jobs.length} fit your background` : "Nothing fits yet"} · ${shortDay(r.ranAt)}`;
   const leftOut = `
       <details class="filtered"><summary>What Was Left Out</summary><ul><li>Searched ${sourcesOk} job sources; every job links to the company's own posting</li>
@@ -892,7 +895,7 @@ function renderMatches() {
   $("#mBody").innerHTML = `
     <div class="summary">${segs.length > 1 ? `<div class="segf" role="radiogroup" aria-label="Fit">${segs.map(([f, l, c]) => `<button role="radio" aria-checked="${filter === f}" class="${filter === f ? "on" : ""}" data-filter="${f}">${l}<span>${c}</span></button>`).join("")}</div>` : ""}</div>
     ${ask ? `<div class="card learn"><img class="mascot" src="img/coffee.webp" alt=""><div style="flex:1"><b style="font-size:16px">${esc(ask.q)}</b><div class="row" style="margin-top:10px"><button class="btn small" data-learn="${ask.key}" data-val="yes">Yes, Hide Them</button><button class="btn ghost small" data-learn="${ask.key}" data-val="no">Keep Showing</button></div></div></div>` : ""}
-    ${capped(list, keys) || `<div class="card empty" style="margin-top:12px"><img class="mascot" src="img/coffee.webp" alt=""><h2>No jobs here yet</h2><p class="hint">Try adding another kind of role or a city on the Me tab, then search again.</p></div>`}
+    ${capped(list, keys) || `<div class="card empty" style="margin-top:12px"><img class="mascot" src="img/coffee.webp" alt=""><h2>No Jobs Here Yet</h2><p class="hint">Try adding another kind of role or a city on the Me tab, then search again.</p></div>`}
     ${leftOut}`;
 }
 const PASS_WHY = ["Not my kind of work", "Wrong industry", "Pay too low", "Too senior", "Location", "Something else"];
@@ -904,7 +907,7 @@ document.addEventListener("click", async e => {
   if (ps) {   // ask why once, so the reasons can steer later searches
     const id = ps.dataset.pass;
     const card = ps.closest(".job"); if (card.querySelector(".passwhy")) return;
-    card.insertAdjacentHTML("beforeend", `<div class="passwhy"><div class="label">Why pass?</div><div class="chips">${PASS_WHY.map(w => `<button class="chip" data-passwhy="${esc(id)}" data-why="${esc(w)}">${w}</button>`).join("")}<button class="chip" data-cancelpass>Keep It</button></div></div>`);
+    card.insertAdjacentHTML("beforeend", `<div class="passwhy"><div class="label">Why Pass?</div><div class="chips">${PASS_WHY.map(w => `<button class="chip" data-passwhy="${esc(id)}" data-why="${esc(w)}">${esc(titled(w))}</button>`).join("")}<button class="chip" data-cancelpass>Keep It</button></div></div>`);
     return;
   }
   if (e.target.closest("[data-cancelpass]")) { renderMatches(); return; }
@@ -965,17 +968,16 @@ const rowJob = s => `<div class="row-job ${s.status === "closed" ? "faded" : ""}
   <div class="r">${payShort(s.job)}${s.job.goneAt ? `<div><span class="pill gone">Taken Down</span></div>` : ""}</div></div>`;
 function renderMine() {
   const live = saved.filter(s => s.status !== "passed");
-  $("#nMine").textContent = live.length ? `(${live.length})` : "";
   $("#mineSub").textContent = "";
   if (!user) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img class="mascot" src="img/papers.webp" alt=""><h2>Keep the jobs you like</h2><p class="hint">With a free account, saved jobs land here, and you can mark each one Applied, Interviewing or Offer and pick a follow-up day.</p><button class="btn" data-account="mine">Make a Free Account</button></div>`; return; }
-  if (!live.length) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img class="mascot" src="img/papers.webp" alt=""><h2>Nothing saved yet</h2><p class="hint">Save a match and it lands here. Then mark it Applied, Interviewing or Offer as it moves.</p></div>`; return; }
-  const groups = [["offer", "Offers"], ["interview", "Interviewing"], ["applied", "Applied"], ["saved", "Saved, Not Applied Yet"], ["closed", "Closed Out"]];
+  if (!live.length) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img class="mascot" src="img/papers.webp" alt=""><h2>Nothing Saved Yet</h2><p class="hint">Save a match and it lands here. Then mark it Applied, Interviewing or Offer as it moves.</p></div>`; return; }
+  const groups = [["offer", "Offers"], ["interview", "Interviewing"], ["applied", "Applied"], ["saved", "Saved, Not Applied Yet"], ["closed", "Closed"]];
   const by = (a, b) => (a.follow_up || "9999").localeCompare(b.follow_up || "9999");
   const c = st => live.filter(s => s.status === st).length;
   const active = live.length - c("closed");
   $("#mineSub").textContent = [`${active} active`, c("applied") + c("interview") + c("offer") ? `${c("applied") + c("interview") + c("offer")} applied` : "", c("interview") ? `${c("interview")} interviewing` : "", c("offer") ? `${c("offer")} ${c("offer") === 1 ? "offer" : "offers"}` : ""].filter(Boolean).join(" · ");
   const bar = active ? `<div class="facts" aria-hidden="true">${["offer", "interview", "applied", "saved"].filter(c).map(st => `<i class="f-${st}" style="flex:${c(st)}"></i>`).join("")}</div>` : "";
-  $("#mineBody").innerHTML = bar + mailCards() + todayCard() + `<div class="btnrow" style="margin-top:2px"><button class="linkbtn" data-pastereply>Got a reply? Paste it here</button></div>` +
+  $("#mineBody").innerHTML = bar + mailCards() + todayCard() + `<div class="btnrow" style="margin-top:2px"><button class="linkbtn" data-pastereply>Got a Reply? Paste It Here</button></div>` +
     groups.map(([st, label]) => {
       const list = live.filter(s => s.status === st).sort(by);
       if (!list.length) return "";
@@ -1054,9 +1056,9 @@ function renderMe() {
   const line = (l, v) => v ? `<div class="kv"><div class="k">${l}</div><div class="v">${v}</div></div>` : "";   // empty answers just don't show
   $("#meBody").innerHTML =
     line("Jobs You've Held", esc((p.pastTitles || []).join(", "))) +
-    line("Years Of Experience", p.years ? esc(p.years) : "") +
+    line("Years of Experience", p.years ? esc(p.years) : "") +
     line("Industries", esc((p.industries || []).map(i => INDUSTRIES[i] || i).join(", "))) +
-    line("Skills And Tools", esc((p.skills || []).join(", "))) +
+    line("Skills and Tools", esc((p.skills || []).join(", "))) +
     line("Roles You Want", esc((w.roles || []).map(tc).join(", "))) +
     line("Where", esc([w.remote !== false ? "Remote (US)" : "", ...(w.cities || [])].filter(Boolean).join(", "))) +
     line("Pay Floor", w.payFloor ? k(w.payFloor) + " a year" : "") +
@@ -1196,7 +1198,7 @@ function madeFor(j) {
     <div class="btnrow"><button class="btn small" data-resume-edit="${esc(j.id)}">Add My Resume</button></div></div>`;
   const t = Tailor.tailor(r, j, profile.data), m = Tailor.email(t, j);
   const lines = t.jobs.reduce((n, x) => n + x.bullets.length, 0);
-  const moved = t.jobs.reduce((n, x) => n + x.bullets.filter((b, i) => (r.jobs.find(o => o.title === x.title && o.company === x.company)?.bullets || []).indexOf(b) !== i).length, 0);
+  const moved = t.jobs.reduce((n, x) => n + x.bullets.filter((b, i) => (r.jobs.find(o => o.title === x.title && o.company === x.company)?.bullets || []).indexOf(b) > i).length, 0);   // same test as the "up" mark
   const left = t.jobs.reduce((n, x) => n + (x.dropped || 0), 0);
   const g = gmail.ready();
   return `${t.words ? `<div class="fitline"><span class="big">${t.matched.length} of ${t.words}</span><span>words from this posting are already on your resume</span></div>` : ""}
@@ -1218,10 +1220,10 @@ function paperHtml(t, r) {
   const was = x => (r?.jobs || []).find(o => o.title === x.title && o.company === x.company)?.bullets || [];
   return `<div class="paper"><div class="nm">${esc(t.name || "Your Name")}</div>
     <div class="ct">${esc([t.city, t.phone, t.email].filter(Boolean).join(" · "))}</div>${t.headline ? `<div class="hd">${esc(t.headline)}</div>` : ""}
-    <div class="sec">Summary</div><p>${esc(t.summary)}</p>
-    ${t.skills.length ? `<div class="sec">Skills</div><p>${t.skills.map(esc).join(" · ")}</p>` : ""}
-    <div class="sec">Work Experience</div>${t.jobs.map(x => `<div class="jt">${esc(x.title)}<span>${esc(x.dates)}</span></div>${x.company ? `<div class="jc">${esc(x.company)}</div>` : ""}<ul>${x.bullets.map((b, i) => `<li${was(x).indexOf(b) > i ? ' class="up" title="Moved up for this job"' : ""}>${esc(b)}</li>`).join("")}</ul>`).join("")}
-    ${t.education.length ? `<div class="sec">Education and Certifications</div>${t.education.map(e => `<p>${esc(e)}</p>`).join("")}` : ""}</div>`;
+    <div class="sec">${Tailor.SECTIONS.summary}</div><p>${esc(t.summary)}</p>
+    ${t.skills.length ? `<div class="sec">${Tailor.SECTIONS.skills}</div><p>${t.skills.map(esc).join(" · ")}</p>` : ""}
+    <div class="sec">${Tailor.SECTIONS.work}</div>${t.jobs.map(x => `<div class="jt">${esc(x.title)}<span>${esc(x.dates)}</span></div>${x.company ? `<div class="jc">${esc(x.company)}</div>` : ""}<ul>${x.bullets.map((b, i) => `<li${was(x).indexOf(b) > i ? ' class="up" title="Moved up for this job"' : ""}>${esc(b)}</li>`).join("")}</ul>`).join("")}
+    ${t.education.length ? `<div class="sec">${Tailor.SECTIONS.education}</div>${t.education.map(e => `<p>${esc(e)}</p>`).join("")}` : ""}</div>`;
 }
 const loadPdf = async () => { if (!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"); return window.jspdf.jsPDF; };
 async function pdfFor(j) { const t = Tailor.tailor(myResume(), j, profile.data); return { t, doc: Tailor.toPdf(t, await loadPdf()), name: Tailor.fileName(t, j) }; }
@@ -1340,7 +1342,7 @@ async function checkReplies(quiet) {
     return !named.length || named.includes(m); });
   try { localStorage.setItem("rg.gchecked", new Date().toISOString()); } catch {}
   renderMine(); renderGmailCard();
-  if (found.length) { toast(`${found.length} ${found.length === 1 ? "reply" : "replies"} from your companies. See My Jobs.`); if ($("#vMine").classList.contains("hidden") && $("#sheet").classList.contains("hidden")) openApp("mine"); }
+  if (found.length) { toast(`${mailSuggest.length} ${mailSuggest.length === 1 ? "reply" : "replies"} from your companies. See My Jobs.`); if ($("#vMine").classList.contains("hidden") && $("#sheet").classList.contains("hidden")) openApp("mine"); }
   else if (!quiet) toast("No new replies from your companies.");
 }
 const STAGE_WORD = { applied: "Applied", interview: "Interviewing", offer: "Offer", closed: "Closed" };
@@ -1530,7 +1532,7 @@ async function loadBackground(titles) {
 function bgHtml(list, compact) {
   return list.map(b => `<div class="bg"><b style="font-size:17px">${esc(b.label)}</b> ${b.titles.join() .toLowerCase() === b.label.toLowerCase() ? "" : `<span class="from">${esc(b.titles.join(", "))}</span>`}
     <p style="margin:6px 0 0;color:var(--ink2)">${esc(b.why)}</p>
-    <div class="chips" style="margin-top:8px">${b.roles.map(r => compact ? `<button type="button" class="chip ${draft.roles.includes(r) ? "on" : ""}" data-tog="roles:${esc(r)}">${esc(tc(r))}</button>` : `<span class="pill good">${esc(tc(r))}</span>`).join("")}</div>
+    ${compact ? "" : `<div class="chips" style="margin-top:8px">${b.roles.map(r => `<span class="pill good">${esc(tc(r))}</span>`).join("")}</div>`}
     ${compact ? "" : `<div class="lbl">Say This Instead</div><div class="say">${b.say.map(x => `<span class="was">${esc(x.was)}</span><span class="now">${esc(x.now)}</span>`).join("")}</div>
     <div class="lbl">Numbers to Put on Your Resume</div><div class="chips" style="margin-top:6px">${b.numbers.map(n => `<span class="pill">${esc(n)}</span>`).join("")}</div>`}</div>`).join("");
 }
@@ -1538,7 +1540,7 @@ async function renderBgSetup() {
   const el = $("#bgSetup"), list = await loadBackground(draft.titles);
   renderRoleChips();
   el.classList.toggle("hidden", !draft.titles.length);
-  if (!list.length) el.innerHTML = `<b style="font-size:17px">I don't have a read on that background yet</b><p class="hint" style="margin:6px 0 0">Recruiter Goose is built for people coming from the trades, counter sales, purchasing, warehouses and the jobsite. You can still pick roles below or type the exact title you want, and I'll search for it.</p>`;
+  if (!list.length) el.innerHTML = `<b style="font-size:17px">No Read on That Background Yet</b><p class="hint" style="margin:6px 0 0">Recruiter Goose is built for people coming from the trades, counter sales, purchasing, warehouses and the jobsite. You can still pick roles below or type the exact title you want, and I'll search for it.</p>`;
   else el.innerHTML = `<div class="moment" style="margin-bottom:4px"><img class="mascot" src="img/papers.webp" alt="" style="width:56px"><b style="font-size:17px">Your Background Points To</b></div>${bgHtml(list, true)}`;
 }
 async function renderBg() {

@@ -240,3 +240,18 @@ test("a search reads the index first and skips the live sites when it has jobs",
   await fetchAll2({ wants: { roles: ["estimating"], remote: true, cities: [] }, industries: [] }, {}, empty);
   assert.ok(calls.includes("boards"), "falls back to live sites when the index is empty");
 });
+
+test("Dallas, TX takes in the whole DFW area and not Dallas, GA", async () => {
+  const { inCity } = await import("../src/places.js");
+  for (const l of ["Fort Worth, TX", "Irving, Texas", "DFW Metroplex", "Plano, TX, US"]) assert.ok(inCity(l, "Dallas, TX"), l);
+  for (const l of ["Dallas, GA", "Arlington, VA", "Houston, TX"]) assert.ok(!inCity(l, "Dallas, TX"), l);
+});
+
+test("sales titles stay for someone who has sold or asked for quoting work", async () => {
+  const { checkJob } = await import("../src/match.js");
+  const job = { title: "Inside Sales Estimator", company: "Builders FirstSource", location: "Irving, TX", description: "Quote doors and windows for builders and contractors. Takeoffs from plans for lumber and millwork.", postedAt: new Date().toISOString() };
+  const base = { years: 7, industries: ["building-materials"], wants: { roles: ["estimating"], remote: false, cities: ["Dallas, TX"], avoid: ["sales"] } };
+  assert.equal(checkJob(job, { ...base, pastTitles: ["Store Manager"] }).hiddenBecause, "Sales role", "ruled out sales and never sold");
+  assert.equal(checkJob(job, { ...base, pastTitles: ["Counter Sales"] }).hiddenBecause, null, "has sold at the counter");
+  assert.equal(checkJob(job, { ...base, pastTitles: ["Store Manager"], wants: { ...base.wants, roles: ["estimating", "quoting"] } }).hiddenBecause, null, "asked for quoting");
+});

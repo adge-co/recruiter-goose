@@ -123,7 +123,12 @@
       return { title: j.title, company: j.company, dates: j.dates, bullets: pick.slice(0, keep).map(x => x.b), dropped: ranked.length - Math.min(pick.length, keep) };
     });
 
-    const skillPool = [...new Set([...(r.skills || []), ...(profile.skills || [])].map(clean).filter(Boolean))];
+    // One list, the resume's own spelling first: "Vendor Management" and "vendor management" are the same skill.
+    const skillPool = [];
+    for (const s0 of [...(r.skills || []), ...(profile.skills || [])].map(clean).filter(Boolean)) {
+      const s1 = /^[a-z]/.test(s0) ? tc(s0) : s0;
+      if (!skillPool.some(x => norm(x) === norm(s1))) skillPool.push(s1);
+    }
     const skills = [...skillPool.filter(s => want.some(w => hasAny(norm(s), w))), ...skillPool.filter(s => !want.some(w => hasAny(norm(s), w)))].slice(0, 14);
     // Posting words that appear in their own lines but not in their skills list go in the skills line too.
     for (const w of said) if (skills.length < 16 && !skills.some(s => norm(s).includes(norm(w).trim())) && /^[A-Z]|^(purchasing|procurement|estimating|takeoffs|scheduling|inventory|quoting|pricing|onboarding|implementation|training|vendor management|purchase orders)$/.test(w)) skills.push(/^[a-z]/.test(w) ? tc(w) : w);
@@ -136,12 +141,14 @@
     const summary = [
       years || recent ? `${years ? years + " years of experience" : "Experience"}${recent ? ", " + recent : ""}.` : "",
       strong.length ? `Hands-on with ${list(strong.map(w => /^[A-Z]/.test(w) ? w : w.toLowerCase()))}.` : "",
-      `Applying for the ${job.title} role at ${job.company}.`,
     ].filter(Boolean).join(" ");
     const fit = skillWant.length ? Math.round(100 * matched.length / skillWant.length) : 0;
     return { name: r.name || profile.name || "", email: r.email || "", phone: r.phone || "", city: r.city || "", headline, summary,
       jobs: outJobs, skills, education: r.education || [], matched, said, missing, fit, words: skillWant.length };
   }
+  // The resume's look, shared by the page and the PDF: Bright Office ink, gray and hairline (design/PERSONALITY.md).
+  const PAPER = { ink: [18, 20, 23], muted: [95, 99, 107], line: [228, 225, 218] };
+  const SECTIONS = { summary: "Summary", skills: "Skills", work: "Work Experience", education: "Education and Certifications" };
   const list = a => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
 
   // ---------- The email ----------
@@ -172,24 +179,26 @@
     const W = 612, M = 54, R = W - M, BOTTOM = 792 - 54;
     let y = 64;
     const room = h => { if (y + h > BOTTOM) { doc.addPage(); y = 60; } };
-    const text = (s, size, style = "normal", x = M, color = [33, 28, 24]) => { doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...color); doc.text(String(s), x, y); };
+    const { ink, muted, line } = PAPER;
+    const text = (s, size, style = "normal", x = M, color = ink) => { doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...color); doc.text(String(s), x, y); };
     const wrap = (s, size, width) => { doc.setFontSize(size); return doc.splitTextToSize(String(s), width); };
-    const head = s => { y += 12; room(32); text(s, 12.5, "bold", M, [47, 90, 65]); y += 5; doc.setDrawColor(201, 164, 106); doc.setLineWidth(0.8); doc.line(M, y, R, y); y += 15; };
+    // Section headings as on screen: small capitals in ink over a hairline.
+    const head = s => { y += 12; room(32); doc.setCharSpace(0.9); text(s.toUpperCase(), 9.5, "bold"); doc.setCharSpace(0); y += 5; doc.setDrawColor(...line); doc.setLineWidth(0.8); doc.line(M, y, R, y); y += 15; };
 
     text(t.name || "Your Name", 22, "bold"); y += 18;
     const contact = [t.city, t.phone, t.email].filter(Boolean).join("  ·  ");
-    if (contact) { text(contact, 10, "normal", M, [90, 80, 70]); y += 15; }
-    if (t.headline) { text(t.headline, 11, "bold", M, [90, 70, 40]); y += 8; }
-    if (t.summary) { head("Summary"); for (const l of wrap(t.summary, 10.5, R - M)) { room(14); text(l, 10.5); y += 14; } }
-    if (t.skills.length) { head("Skills"); for (const l of wrap(t.skills.join("  ·  "), 10.5, R - M)) { room(14); text(l, 10.5); y += 14; } }
+    if (contact) { text(contact, 10, "normal", M, muted); y += 15; }
+    if (t.headline) { text(t.headline, 11, "bold", M, muted); y += 8; }
+    if (t.summary) { head(SECTIONS.summary); for (const l of wrap(t.summary, 10.5, R - M)) { room(14); text(l, 10.5); y += 14; } }
+    if (t.skills.length) { head(SECTIONS.skills); for (const l of wrap(t.skills.join("  ·  "), 10.5, R - M)) { room(14); text(l, 10.5); y += 14; } }
     if (t.jobs.length) {
-      head("Work Experience");
+      head(SECTIONS.work);
       for (const j of t.jobs) {
         room(34);
         text(j.title || "", 11, "bold");
-        if (j.dates) { doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(90, 80, 70); doc.text(j.dates, R, y, { align: "right" }); }
+        if (j.dates) { doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(...muted); doc.text(j.dates, R, y, { align: "right" }); }
         y += 14;
-        if (j.company) { text(j.company, 10.5, "normal", M, [90, 80, 70]); y += 14; }
+        if (j.company) { text(j.company, 10.5, "normal", M, muted); y += 14; }
         for (const b of j.bullets) {
           const ls = wrap(b, 10.5, R - M - 14);
           room(ls.length * 13.5 + 2);
@@ -200,7 +209,7 @@
         y += 6;
       }
     }
-    if (t.education.length) { head("Education And Certifications"); for (const e of t.education) for (const l of wrap(e, 10.5, R - M)) { room(14); text(l, 10.5); y += 14; } }
+    if (t.education.length) { head(SECTIONS.education); for (const e of t.education) for (const l of wrap(e, 10.5, R - M)) { room(14); text(l, 10.5); y += 14; } }
     return doc;
   }
   const fileName = (t, job) => `${(t.name || "Resume").replace(/[^\w ]+/g, "").trim()} - ${String(job.company).replace(/[^\w ]+/g, "").trim()} ${String(job.title).replace(/[^\w ]+/g, "").trim()}.pdf`.replace(/\s+/g, " ");
@@ -222,7 +231,8 @@
     const t = `${subject || ""} ${snippet || ""}`.toLowerCase();
     if (/\b(unfortunately|not (to )?(move|moving) forward|other candidates|decided to (pursue|proceed|move forward) with|position has been filled|no longer (being )?consider|not selected|will not be moving)\b/.test(t)) return "closed";
     if (/\b(offer letter|pleased to offer|extend (you )?an offer|job offer)\b/.test(t)) return "offer";
-    if (/\b(interview|phone screen|schedule (a |some )?(time|call)|your availability|times that work|calendly|meet with (our|the) team|next step)\b/.test(t)) return "interview";
+    // An interview means they asked to set one up. "We'll reach out if you're selected for an interview" is a form letter.
+    if (/\b(schedule (a |an |some |your )?(time|call|interview|phone screen)|set up (a |an )?(time|call|interview)|invite you (to|for) (an? )?(interview|phone screen|call)|your availability|times that work|calendly|meet with (our|the) team|phone screen with)\b/.test(t)) return "interview";
     if (/\b((received|receipt of) your application|thank(s| you) for (applying|your application|your interest)|application (has been )?(received|submitted))\b/.test(t)) return "applied";
     return null;
   }
@@ -232,6 +242,6 @@
     : ORDER.indexOf(kind) > ORDER.indexOf(now) && now !== "closed" ? kind : null;
   const gmailQuery = (job, since) => `"${String(job.company).replace(/"/g, "")}" -from:me -in:chats${since ? " after:" + since.slice(0, 10).replace(/-/g, "/") : " newer_than:90d"}`;
 
-  const api = { readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS };
+  const api = { readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else window.Tailor = api;
 })();

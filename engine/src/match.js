@@ -3,6 +3,7 @@
 
 import * as S from "./sources/index.js";
 import { postingCheck, knockouts } from "./trust.js";
+import { inCity } from "./places.js";
 
 // Words people use for the same kind of role. A role the person types that isn't here is used as-is.
 export const ROLE_WORDS = {
@@ -24,6 +25,7 @@ export const ROLE_WORDS = {
   quality: ["quality", "qa qc", "qc coordinator", "quality control", "quality assurance"],
   warehouse: ["warehouse manager", "warehouse supervisor", "warehouse coordinator", "distribution center", "yard manager", "branch operations"],
   quoting: ["quote", "quoting", "quotations", "inside sales", "counter sales", "order desk", "project sales"],
+  sales: ["outside sales", "sales representative", "sales rep", "territory sales", "territory manager", "sales coordinator", "sales estimator", "account manager"],
 };
 
 const SENIOR = /\b(senior|sr\.?|lead|principal|staff)\b/i;
@@ -176,8 +178,7 @@ export function vet(jobs, p) {
 function placeFits(j, p) {
   // Remote means remote from where they live: a "remote" job hiring only in Germany or Pakistan doesn't count.
   if (p.wants.remote && j.remote) return p.wants.country !== "US" || !NON_US.test(norm(j.location)) || US_OK.test(norm(j.location));
-  const loc = norm(j.location);
-  return p.wants.cities.some(c => loc.includes(norm(c.split(",")[0])));
+  return p.wants.cities.some(c => inCity(j.location, c));   // Dallas, TX takes in Fort Worth, Irving and Plano, not Dallas, GA
 }
 
 // ---------- 3. Score how well each one fits ----------
@@ -277,12 +278,17 @@ export function score(j, p, common) {
   const stretch = (EXEC.test(title) && p.years < 10) || (SENIOR.test(title) && p.years < 5);
   if (stretch) { s -= 15; flags.push("Wants More Years"); }
   const underFloor = floor && j.payMax && j.payMax < floor;
-  const avoidHit = p.wants.avoid.find(a => (AVOID_WORDS[a] || [a]).some(w => has(title, w)));
+  // A kind of role they ruled out, unless they asked for that very kind of title (Inside Sales under Quoting).
+  // Someone who has held a sales title isn't ruling out sales.
+  const avoid = p.wants.avoid.filter(a => !p.pastTitles.some(t => (AVOID_WORDS[a] || [a]).some(w => has(t, w))));
+  const asked = p.wants.roles.flatMap(r => ROLE_WORDS[r] || [r]);
+  const avoidHit = avoid.find(a => { const ws = AVOID_WORDS[a] || [a];
+    return ws.some(w => has(title, w)) && !asked.some(r => has(title, r) && ws.some(w => has(r, w))); });
   const entry = ENTRY.test(title) && p.years >= 5;
   if (entry) { s -= 15; flags.push("Entry Level"); }
   const salesy = SALESY.test(j.description);
   if (avoidHit) { s -= 40; flags.push(`${titleCase(avoidHit)} Role`); }
-  else if (salesy && p.wants.avoid.includes("sales")) { s -= 15; flags.push("Partly Sales"); }
+  else if (salesy && avoid.includes("sales")) { s -= 15; flags.push("Partly Sales"); }
 
   const theirWork = norm([...p.pastTitles, ...p.wants.roles].join(" "));
   const otherWork = Object.keys(OTHER_WORK).find(k => OTHER_WORK[k].test(norm(title)) && !OTHER_WORK[k].test(theirWork));
@@ -297,7 +303,7 @@ export function score(j, p, common) {
   if (best < 20) return no("");   // the title has to fit a role they want or have done; a mention in the description isn't enough
   if (otherWork) return no(`${otherWork} job`);   // HR Coordinator isn't a coordinator job for someone from construction
   if (offField) return no(`${titleCase(field.other)} industry, not your background`);   // the Account Manager selling beds to hotels
-  let fit = (salesy && p.wants.avoid.includes("sales")) ? "sales" : s >= 70 ? "strong" : s >= 50 ? "good" : s >= 35 ? "reach" : null;
+  let fit = (salesy && avoid.includes("sales")) ? "sales" : s >= 70 ? "strong" : s >= 50 ? "good" : s >= 35 ? "reach" : null;
   if (!fieldPts && (fit === "strong" || fit === "good")) { fit = "reach"; flags.push("Outside Your Field"); }   // the right title in an unrelated industry is a long shot, not a match
   if ((stretch || underFloor || entry || technical) && (fit === "strong" || fit === "good")) fit = "reach";   // a stretch is never sold as a sure thing
   return { ...j, score: s, raw, fit, reasons, flags, ageDays: age === null ? null : Math.floor(age) };

@@ -7,7 +7,7 @@ export const BACKGROUNDS = [
   {
     key: "counter", label: "Counter Sales",
     match: /\b(counter|inside sales|showroom|parts (sales|specialist|associate)|sales associate|yard sales)\b/i,
-    roles: ["purchasing", "customer success", "estimating", "implementation"],
+    roles: ["quoting", "purchasing", "estimating", "sales", "customer success"],
     why: "You quoted, priced and fixed order problems for contractors all day. Supplier-side and construction software teams want people who already speak contractor.",
     say: [["Helped customers at the counter", "Quoted and processed orders for contractor accounts"], ["Looked up parts", "Matched specs and found substitutes from supplier catalogs"]],
     numbers: ["Orders or quotes per day", "Dollars sold per month", "Number of contractor accounts"],
@@ -71,7 +71,7 @@ export const BACKGROUNDS = [
   {
     key: "warehouse", label: "Warehouse, Yard and Inventory",
     match: /\b(warehouse|yard (lead|manager|supervisor|associate)|inventory|receiving|shipping|stock|materials handler|forklift)\b/i,
-    roles: ["inventory", "operations", "purchasing", "coordinator"],
+    roles: ["warehouse", "inventory", "purchasing", "operations", "coordinator"],
     why: "Inventory and receiving are supply chain jobs. Recruiters search for inventory, materials and logistics coordinators.",
     say: [["Ran the yard", "Managed inventory, receiving and outbound orders"], ["Counted stock", "Ran cycle counts and kept inventory accurate"]],
     numbers: ["Inventory value", "Orders shipped per day", "Count accuracy"],
@@ -79,7 +79,7 @@ export const BACKGROUNDS = [
   {
     key: "branch", label: "Branch or Store Manager",
     match: /\b(branch manager|store manager|general manager|assistant manager|location manager|operations manager)\b/i,
-    roles: ["operations", "customer success", "training", "purchasing"],
+    roles: ["operations", "warehouse", "purchasing", "sales", "training"],
     why: "You ran a small business inside a bigger one: people, stock, money and customers. That reads as operations.",
     say: [["Ran the store", "Managed a branch's sales, staff and inventory"], ["Hired and trained", "Hired, trained and scheduled a team"]],
     numbers: ["Yearly sales", "Team size", "Margin or growth"],
@@ -87,8 +87,8 @@ export const BACKGROUNDS = [
   {
     key: "outside", label: "Outside Sales or Rep",
     match: /\b(outside sales|territory (manager|rep)|sales rep\w*|account rep\w*|manufacturer'?s rep|rep agency|sales engineer)\b/i,
-    roles: ["customer success", "implementation", "training", "estimating"],
-    why: "If you want out of quota, your contractor relationships and product knowledge carry over to customer success and onboarding roles.",
+    roles: ["sales", "quoting", "customer success", "estimating", "implementation"],
+    why: "Supply houses, manufacturers and contractors hire reps who already know the contractors. If you want out of quota, the same relationships carry over to customer success and onboarding.",
     say: [["Sold to contractors", "Managed contractor and dealer accounts in a territory"], ["Did lunch-and-learns", "Trained dealers and contractors on product lines"]],
     numbers: ["Accounts", "Territory sales per year", "Retention or repeat rate"],
   },
