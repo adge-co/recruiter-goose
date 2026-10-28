@@ -531,10 +531,10 @@ const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 const INDUSTRIES = {
-  "construction-tech": "Construction Tech", "building-materials": "Building Materials", "trades-software": "Software for the Trades",
+  "contractors": "Builders and Contractors", "construction-tech": "Construction Tech", "building-materials": "Building Materials", "trades-software": "Software for the Trades",
   "proptech": "Homebuilding and Property Tech", "logistics": "Logistics and Supply Chain", "energy": "Energy and Battery Storage", "hospitality": "Hospitality Tech", "saas": "General Software",
 };
-const ROLES = ["purchasing", "estimating", "implementation", "project manager", "coordinator", "operations", "customer success", "onboarding", "training", "scheduling", "inventory", "safety", "quality", "pricing", "support", "product manager"];
+const ROLES = ["purchasing", "estimating", "implementation", "project manager", "coordinator", "operations", "customer success", "onboarding", "training", "scheduling", "inventory", "safety", "quality", "pricing", "support", "product manager", "warehouse", "quoting"];
 const CHECK = { "Looks Real": "real", "Check First": "checkfirst", "Pipeline": "pipeline", "Likely Stale": "stale" };
 const FIT = { strong: "Strong Fit", good: "Good Fit", reach: "A Reach", sales: "Partly Sales" };
 const STATUS = [["saved", "Saved"], ["applied", "Applied"], ["interview", "Interviewing"], ["offer", "Offer"], ["closed", "Closed"]];

@@ -23,6 +23,14 @@ const S = {
     if (!res.ok) throw new Error(`Job index: HTTP ${res.status}`);
     return (await res.json()).map(fromRow);
   },
+  // Whether each posting is still live in the index: true, false, or missing.
+  async indexStatus(ids: string[]) {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const list = encodeURIComponent(`(${ids.map(i => `"${i.replace(/"/g, "")}"`).join(",")})`);
+    const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/postings?select=id,active&id=in.${list}`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+    if (!res.ok) throw new Error(`Job index: HTTP ${res.status}`);
+    return Object.fromEntries((await res.json()).map((r: { id: string; active: boolean }) => [r.id, r.active]));
+  },
 };
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" };

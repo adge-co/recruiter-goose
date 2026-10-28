@@ -6,6 +6,7 @@
 // ServiceTitan, Procore, Buildertrend, Billd, Housecall Pro (find their real board names before adding back). Jobber is back on Ashby.
 
 export const INDUSTRIES = {
+  "contractors": "Builders and Contractors",
   "construction-tech": "Construction Tech",
   "building-materials": "Building Materials",
   "trades-software": "Software for the Trades",

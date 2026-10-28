@@ -4,13 +4,14 @@
 import * as S from "./sources/index.js";
 import { ROLE_WORDS } from "./match.js";
 
-export async function crawl(boards, sources = S) {
+// `known` maps a board key to the posting ids already in the index, so big boards only read new postings in full.
+export async function crawl(boards, sources = S, known = new Map()) {
   const report = [], found = [];
   const run = async (name, key, fn) => {
     try { const list = await fn(); list.forEach(j => found.push({ ...j, boardKey: key })); report.push({ key, name, ok: true, count: list.length }); }
     catch (e) { report.push({ key, name, ok: false, count: 0, error: String(e.message || e).slice(0, 200) }); }
   };
-  const tasks = boards.map(b => run(b.name, `${b.ats}:${b.token}`, async () => (await sources.readBoard(b)).map(j => ({ ...j, industries: b.industries || [] }))));
+  const tasks = boards.map(b => { const key = `${b.ats}:${b.token}`; return run(b.name, key, async () => (await sources.readBoard(b, { known: known.get(key) || new Set() })).map(j => ({ ...j, industries: b.industries || [] }))); });
   for (const role of Object.keys(ROLE_WORDS)) {
     tasks.push(run(`Remotive: ${role}`, "remotive", () => sources.remotive({ keyword: role })));
     tasks.push(run(`Jobicy: ${role}`, "jobicy", () => sources.jobicy({ keyword: role })));
@@ -39,7 +40,7 @@ export const toRow = (j, seenAt) => ({
   id: j.id, board_key: j.boardKey, company: j.company, title: j.title, location: j.location || null, remote: !!j.remote,
   pay_min: j.payMin ? Math.round(j.payMin) : null, pay_max: j.payMax ? Math.round(j.payMax) : null, pay_text: j.payText || null,
   posted_at: j.postedAt || null, first_published: j.firstPublished || null, apply_url: j.applyUrl,
-  description: String(j.description || "").slice(0, 8000), source: j.source || null, industries: j.industries || [], seen_at: seenAt, active: true,
+  ...(j.known ? {} : { description: String(j.description || "").slice(0, 8000) }), source: j.source || null, industries: j.industries || [], seen_at: seenAt, active: true,
 });
 
 // And back into the posting shape the matcher reads.

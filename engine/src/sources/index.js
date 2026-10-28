@@ -121,9 +121,196 @@ async function ashby(token, name) {
   });
 }
 
-const BOARD = { greenhouse, lever, ashby };
+// ---------- Big employer hiring systems (Workday, iCIMS, UKG, SmartRecruiters, Oracle) ----------
+// Builders, specialty contractors and supply houses mostly hire through these. They list thousands of field and
+// plant jobs, so each board is searched only for the office roles this app matches, and a posting's full text is
+// fetched once: `known` holds ids already in the index, which come back with `known: true` and no description.
 
-export const readBoard = c => BOARD[c.ats](c.token, c.name);
+// Every office role word worth searching a big board for.
+export const DEEP_SEARCH = ["purchasing", "procurement", "buyer", "estimator", "estimating", "preconstruction", "project coordinator",
+  "project engineer", "assistant project manager", "project manager", "supply chain", "inventory", "materials", "logistics",
+  "scheduler", "dispatch", "operations coordinator", "pricing", "quote", "implementation", "customer service", "warehouse",
+  "quality", "safety coordinator", "document control", "contract administrator"];
+const DETAIL_CAP = 40;   // new postings read in full per board per run; the rest wait for the next run
+
+const decode = s => String(s || "").replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+
+// Runs fn over items, a few at a time, so one company's server isn't hit with a hundred requests at once.
+async function pool(items, n, fn) {
+  const out = []; let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = i++; out[k] = await fn(items[k]).catch(() => null); } }));
+  return out;
+}
+
+async function getText(url, opts = {}, timeoutMs = 15000) {
+  const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...opts, headers: { ...UA, ...(opts.headers || {}) }, signal: ctrl.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } finally { clearTimeout(t); }
+}
+
+// The JobPosting block search engines read, which most hiring systems put on each job page.
+export function jsonLdJob(html) {
+  for (const m of String(html).matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      const d = JSON.parse(m[1].trim()), list = Array.isArray(d) ? d : d["@graph"] || [d];
+      const j = list.find(x => x && x["@type"] === "JobPosting");
+      if (j) return j;
+    } catch { /* not JSON */ }
+  }
+  return null;
+}
+const ldPlace = j => { const a = [].concat(j?.jobLocation || [])[0]?.address || {}; return [a.addressLocality, a.addressRegion].filter(Boolean).join(", "); };
+const ldPay = j => { const v = j?.baseSalary?.value; return v && (v.minValue || v.value) ? yearly(v.minValue || v.value, v.maxValue || v.value, String(v.unitText || "YEAR").toUpperCase()) : null; };
+// "Posted 3 Days Ago" and friends, as a date.
+export function postedAgo(text, now = Date.now()) {
+  const s = String(text || "").toLowerCase();
+  if (/today|just posted/.test(s)) return new Date(now).toISOString();
+  if (/yesterday/.test(s)) return new Date(now - 864e5).toISOString();
+  const m = s.match(/(\d+)\+?\s*days?/);
+  return m && !s.includes("+") ? new Date(now - +m[1] * 864e5).toISOString() : null;   // "30+ days" is too vague to date
+}
+
+// Workday token: "host/tenant/site", e.g. "graybar.wd1.myworkdayjobs.com/graybar/Careers".
+export async function workday(token, name, { known = new Set(), search = DEEP_SEARCH } = {}) {
+  const [host, tenant, site] = token.split("/");
+  const api = `https://${host}/wday/cxs/${tenant}/${site}`;
+  const seen = new Map();
+  await pool(search, 4, async q => {
+    const d = await getJson(`${api}/jobs`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset: 0, searchText: q }) });
+    for (const p of d.jobPostings || []) if (p.externalPath && !seen.has(p.externalPath)) seen.set(p.externalPath, p);
+  });
+  const list = [...seen.values()];
+  const id = p => `wd:${tenant}:${p.externalPath.split("_").pop() || p.externalPath}`;
+  const fresh = list.filter(p => !known.has(id(p))).slice(0, DETAIL_CAP);
+  const details = new Map((await pool(fresh, 4, async p => [p.externalPath, (await getJson(api + p.externalPath)).jobPostingInfo])).filter(Boolean));
+  const out = [];
+  for (const p of list) {
+    const info = details.get(p.externalPath), isKnown = known.has(id(p));
+    if (!info && !isKnown) continue;
+    const loc = info?.location || p.locationsText || "";
+    const desc = info ? stripHtml(info.jobDescription) : undefined;
+    out.push({
+      id: id(p), title: p.title, company: name, location: loc || "Not Listed", remote: isRemoteText(loc) || /remote/i.test(info?.remoteType || ""),
+      ...(desc ? payFromText(desc) || {} : {}), payText: "",
+      postedAt: info?.startDate || postedAgo(p.postedOn), firstPublished: info?.startDate || null,
+      applyUrl: info?.externalUrl || `https://${host}/${site}${p.externalPath}`, description: desc, known: isKnown, source: "Company Site",
+    });
+  }
+  return out;
+}
+
+// iCIMS token: the careers host, e.g. "careers-tdindustries.icims.com".
+export async function icims(token, name, { known = new Set(), search = DEEP_SEARCH } = {}) {
+  const found = new Map();
+  await pool(search, 3, async q => {
+    const html = await getText(`https://${token}/jobs/search?ss=1&searchKeyword=${encodeURIComponent(q)}&in_iframe=1`);
+    for (const m of html.matchAll(/href="(https:\/\/[^"]*\/jobs\/(\d+)\/[^"]*\/job)[^"]*"[^>]*>([\s\S]*?)<\/a>/gi)) {
+      const title = stripHtml(decode(m[3])).replace(/^Title\s*/i, "");
+      if (title && !found.has(m[2])) found.set(m[2], { url: m[1], jid: m[2], title });
+    }
+  });
+  const list = [...found.values()], id = p => `icims:${token.split(".")[0]}:${p.jid}`;
+  const fresh = list.filter(p => !known.has(id(p))).slice(0, DETAIL_CAP);
+  const details = new Map((await pool(fresh, 3, async p => [p.jid, jsonLdJob(await getText(p.url + "?in_iframe=1"))])).filter(x => x && x[1]));
+  const out = [];
+  for (const p of list) {
+    const ld = details.get(p.jid), isKnown = known.has(id(p));
+    if (!ld && !isKnown) continue;
+    const loc = ld ? ldPlace(ld) : "", desc = ld ? stripHtml(decode(ld.description)) : undefined;
+    out.push({
+      id: id(p), title: ld?.title ? decode(ld.title) : p.title, company: name, location: loc || "Not Listed",
+      remote: /TELECOMMUTE/i.test(ld?.jobLocationType || "") || isRemoteText(loc), ...(ld ? ldPay(ld) || payFromText(desc) || {} : {}), payText: "",
+      postedAt: ld?.datePosted || null, firstPublished: ld?.datePosted || null, applyUrl: p.url, description: desc, known: isKnown, source: "Company Site",
+    });
+  }
+  return out;
+}
+
+// UKG (UltiPro) token: "host/tenant/boardId", e.g. "recruiting2.ultipro.com/AUS1003AUIN/611d5a38-...".
+export async function ukg(token, name, { known = new Set(), search = DEEP_SEARCH } = {}) {
+  const [host, tenant, board] = token.split("/");
+  const base = `https://${host}/${tenant}/JobBoard/${board}`;
+  const found = new Map();
+  await pool(search, 3, async q => {
+    const d = await getJson(`${base}/JobBoardView/LoadSearchResults`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ opportunitySearch: { Top: 50, Skip: 0, QueryString: q, OrderBy: [{ Value: "postedDateDesc", PropertyName: "PostedDate", Ascending: false }], Filters: [] }, matchCriteria: { PreferredJobs: [], Educations: [], LicenseAndCertifications: [], Skills: [], hasNoLicenses: false, SkippedSkills: [] } }) });
+    for (const o of d.opportunities || []) if (o.Id && !found.has(o.Id)) found.set(o.Id, o);
+  });
+  const list = [...found.values()], id = o => `ukg:${tenant}:${o.Id}`;
+  const fresh = list.filter(o => !known.has(id(o))).slice(0, DETAIL_CAP);
+  const details = new Map((await pool(fresh, 3, async o => {
+    const html = await getText(`${base}/OpportunityDetail?opportunityId=${o.Id}`);
+    const m = html.match(/CandidateOpportunityDetail\((\{[\s\S]*?\})\);?\s*\n/);
+    let d = null; try { d = m ? JSON.parse(m[1]) : null; } catch { /* page changed */ }
+    return [o.Id, d?.Description || jsonLdJob(html)?.description || ""];
+  })).filter(Boolean));
+  return list.filter(o => details.has(o.Id) || known.has(id(o))).map(o => {
+    const a = (o.Locations || [])[0]?.Address || {}, loc = [a.City, a.State?.Code].filter(Boolean).join(", ");
+    const raw = details.get(o.Id), desc = raw != null ? stripHtml(decode(raw)) || stripHtml(o.BriefDescription) : undefined;
+    return {
+      id: id(o), title: o.Title, company: name, location: loc || "Not Listed", remote: isRemoteText(loc) || (o.Locations || []).some(l => l.LocalizedDescription && /remote/i.test(l.LocalizedDescription)),
+      ...(desc ? payFromText(desc) || {} : {}), payText: "", postedAt: o.PostedDate || null, firstPublished: o.PostedDate || null,
+      applyUrl: `${base}/OpportunityDetail?opportunityId=${o.Id}`, description: desc, known: known.has(id(o)), source: "Company Site",
+    };
+  });
+}
+
+// SmartRecruiters token: the company id, e.g. "Winsupply1".
+export async function smartrecruiters(token, name, { known = new Set(), search = DEEP_SEARCH } = {}) {
+  const found = new Map();
+  await pool(search, 3, async q => {
+    const d = await getJson(`https://api.smartrecruiters.com/v1/companies/${token}/postings?limit=100&q=${encodeURIComponent(q)}&country=us`);
+    for (const p of d.content || []) if (p.id && !found.has(p.id)) found.set(p.id, p);
+  });
+  const list = [...found.values()], id = p => `sr:${token}:${p.id}`;
+  const fresh = list.filter(p => !known.has(id(p))).slice(0, DETAIL_CAP);
+  const details = new Map((await pool(fresh, 3, async p => [p.id, await getJson(`https://api.smartrecruiters.com/v1/companies/${token}/postings/${p.id}`)])).filter(Boolean));
+  return list.filter(p => details.has(p.id) || known.has(id(p))).map(p => {
+    const d = details.get(p.id), sec = d?.jobAd?.sections || {};
+    const desc = d ? stripHtml([sec.jobDescription?.text, sec.qualifications?.text, sec.additionalInformation?.text].filter(Boolean).join(" ")) : undefined;
+    const loc = [p.location?.city, p.location?.region].filter(Boolean).join(", ");
+    return {
+      id: id(p), title: p.name, company: name, location: loc || "Not Listed", remote: !!p.location?.remote || isRemoteText(loc),
+      ...(desc ? payFromText(desc) || {} : {}), payText: "", postedAt: p.releasedDate || null, firstPublished: p.releasedDate || null,
+      applyUrl: d?.applyUrl || `https://jobs.smartrecruiters.com/${token}/${p.id}`, description: desc, known: known.has(id(p)), source: "Company Site",
+    };
+  });
+}
+
+// Oracle Recruiting token: "host/siteNumber", e.g. "eewl.fa.us6.oraclecloud.com/CX_1".
+export async function oracle(token, name, { known = new Set(), search = DEEP_SEARCH } = {}) {
+  const [host, siteNo] = token.split("/");
+  const api = `https://${host}/hcmRestApi/resources/latest`;
+  const found = new Map();
+  await pool(search, 3, async q => {
+    const d = await getJson(`${api}/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=${siteNo},keyword=${encodeURIComponent(q)},limit=25,sortBy=POSTING_DATES_DESC`);
+    for (const r of d.items?.[0]?.requisitionList || []) if (r.Id && !found.has(r.Id)) found.set(r.Id, r);
+  });
+  const list = [...found.values()], id = r => `oracle:${host.split(".")[0]}:${r.Id}`;
+  const fresh = list.filter(r => !known.has(id(r))).slice(0, DETAIL_CAP);
+  const details = new Map((await pool(fresh, 3, async r => {
+    const d = await getJson(`${api}/recruitingCEJobRequisitionDetails?expand=all&onlyData=true&finder=ById;Id=%22${r.Id}%22,siteNumber=${siteNo}`);
+    const x = d.items?.[0] || {};
+    return [r.Id, [x.ExternalDescriptionStr, x.ExternalResponsibilitiesStr, x.ExternalQualificationsStr].filter(Boolean).join(" ")];
+  })).filter(Boolean));
+  return list.filter(r => details.has(r.Id) || known.has(id(r))).map(r => {
+    const raw = details.get(r.Id), desc = raw != null ? stripHtml(decode(raw)) || stripHtml(r.ShortDescriptionStr) : undefined;
+    const loc = String(r.PrimaryLocation || "").replace(/,\s*United States$/, "");
+    return {
+      id: id(r), title: r.Title, company: name, location: loc || "Not Listed", remote: /remote/i.test(r.WorkplaceType || "") || isRemoteText(loc),
+      ...(desc ? payFromText(desc) || {} : {}), payText: "", postedAt: r.PostedDate || null, firstPublished: r.PostedDate || null,
+      applyUrl: `https://${host}/hcmUI/CandidateExperience/en/sites/${siteNo}/job/${r.Id}`, description: desc, known: known.has(id(r)), source: "Company Site",
+    };
+  });
+}
+
+const BOARD = { greenhouse, lever, ashby, workday, icims, ukg, smartrecruiters, oracle };
+export const DEEP = new Set(["workday", "icims", "ukg", "smartrecruiters", "oracle"]);
+
+export const readBoard = (c, opts) => BOARD[c.ats](c.token, c.name, opts);
 
 export async function companyBoards(q) {
   const picks = DIRECTORY.filter(c => !q.industries?.length || c.industries.some(i => q.industries.includes(i)));

@@ -21,9 +21,20 @@ Deno.serve(async () => {
     if (last[0] && Date.now() - Date.parse(last[0].started_at) < 20 * 60e3) return Response.json({ skipped: "Crawled less than 20 minutes ago" });
     const [run] = await rest("crawl_runs", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ started_at: started }) });
     const boards = await rest("boards?select=ats,token,name,industries&active=eq.true");
-    const { jobs, report } = await crawl(boards, S);
-    for (let i = 0; i < jobs.length; i += 400)
-      await rest("postings?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(jobs.slice(i, i + 400).map(j => toRow(j, started))) });
+    // Postings already indexed from the big boards, so those boards only read new postings in full.
+    const deepKeys = boards.filter((b: { ats: string }) => S.DEEP.has(b.ats)).map((b: { ats: string; token: string }) => `${b.ats}:${b.token}`);
+    const known = new Map<string, Set<string>>();
+    if (deepKeys.length) for (let from = 0; ; from += 1000) {
+      const rows = await rest(`postings?select=id,board_key&active=eq.true&board_key=in.${encodeURIComponent(`(${deepKeys.map(k => `"${k}"`).join(",")})`)}&order=id&limit=1000&offset=${from}`);
+      for (const r of rows) { if (!known.has(r.board_key)) known.set(r.board_key, new Set()); known.get(r.board_key)!.add(r.id); }
+      if (rows.length < 1000) break;
+    }
+    const { jobs, report } = await crawl(boards, S, known);
+    const rows = jobs.map(j => toRow(j, started));
+    // Rows without a description keep the one already stored; a batch has to share one set of columns.
+    for (const part of [rows.filter(r => "description" in r), rows.filter(r => !("description" in r))])
+      for (let i = 0; i < part.length; i += 400)
+        await rest("postings?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(part.slice(i, i + 400)) });
     const okKeys = [...new Set(report.filter(r => r.ok).map(r => r.key))];
     const retired = await rest("rpc/finish_crawl", { method: "POST", body: JSON.stringify({ p_started: started, p_keys: okKeys }) });
     for (const r of report.filter(r => r.key.includes(":"))) {
@@ -31,7 +42,7 @@ Deno.serve(async () => {
       await rest(`boards?ats=eq.${ats}&token=eq.${encodeURIComponent(token)}`, { method: "PATCH", body: JSON.stringify(r.ok ? { last_ok_at: started, last_count: r.count, last_error: null } : { last_error: r.error }) });
     }
     // A handful of untried board names per run.
-    const cands = await rest("board_candidates?select=ats,token&tried_at=is.null&limit=120");
+    const cands = await rest("board_candidates?select=ats,token&tried_at=is.null&ats=in.(greenhouse,lever,ashby)&limit=120");
     if (cands.length) {
       const hits = await probe(cands, S);
       const now = new Date().toISOString();

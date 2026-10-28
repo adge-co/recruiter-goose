@@ -22,6 +22,8 @@ export const ROLE_WORDS = {
   inventory: ["inventory", "materials planner", "material planner", "materials coordinator", "supply planner", "demand planner"],
   safety: ["safety coordinator", "safety manager", "safety specialist", "ehs", "hse"],
   quality: ["quality", "qa qc", "qc coordinator", "quality control", "quality assurance"],
+  warehouse: ["warehouse manager", "warehouse supervisor", "warehouse coordinator", "distribution center", "yard manager", "branch operations"],
+  quoting: ["quote", "quoting", "quotations", "inside sales", "counter sales", "order desk", "project sales"],
 };
 
 const SENIOR = /\b(senior|sr\.?|lead|principal|staff)\b/i;
@@ -41,6 +43,7 @@ const SALESY = /\b(quota|commission|cold call|outbound prospecting|book of busin
 export const FIELD_WORDS = {
   "construction-tech": ["construction", "contractor", "contractors", "general contractor", "subcontractor", "subcontractors", "jobsite", "job site", "builder", "builders", "homebuilder", "homebuilders", "preconstruction", "takeoff", "estimating", "aec"],
   "building-materials": ["building materials", "building product manufacturers", "lumber", "millwork", "doors", "windows", "door hardware", "dealer", "dealers", "distributor", "distributors", "lbm", "supply house", "plumbing supply", "hvac"],
+  "contractors": ["general contractor", "subcontractor", "subcontractors", "self-perform", "jobsite", "job site", "superintendent", "preconstruction", "mechanical contractor", "electrical contractor", "commercial construction", "construction projects", "submittals", "change orders"],
   "trades-software": ["trades", "hvac", "plumbing", "electrical", "roofing", "field service", "technicians", "service contractors", "home services"],
   "proptech": ["homebuilder", "homebuilders", "homebuilding", "home builders", "property management", "real estate", "multifamily"],
   "logistics": ["logistics", "supply chain", "freight", "shipping", "warehouse", "fleet", "fleets", "trucking", "carrier", "carriers", "procurement", "transportation"],
@@ -48,7 +51,7 @@ export const FIELD_WORDS = {
   "hospitality": ["hotel", "hotels", "hospitality", "resort", "resorts", "restaurant", "restaurants", "guest", "guests", "front desk", "food service", "property management system"],
   "saas": [],
 };
-const FIELD_NAMES = { "construction-tech": "Construction", "building-materials": "Building materials", "trades-software": "Trades", "proptech": "Homebuilding", "logistics": "Logistics", "energy": "Energy", "hospitality": "Hospitality" };
+const FIELD_NAMES = { "contractors": "Construction", "construction-tech": "Construction", "building-materials": "Building materials", "trades-software": "Trades", "proptech": "Homebuilding", "logistics": "Logistics", "energy": "Energy", "hospitality": "Hospitality" };
 
 // Fields that, when a job is clearly about one of them and not the person's own, mean "not for you".
 export const OTHER_FIELDS = {
@@ -357,10 +360,11 @@ export async function match(profile, env = {}, sources = S, store = null) {
 
 // Re-reads the company boards behind saved postings. Answers open, gone or unknown (sites we can't re-check).
 export async function verify(ids = [], sources = S) {
-  const out = {}, boards = new Map();
+  const out = {}, boards = new Map(), indexed = [];
   for (const id of ids.slice(0, 60)) {
     const m = String(id).match(/^(gh|lever|ashby):([^:]+):/);
-    if (!m) { out[id] = "unknown"; continue; }
+    // Big employer boards are searched, not read whole, so the job index (refreshed every 4 hours) answers for them.
+    if (!m) { if (sources.indexStatus && /^(wd|icims|ukg|sr|oracle):/.test(id)) indexed.push(id); else out[id] = "unknown"; continue; }
     const ats = { gh: "greenhouse", lever: "lever", ashby: "ashby" }[m[1]];
     const key = ats + ":" + m[2];
     if (!boards.has(key)) boards.set(key, { ats, token: m[2], ids: [] });
@@ -372,5 +376,9 @@ export async function verify(ids = [], sources = S) {
       for (const id of b.ids) out[id] = live.has(id) ? "open" : "gone";
     } catch { for (const id of b.ids) out[id] = "unknown"; }
   }));
+  if (indexed.length) {
+    try { const live = await sources.indexStatus(indexed); for (const id of indexed) out[id] = live[id] === true ? "open" : live[id] === false ? "gone" : "unknown"; }
+    catch { for (const id of indexed) out[id] = "unknown"; }
+  }
   return { checkedAt: new Date().toISOString(), status: out };
 }
