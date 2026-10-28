@@ -15,12 +15,14 @@ const rest = async (path: string, init: RequestInit = {}) => {
 };
 
 // One function, two jobs. POST {} is the 4-hour pass over the small boards and the keyword feeds.
-// POST {"deep": true} reads the next two big employer boards (Workday, iCIMS, UKG, SmartRecruiters, Oracle), oldest first;
-// pg_cron calls it every 10 minutes so each big board is fresh every couple of hours without one run doing too much.
+// POST {"deep": true} reads the next big employer board (Workday, iCIMS, UKG, SmartRecruiters, Oracle), least recently tried first;
+// pg_cron calls it every 5 minutes so each big board is fresh every couple of hours without one run doing too much.
+// The board is marked tried before it is read, so one that runs out of time can't hold up the rest.
 async function deepPass() {
   const started = new Date().toISOString();
-  const boards = await rest(`boards?select=ats,token,name,industries&active=eq.true&ats=in.(${[...S.DEEP].join(",")})&order=last_ok_at.asc.nullsfirst&limit=2`);
+  const boards = await rest(`boards?select=ats,token,name,industries&active=eq.true&ats=in.(${[...S.DEEP].join(",")})&order=last_tried_at.asc.nullsfirst&limit=1`);
   if (!boards.length) return { boards: 0 };
+  for (const b of boards) await rest(`boards?ats=eq.${b.ats}&token=eq.${encodeURIComponent(b.token)}`, { method: "PATCH", body: JSON.stringify({ last_tried_at: started }) });
   const keys = boards.map((b: { ats: string; token: string }) => `${b.ats}:${b.token}`);
   const known = new Map<string, Set<string>>();
   const rows0 = await rest(`postings?select=id,board_key&active=eq.true&board_key=in.${encodeURIComponent(`(${keys.map((k: string) => `"${k}"`).join(",")})`)}&limit=5000`);
@@ -44,7 +46,7 @@ async function save(jobs: Record<string, unknown>[], started: string) {
 async function markBoards(report: { key: string; ok: boolean; count: number; error?: string }[], started: string) {
   for (const r of report.filter(r => r.key.includes(":"))) {
     const i = r.key.indexOf(":"), ats = r.key.slice(0, i), token = r.key.slice(i + 1);
-    await rest(`boards?ats=eq.${ats}&token=eq.${encodeURIComponent(token)}`, { method: "PATCH", body: JSON.stringify(r.ok ? { last_ok_at: started, last_count: r.count, last_error: null } : { last_ok_at: started, last_error: r.error }) });
+    await rest(`boards?ats=eq.${ats}&token=eq.${encodeURIComponent(token)}`, { method: "PATCH", body: JSON.stringify(r.ok ? { last_ok_at: started, last_count: r.count, last_error: null } : { last_error: r.error }) });
   }
 }
 
