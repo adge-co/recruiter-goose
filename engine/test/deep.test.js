@@ -11,6 +11,7 @@ const calls = [];
 function serve(routes) {
   calls.length = 0;
   globalThis.fetch = async (url, opts = {}) => {
+    if (String(url).endsWith("/robots.txt")) { const r = routes.find(([re]) => re.test(String(url))); return new Response(r ? r[1] : "", { status: r ? 200 : 404 }); }
     calls.push({ url: String(url), method: opts.method || "GET", body: opts.body });
     const r = routes.find(([re]) => re.test(String(url)));
     if (!r) return new Response("missing", { status: 404 });
@@ -118,4 +119,10 @@ test("a big board whose search fails is a failed board, not an empty one", async
 test("big boards read office roles and Texas postings first", () => {
   const list = [{ t: "CDL Driver", l: "Dallas, TX" }, { t: "Stocker", l: "Reno, NV" }, { t: "Purchasing Agent", l: "Reno, NV" }, { t: "Estimator", l: "Fort Worth, TX" }];
   assert.deepEqual(S.firstToRead(list, p => p.t, p => p.l).map(p => p.t), ["Estimator", "Purchasing Agent", "CDL Driver", "Stocker"]);
+});
+
+test("a board whose robots.txt disallows the search is left alone, with the reason", async () => {
+  serve([[/robots\.txt$/, "User-agent: *\nDisallow: /jobs/search\n"], [/./, "<html></html>"]]);
+  await assert.rejects(S.icims("careers-example.icims.com", "Example", { search: ONE }), /robots\.txt/);
+  assert.equal(calls.length, 0, "nothing past robots.txt was fetched");
 });

@@ -152,7 +152,38 @@ async function pool(items, n, fn, strict = false) {
   return out;
 }
 
+// The site's robots.txt decides what may be read: a path it disallows is never fetched, and the board shows the reason.
+// Read once per host per run. Groups for "*" and "recruitergoose" count; the longest matching rule wins, Allow on a tie.
+const robots = new Map();
+export function robotsRules(text) {
+  const rules = []; let mine = false, inAgents = false;
+  for (const raw of String(text || "").split(/\r?\n/)) {
+    const line = raw.replace(/#.*/, "").trim(), m = line.match(/^([a-z-]+)\s*:\s*(.*)$/i);
+    if (!m) continue;
+    const key = m[1].toLowerCase(), val = m[2].trim();
+    if (key === "user-agent") { if (!inAgents) mine = false; inAgents = true; if (val === "*" || /recruitergoose/i.test(val)) mine = true; continue; }
+    inAgents = false;
+    if (mine && (key === "allow" || key === "disallow") && val) rules.push({ allow: key === "allow", path: val });
+  }
+  return rules;
+}
+export function robotsAllow(rules, pathAndQuery) {
+  let best = null;
+  for (const r of rules) {
+    const re = new RegExp("^" + r.path.replace(/[.+?^{}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\\\$$/, "$"));
+    if (re.test(pathAndQuery) && (!best || r.path.length > best.path.length || (r.path.length === best.path.length && r.allow))) best = r;
+  }
+  return !best || best.allow;
+}
+async function mayRead(url) {
+  const u = new URL(url);
+  if (!robots.has(u.host)) robots.set(u.host, fetch(`${u.origin}/robots.txt`, { headers: UA }).then(r => r.ok ? r.text() : "").then(robotsRules).catch(() => []));
+  if (!robotsAllow(await robots.get(u.host), u.pathname + u.search)) throw new Error(`${u.host}'s robots.txt asks crawlers not to read ${u.pathname}`);
+}
+async function politeJson(url, opts) { await mayRead(url); return getJson(url, opts); }
+
 async function getText(url, opts = {}, timeoutMs = 15000) {
+  await mayRead(url);
   const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(url, { ...opts, headers: { ...UA, ...(opts.headers || {}) }, signal: ctrl.signal });
@@ -189,13 +220,13 @@ export async function workday(token, name, { known = new Set(), search = DEEP_SE
   const api = `https://${host}/wday/cxs/${tenant}/${site}`;
   const seen = new Map();
   await pool(search, 4, async q => {
-    const d = await getJson(`${api}/jobs`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset: 0, searchText: q }) });
+    const d = await politeJson(`${api}/jobs`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset: 0, searchText: q }) });
     for (const p of d.jobPostings || []) if (p.externalPath && !seen.has(p.externalPath)) seen.set(p.externalPath, p);
   }, true);
   const list = [...seen.values()];
   const id = p => `wd:${tenant}:${p.externalPath.split("_").pop() || p.externalPath}`;
   const fresh = firstToRead(list.filter(p => !known.has(id(p))), p => p.title, p => p.locationsText);
-  const details = new Map((await pool(fresh, 4, async p => [p.externalPath, (await getJson(api + p.externalPath)).jobPostingInfo])).filter(Boolean));
+  const details = new Map((await pool(fresh, 4, async p => [p.externalPath, (await politeJson(api + p.externalPath)).jobPostingInfo])).filter(Boolean));
   const out = [];
   for (const p of list) {
     const info = details.get(p.externalPath), isKnown = known.has(id(p));
@@ -245,7 +276,7 @@ export async function ukg(token, name, { known = new Set(), search = DEEP_SEARCH
   const base = `https://${host}/${tenant}/JobBoard/${board}`;
   const found = new Map();
   await pool(search, 3, async q => {
-    const d = await getJson(`${base}/JobBoardView/LoadSearchResults`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+    const d = await politeJson(`${base}/JobBoardView/LoadSearchResults`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ opportunitySearch: { Top: 50, Skip: 0, QueryString: q, OrderBy: [{ Value: "postedDateDesc", PropertyName: "PostedDate", Ascending: false }], Filters: [] }, matchCriteria: { PreferredJobs: [], Educations: [], LicenseAndCertifications: [], Skills: [], hasNoLicenses: false, SkippedSkills: [] } }) });
     for (const o of d.opportunities || []) if (o.Id && !found.has(o.Id)) found.set(o.Id, o);
   }, true);
@@ -272,12 +303,12 @@ export async function ukg(token, name, { known = new Set(), search = DEEP_SEARCH
 export async function smartrecruiters(token, name, { known = new Set(), search = DEEP_SEARCH } = {}) {
   const found = new Map();
   await pool(search, 3, async q => {
-    const d = await getJson(`https://api.smartrecruiters.com/v1/companies/${token}/postings?limit=100&q=${encodeURIComponent(q)}&country=us`);
+    const d = await politeJson(`https://api.smartrecruiters.com/v1/companies/${token}/postings?limit=100&q=${encodeURIComponent(q)}&country=us`);
     for (const p of d.content || []) if (p.id && !found.has(p.id)) found.set(p.id, p);
   }, true);
   const list = [...found.values()], id = p => `sr:${token}:${p.id}`;
   const fresh = firstToRead(list.filter(p => !known.has(id(p))), p => p.name, p => p.location?.region);
-  const details = new Map((await pool(fresh, 3, async p => [p.id, await getJson(`https://api.smartrecruiters.com/v1/companies/${token}/postings/${p.id}`)])).filter(Boolean));
+  const details = new Map((await pool(fresh, 3, async p => [p.id, await politeJson(`https://api.smartrecruiters.com/v1/companies/${token}/postings/${p.id}`)])).filter(Boolean));
   return list.filter(p => details.has(p.id) || known.has(id(p))).map(p => {
     const d = details.get(p.id), sec = d?.jobAd?.sections || {};
     const desc = d ? stripHtml([sec.jobDescription?.text, sec.qualifications?.text, sec.additionalInformation?.text].filter(Boolean).join(" ")) : undefined;
@@ -296,13 +327,13 @@ export async function oracle(token, name, { known = new Set(), search = DEEP_SEA
   const api = `https://${host}/hcmRestApi/resources/latest`;
   const found = new Map();
   await pool(search, 3, async q => {
-    const d = await getJson(`${api}/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=${siteNo},keyword=${encodeURIComponent(q)},limit=25,sortBy=POSTING_DATES_DESC`);
+    const d = await politeJson(`${api}/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=${siteNo},keyword=${encodeURIComponent(q)},limit=25,sortBy=POSTING_DATES_DESC`);
     for (const r of d.items?.[0]?.requisitionList || []) if (r.Id && !found.has(r.Id)) found.set(r.Id, r);
   }, true);
   const list = [...found.values()], id = r => `oracle:${host.split(".")[0]}:${r.Id}`;
   const fresh = firstToRead(list.filter(r => !known.has(id(r))), r => r.Title, r => r.PrimaryLocation);
   const details = new Map((await pool(fresh, 3, async r => {
-    const d = await getJson(`${api}/recruitingCEJobRequisitionDetails?expand=all&onlyData=true&finder=ById;Id=%22${r.Id}%22,siteNumber=${siteNo}`);
+    const d = await politeJson(`${api}/recruitingCEJobRequisitionDetails?expand=all&onlyData=true&finder=ById;Id=%22${r.Id}%22,siteNumber=${siteNo}`);
     const x = d.items?.[0] || {};
     return [r.Id, [x.ExternalDescriptionStr, x.ExternalResponsibilitiesStr, x.ExternalQualificationsStr].filter(Boolean).join(" ")];
   })).filter(Boolean));
