@@ -393,7 +393,8 @@ export async function verify(ids = [], sources = S) {
   await Promise.all([...boards.values()].map(async b => {
     try {
       const live = new Set((await sources.readBoard({ ats: b.ats, token: b.token, name: "" })).map(j => j.id));
-      for (const id of b.ids) out[id] = live.has(id) ? "open" : "gone";
+      // A board that comes back empty is more often a hiccup or a rename than every job closing at once.
+      for (const id of b.ids) out[id] = !live.size ? "unknown" : live.has(id) ? "open" : "gone";
     } catch { for (const id of b.ids) out[id] = "unknown"; }
   }));
   if (indexed.length) {

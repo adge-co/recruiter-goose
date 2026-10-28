@@ -361,3 +361,31 @@ test("a forwarded message is read, not cut off", () => {
   globalThis.atob ||= s => Buffer.from(s, "base64").toString("binary");
   assert.equal(T.readReply("Fwd: Dispatcher candidate", T.mailText({ mimeType: "text/plain", body: { data: enc(body) } })), "offer");
 });
+
+// Thirteen more from the tenth review: Indeed and LinkedIn exports, Word tabs, Canva columns, phone notes, bilingual,
+// dates first, company first, labeled fields, ATS capitals, dates in parentheses, Google Docs and Zety.
+test("thirteen more layouts: LinkedIn sidebar, phone-typed city, stacked roles, bilingual titles", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = f => T.readResume(readFileSync(new URL(`./resumes/${f}.txt`, import.meta.url), "utf8"));
+  const want = {
+    "f01_indeed_export":["Ricky Salazar","Lubbock, TX (relocating to Dallas-Fort Worth, TX)",[["Counter Salesman / Purchaser","Lumbermen's Supply","March 2017 to Present"],["Yard Hand / Forklift Operator","Ace Building Center","June 2013 to February 2017"]]],
+    "f02_linkedin_pdf":["Tamika Ross","Austin, TX",[["Senior Buyer","Austin Industrial Group","August 2020 - Present"],["Buyer","Austin Industrial Group","May 2017 - July 2020"],["Inside Sales Associate","Ferguson Enterprises","June 2015 - April 2017"]]],
+    "f03_word_template_tabs":["Demetrius Walker","Arlington, TX",[["Estimator","Southwest Interiors LLC","Jan 2021 – Present"],["Field Foreman","Southwest Interiors LLC","Mar 2016 – Dec 2020"],["Drywall Hanger","D&L Drywall","2013 – 2016"]]],
+    "f04_canva_two_column":["Marisol Garza","Mesquite, TX",[["Purchasing Coordinator","Beck-Reit Mechanical","2022 - Present"],["Office Assistant","Garza Family Roofing","2019 - 2022"]]],
+    "f05_phone_notes":["Jesse Ochoa","Cleburne, TX",[["Yard Lead","Cleburne Lumber & Hardware","2019-now"],["Driver","Texas Builders Supply","2015-2019"]]],
+    "f06_bilingual":["José Ángel Medina Ríos","Pharr, TX",[["Vendedor de Mostrador (Counter Sales)","Materiales La Frontera","Feb 2018 – Presente"],["Almacenista / Warehouse Associate","Home Depot","Ago 2014 – Ene 2018"]]],
+    "f07_super_dates_first":["Brandon K. Whitfield","Weatherford, TX (relocating to Frisco, TX)",[["Superintendent","Lakeridge Homes","2020 – Present"],["Assistant Superintendent","Lakeridge Homes","2016 – 2020"],["Framer","Whitfield Framing (family business)","2013 – 2016"]]],
+    "f08_purch_mgr_company_first":["Katherine Odom","Tyler, TX",[["Purchasing Manager","East Texas Building Supply","2018 – Present"],["Buyer / Inventory Control","Piney Woods Lumber Co.","2011 – 2018"]]],
+    "f09_hvac_labeled":["Luis Perez Jr.","Garland, TX",[["HVAC Service Technician","Berkshire Air & Heat","06/2019 - Present"],["HVAC Installer","Comfort Pro Mechanical","03/2016 - 05/2019"]]],
+    "f10_ats_caps_projects":["Aaliyah M. Brooks","Denton, TX",[["Project Coordinator","Hallmark Builders Group","June 2022 – Present"],["Administrative Assistant","North Texas Roofing & Sheet Metal","August 2019 – May 2022"]]],
+    "f11_yard_mgr_paren_dates":["Greg Holloway","Granbury, TX",[["Yard Manager","Brazos Valley Lumber","2012 – Present"],["Assistant Yard Manager","Brazos Valley Lumber","2005 – 2012"],["Yard Hand / Driver","Moore Lumber & Hardware","2000 – 2005"]]],
+    "f12_electrician_gdocs":["Carlos Jimenez","Fort Worth, TX",[["Journeyman Electrician","Sparks Electric Co","2021–Present"],["Apprentice Electrician","Bright Line Electrical","2017–2021"]]],
+    "f13_inside_sales_zety":["Taylor Nguyen-Baker","Round Rock, TX",[["Inside Sales Representative / Backup Buyer","Capital Plumbing Supply","05/2020 to Current"],["Counter Sales Associate","Capital Plumbing Supply","08/2017 to 04/2020"]]]
+  };
+  for (const [f, [name, city, jobs]] of Object.entries(want)) {
+    const r = read(f);
+    assert.deepEqual([r.name, r.city, r.jobs.map(j => [j.title, j.company, j.dates])], [name, city, jobs], f);
+  }
+  assert.deepEqual(read("f02_linkedin_pdf").skills, ["Procurement", "Vendor Negotiation", "SAP"]);
+  assert.ok(!read("f02_linkedin_pdf").education.some(e => /Tamika|Senior Buyer at/.test(e)));
+});

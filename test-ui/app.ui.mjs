@@ -339,6 +339,12 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     assert.equal(head.subarray(0, 5).toString(), "%PDF-");
     await page.waitForTimeout(400);
     await shot(page, "phone-light-resume-sheet");
+    // The preview stays white paper in dark mode, like the PDF it stands for.
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.locator("#sheetBody .paper").evaluate(el => el.scrollIntoView({ block: "start" }));
+    assert.equal(await page.$eval("#sheetBody .paper", el => getComputedStyle(el).backgroundColor), "rgb(255, 255, 255)");
+    await shot(page, "phone-dark-resume-paper");
+    await page.emulateMedia({ colorScheme: "light" });
   });
   await step("[resume] back from the company's site, one tap marks it Applied", async () => {
     await page.keyboard.press("Escape");

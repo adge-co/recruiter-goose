@@ -103,6 +103,7 @@ h2{font-size:21px;line-height:1.22;margin:0 0 4px}
 .btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.icon:focus-visible,.linkbtn:focus-visible,.row-job:focus-visible,.job:focus-visible{outline:2px solid var(--mark);outline-offset:3px}
 .btn:disabled{opacity:.5;cursor:default}
 .btn.ghost{background:var(--raise);color:var(--ink);box-shadow:var(--hl)}
+.btn.ghost.danger{color:var(--red-text)}   /* the one button that can't be undone reads differently */
 .btn.ghost:active{transform:scale(.97)}
 .btn.small{padding:8px 14px;min-height:40px;font-size:14.5px;border-radius:999px}
 .btn.wide{width:100%}
@@ -331,7 +332,7 @@ button.pill{border:0;cursor:pointer;font-family:inherit}
 .kwctx{margin-top:10px;border-left:3px solid var(--line2);padding:4px 0 4px 12px}
 .kwctx p{margin:4px 0 0;color:var(--ink)}
 .pill.miss{background:var(--mark-soft);color:var(--mark-text)}
-.paper{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:18px 18px 14px;margin-top:12px;font-size:13.5px;color:var(--ink);box-shadow:var(--hl)}
+.paper{--ink:#1F1A17;--muted:#6B625C;--line2:#DDD6CF;--surface:#FFFFFF;color-scheme:light;background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:18px 18px 14px;margin-top:12px;font-size:13.5px;color:var(--ink);box-shadow:var(--hl)}
 .paper .nm{font-family:var(--display);font-size:20px;font-weight:600}
 .paper .ct{color:var(--muted);font-size:12.5px;margin-top:2px}
 .paper .hd{color:var(--muted);font-weight:700;font-size:13px;margin-top:6px}
@@ -518,7 +519,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
     <div class="group">
       <h2>Account</h2>
       <p class="acct" id="meEmail"></p>
-      <div class="row" id="meAcct"><button class="btn ghost" id="signOut">Sign Out</button><button class="btn ghost" id="deleteMe">Delete My Account</button></div>
+      <div class="row" id="meAcct"><button class="btn ghost" id="signOut">Sign Out</button><button class="btn ghost danger" id="deleteMe">Delete My Account</button></div>
       <button class="btn hidden" id="meJoin" data-account="me">Make a Free Account</button>
     </div>
   </section>
@@ -757,7 +758,8 @@ async function readResume(text) {
   merge("skills", [...draft.resume.skills, ...(data.skills || [])].map(w => /^[a-z]/.test(w) ? titled(w) : w === w.toUpperCase() && w.length > 4 ? titled(w.toLowerCase()) : w));
   merge("industries", data.industries);
   if (!draft.roles.length) merge("roles", (data.suggestedRoles || []).filter(r => r !== "sales" || Tailor.soldBefore(draft.titles)));
-  if (data.years && !$("#iYears").value) $("#iYears").value = data.years;
+  const years = draft.resume.years || data.years;   // from the job dates when they're there, else the server's read of the whole text
+  if (years && !$("#iYears").value) $("#iYears").value = years;
   const companies = jobs.map(j => j.company).filter(Boolean);
   if (companies.length || data.pastCompanies?.length) draft.companies = companies.length ? companies : data.pastCompanies;
   // Where they want to work: the city they're moving to, else the one on the resume. A city chosen means local jobs first, so Remote starts off.
@@ -774,7 +776,7 @@ async function readResume(text) {
     : bare ? ` ${bare === 1 ? "One job has no lines under it" : `${bare} jobs have no lines under them`}; add a few in Me so the resume isn't bare.` : "");
   const many = (n, one, more = one + "s") => `${n} ${n === 1 ? one : more}`;
   msg.innerHTML = draft.titles.length
-    ? `<span class="ok">Got it.</span> I filled in ${many(draft.titles.length, "past job")}${data.years ? `, ${many(data.years, "year")}` : ""}, ${many(draft.skills.length, "skill")} and ${many(draft.industries.length, "industry", "industries")}. Check them below and fix anything off.${warn}`
+    ? `<span class="ok">Got it.</span> I filled in ${many(draft.titles.length, "past job")}${years ? `, ${many(years, "year")}` : ""}, ${many(draft.skills.length, "skill")} and ${many(draft.industries.length, "industry", "industries")}. Check them below and fix anything off.${warn}`
     : `<span class="err">I couldn't pick out your jobs from that. Type them in below.</span>`;
 }
 async function onResumeFile(file) {
@@ -1081,8 +1083,11 @@ function todayItems() {
   for (const s of saved) {
     const j = s.job || {};
     if (mailSuggest.some(m => m.sid === s.id)) continue;   // a reply is waiting on this job: that card says what to do
-    if (["saved", "applied", "interview"].includes(s.status) && j.goneAt)
+    // A saved job that came down is over; one they applied to may still be moving (postings often come down once interviews start).
+    if (s.status === "saved" && j.goneAt)
       items.push({ id: s.job_key, s, b: j.title, t: `No longer on ${j.company}'s job board as of ${shortDay(j.goneAt)}.`, act: "closeout" });
+    else if (["applied", "interview"].includes(s.status) && j.goneAt && !j.mail && !(s.follow_up > today))
+      items.push({ id: s.job_key, s, b: j.title, t: `Came down from ${j.company}'s job board ${shortDay(j.goneAt)}. They may be interviewing; a short check-in is fair.`, act: "follow" });
     else if (["applied", "interview"].includes(s.status) && s.follow_up && s.follow_up <= today)
       items.push({ id: s.job_key, s, b: j.title, t: `Follow-up day. One short note to the recruiter or hiring manager at ${j.company}.`, act: "follow" });
     else if (s.status === "applied" && daysAgo(appliedOn(s)) >= 21 && !j.mail)
@@ -1107,7 +1112,12 @@ document.addEventListener("click", async e => {
   const b = e.target.closest("[data-copyfu]"); if (!b) return;
   const s = saved.find(x => x.id === b.dataset.copyfu), j = s?.job || {};
   const note = `Hi, I applied for the ${j.title} role at ${j.company} on ${shortDay(appliedOn(s))} and wanted to check in. I'm still very interested and happy to share anything that helps. Thanks for your time.`;
-  try { await navigator.clipboard.writeText(note); toast("Copied. Paste it into an email or LinkedIn message."); } catch { toast(note); }
+  let copied = true;
+  try { await navigator.clipboard.writeText(note); } catch { copied = false; }
+  // The check-in is done for now: the next one is a week out, so this nudge doesn't sit on My Jobs.
+  const { data } = await sb.from("saved_jobs").update({ follow_up: isoDay(7), updated_at: new Date().toISOString() }).eq("id", s.id).select().single();
+  if (data) { saved = saved.map(x => x.id === s.id ? data : x); renderMine(); }
+  toast(copied ? `Copied. Paste it into an email or LinkedIn message. Next follow-up ${longDay(isoDay(7))}.` : note);
 });
 document.addEventListener("click", async e => {
   const c = e.target.closest("[data-closeout]"); if (!c) return;

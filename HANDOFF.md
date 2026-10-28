@@ -1,7 +1,7 @@
 # Recruiter Goose: Handoff (10-24-2026, current state updated 10-28-2026)
 
 ## Current state (10-28-2026), read this first
-- Repo `adge-co/recruiter-goose` (public), branch `main`. Tests: `cd engine && npm test` (51 tests, including 75 real-world reply wordings in `engine/test/reply-cases.js` and 5 odd resume formats) and `node test-ui/app.ui.mjs` (34 Playwright checks with a fake backend).
+- Repo `adge-co/recruiter-goose` (public), branch `main`. Tests: `cd engine && npm test` (58 tests, including 531 real-world reply wordings in `engine/test/reply-cases.js` and 53 real-world resume layouts in `engine/test/resumes/`) and `node test-ui/app.ui.mjs` (34 Playwright checks with a fake backend).
 - Live functions: `match` v13 and `crawl` v9, both importing the engine from jsDelivr at commit 8f39ed9 or later (see "Recruiter Goose 2" below for how to redeploy). `crawl` fills `postings` every 4 hours (`crawl-jobs`) and reads one big employer board every 5 minutes (`crawl-deep`, rotating by `boards.last_tried_at`). Boards whose robots.txt says no are turned off, never worked around.
 - One resume reader: `app/tailor.js` `readResume` (browser). The server's `parseResume` only adds skills, industries, years and suggested roles. The tailored resume PDF and the application email come from `app/tailor.js` too.
 - Replies: `app/tailor.js` `readReply` reads a sentence at a time (store hours and form-letter "if" sentences are set aside first; sales emails, invoices and job alerts are ignored). Add new wordings to `engine/test/reply-cases.js` before changing the rules.
