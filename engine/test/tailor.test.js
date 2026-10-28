@@ -236,3 +236,30 @@ test("a Gmail message is read whole, without the quoted thread", () => {
   const html = { mimeType: "text/html", body: { data: enc("<p>Hi Jos&eacute;,</p><p>We&#39;d like to offer you the Estimator position.</p>") } };
   assert.equal(T.readReply("Good news", T.mailText(html)), "offer");
 });
+
+// Nine more, written by a reviewer as people really send them: Word paste, PDF letter-spacing, all caps, skills-first,
+// two columns, Spanish and English, a 30-year career, one job, and a LinkedIn "Save to PDF".
+test("nine real-world resume layouts each read into the right jobs", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = f => T.readResume(readFileSync(new URL(`./resumes/${f}.txt`, import.meta.url), "utf8"));
+  const want = {
+    r1_word_paste: ["Terrell W. Banks", "Mansfield, TX", [["Millwork Counter Lead", "Builders FirstSource", 4], ["Yard Associate / Forklift Operator", "Lowe's Home Improvement", 2]]],
+    r2_pdf_extract: ["Katherine O'Neill", "Denton, TX", [["Purchasing Coordinator", "Lone Star Mechanical Supply", 3], ["Inventory Clerk", "Lone Star Mechanical Supply", 2]]],
+    r3_all_caps: ["Raymond Espinoza Jr.", "Garland, TX", [["Electrician Foreman", "Sparks Electric Co", 4], ["Journeyman Electrician", "Metro Power LLC", 2]]],
+    r4_functional: ["Destiny Harper", "Fort Worth, TX", [["Office Coordinator", "Lone Oak Roofing", 0], ["Server", "Joe T. Garcia's", 0]]],
+    r5_two_column: ["Thanh Nguyen", "Arlington, TX", [["Warehouse Lead", "Ferguson Enterprises", 3], ["Material Handler", "Amazon", 1]]],
+    r6_spanglish: ["José Luis Hernández-Treviño", "Irving, TX", [["Framing Superintendent", "Constructora del Norte / Pulte Homes trade partner", 3], ["Carpenter Lead", "Hernández Framing LLC", 1]]],
+    r8_one_job: ["Brianna Lowe", "Little Elm, TX", [["Inside Sales Associate", "Ewing Irrigation & Landscape Supply", 4]]],
+    r9_linkedin_export: ["Marisol Peña", "Dallas-Fort Worth, TX", [["Junior Estimator", "Pinnacle Drywall Inc.", 2], ["Project Assistant", "Pinnacle Drywall Inc.", 1]]],
+  };
+  for (const [f, [name, city, jobs]] of Object.entries(want)) {
+    const r = read(f);
+    assert.equal(r.name, name, f); assert.equal(r.city, city, f);
+    assert.deepEqual(r.jobs.map(j => [j.title, j.company, j.bullets.length]), jobs, f);
+  }
+  assert.equal(read("r7_long_career").jobs.length, 5);
+  assert.deepEqual(read("r7_long_career").jobs[2].company, "84 Lumber");
+  assert.equal(read("r2_pdf_extract").phone, "940-555-0193");
+  assert.equal(read("r5_two_column").twoColumn, true);
+  assert.deepEqual(read("r9_linkedin_export").skills, ["Takeoffs", "PlanSwift", "Bluebeam"]);
+});

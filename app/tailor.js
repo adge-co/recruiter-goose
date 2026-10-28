@@ -3,13 +3,16 @@
 // words they already have first, and lists the posting's words they don't have so they can decide.
 // Loaded by the app as window.Tailor; the engine tests load it with require().
 (function () {
-  const MONTH = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?";
-  const RANGE = new RegExp(`(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2}\\s*(?:-|–|—|to)\\s*(?:present|current|now|today|(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2})`, "i");
-  const HEADING = /^(profile|summary|professional summary|objective|experience|work experience|professional experience|employment|work history|education|skills|core skills|key skills|technical skills|skills and tools|certifications|licenses|certifications and licenses|references|projects|training|certs|skills & tools|skills and certifications|licenses and certifications)\s*:?$/i;
+  // English and Spanish month names ("Ene 2018 – Presente"), for the many bilingual resumes in Texas.
+  const MONTH = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|ene(?:ro)?|febrero|marzo|abr(?:il)?|mayo|junio|julio|ago(?:sto)?|sept?iembre|octubre|noviembre|dic(?:iembre)?)\\.?";
+  const RANGE = new RegExp(`(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2}\\s*(?:-|–|—|to)\\s*(?:presente|present|actualidad|actualmente|actual|current|now|today|(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2})`, "i");
+  const HEAD_ONE = "profile|summary|professional summary|career summary|objective|about me|contact|experience|work experience|professional experience|relevant experience|employment|employment history|work history|career history|experiencia|experiencia laboral|education|educación|educacion|skills|top skills|core skills|key skills|technical skills|skills and tools|core competencies|areas of expertise|qualifications|summary of qualifications|habilidades|certifications|licenses|certifications and licenses|references|projects|training|certs|skills & tools|skills and certifications|licenses and certifications|key accomplishments|accomplishments|highlights|career highlights|achievements|languages|idiomas";
+  // A heading, alone on its line, in either language: "EXPERIENCIA / EXPERIENCE".
+  const HEADING = new RegExp(`^(?:${HEAD_ONE})(?:\\s*/\\s*(?:${HEAD_ONE}))?\\s*:?$`, "i");
   // A heading with its list on the same line: "Skills & Tools: Procore; Excel".
   const HEAD_INLINE = /^(skills|core skills|key skills|technical skills|skills and tools|skills & tools|tools|certs|certifications|licenses|education|training)\s*:\s*(.+)$/i;
   // A line that starts with what someone did ("Quoted doors…", "Ran the forklift…") is a line about the work, marked or not.
-  const DID = /^(?:[a-z]+ed|ran|set|led|built|kept|made|took|sold|bought|grew|won|cut|wrote|drove|ran|taught|met|oversaw|handle[ds]?|manage[ds]?|run|own(?:ed)?|help(?:ed)?|work(?:ed)?|answer(?:ed)?|load(?:ed)?|pull(?:ed)?|train(?:ed)?|quote[ds]?|price[ds]?|order(?:ed)?)\b/i;
+  const DID = /^(?:[a-z]+ed|ran|set|led|built|kept|made|took|sold|bought|grew|won|cut|wrote|drove|taught|met|oversaw|(?:build|track|count|process|schedule|enter|coordinate|answer|order|run|manage|lead|train|quote|price|handle|load|pull|receive|ship|support|maintain|prepare|review|create|update|assist|work|walk|read|write|send|do|issue|negotiate|plan|supervise|oversee|keep|cut|install|wire|frame|own|help|call|close|open|resolve|reduce|increase|improve|deliver|stage|pick|pack|check|inspect|estimate|bid|sell|buy|serve|teach|operate|clean|sort|stock|file|book|dispatch|route|cover)(?:s|es)?)\b/i;
   const STATE_CODES = "AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC";
   const BULLET = /^\s*(?:[-•·*▪●◦‣–o]|\d+[.)])\s+/;   // "o" is what Word turns hollow bullets into when pasted
   const TITLE_WORD = /\b(manager|agent|specialist|coordinator|buyer|estimator|analyst|consultant|supervisor|lead|director|representative|rep|associate|engineer|technician|foreman|superintendent|administrator|assistant|owner|planner|purchaser|salesperson|sales|counter|desk|yard|clerk|dispatcher|scheduler|trainer|advisor|officer|president|founder|operator|installer|designer|developer|accountant|controller|expeditor|merchandiser|driver|server|bartender|carpenter|electrician|plumber|apprentice|journeyman|laborer|warehouse)\b/i;
@@ -43,31 +46,69 @@
   const tc = s => String(s).replace(/\b([a-z])/g, c => c.toUpperCase());
 
   // ---------- Read a pasted or uploaded resume into parts the person can edit ----------
+  // Undo what PDF and Word exports do to text before reading it: letter-spaced headings ("S K I L L S"), spaced punctuation
+  // ("Denton , TX", "x @ gmail.com", "940 - 555 - 0193"), two columns side by side, and LinkedIn's company-then-title order.
+  function prep(text) {
+    let lines = String(text || "").replace(/\r/g, "").split("\n").map(l => l
+      .replace(/(^|\s{2,})((?:[\p{L}'’&](?: |$)){3,})/gu, (m, gap, run) => gap + run.replace(/ /g, "") + " ")   // "K A T H E R I N E" -> "KATHERINE"
+      .replace(/ +([,;:])(?= )/g, "$1").replace(/ *@ */g, "@").replace(/\b(\d{3}) - (\d{3}) - (\d{4})\b/g, "$1-$2-$3")
+      .replace(/\s*\((?:\d+ years?)?\s*(?:\d+ months?)?\)\s*$/i, "").replace(/\s+$/, ""));
+    // Two columns: several lines with a wide gap whose right side isn't just dates. Read the left column, then the right.
+    const gap = /^(.*?\S)\s{6,}(\S.*)$/, wide = lines.map(l => l.match(gap)).filter(m => m && !new RegExp(`^${RANGE.source}$`, "i").test(m[2].trim()));
+    let twoColumn = false;
+    if (wide.length >= 4) {
+      twoColumn = true;
+      const left = [], right = [];
+      for (const l of lines) {
+        if (/^\s{20,}\S/.test(l)) { right.push(l.trim()); continue; }
+        const m = l.match(gap);
+        if (m && !new RegExp(`^${RANGE.source}$`, "i").test(m[2].trim())) { left.push(m[1]); right.push(m[2]); } else left.push(l);
+      }
+      lines = [...left, ...right];
+    }
+    // "Pinnacle Drywall Inc. / Junior Estimator / May 2023 - Present": company first, then title, then dates (LinkedIn, many templates).
+    for (let i = 0; i + 2 < lines.length; i++) {
+      const [a, b, c] = [lines[i].trim(), lines[i + 1].trim(), lines[i + 2].trim()];
+      if (a && b && a.length < 60 && b.length < 60 && !RANGE.test(a) && !RANGE.test(b) && RANGE.test(c) && c.replace(RANGE, "").replace(/[\s,|·•–—()-]/g, "").length < 4
+        && !TITLE_WORD.test(a) && TITLE_WORD.test(b) && !HEADING.test(a) && !BULLET.test(a) && !BULLET.test(b)) { lines[i] = `${b} — ${a}`; lines[i + 1] = ""; }
+    }
+    // A place on its own line under a job ("Dallas, Texas, United States") isn't a line about the work.
+    lines = lines.filter((l, i) => i < 8 || !/^\s*[A-Z][\p{L}.' -]+,\s*[A-Z][a-z]+(?: [A-Z][a-z]+)?(?:,\s*United States)?\s*$/u.test(l) || /\d|@/.test(l));
+    return { lines, twoColumn, top: String(text || "").split(/\r?\n/).filter(l => l.trim()).slice(0, 6).map(l => l.trim().split(/\s{6,}/)).flat() };
+  }
   function readResume(text) {
     // Tab columns ("06/2018 - Current<tab>PURCHASING AGENT<tab>ABC Mechanical") become " | " so each column stays its own part.
-    const lines = String(text || "").split(/\r?\n/).map(l => l.replace(/^\t+/, "").replace(/\t+/g, " | ").replace(/^o \| /, "o ").replace(/ {2,}/g, " ").trimEnd()).filter(l => l.trim());
+    const raw0 = prep(text);
+    const lines = raw0.lines.map(l => l.replace(/^\t+/, "").replace(/\t+/g, " | ").replace(/^o \| /, "o ").replace(/ {2,}/g, " ").trimEnd()).filter(l => l.trim());
     const all = lines.join("\n");
-    const out = { name: "", email: "", phone: "", city: "", jobs: [], skills: [], education: [] };
+    const out = { name: "", email: "", phone: "", city: "", jobs: [], skills: [], education: [], ...(raw0.twoColumn ? { twoColumn: true } : {}) };
     out.email = (all.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [""])[0];
     out.phone = clean((all.match(/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/) || [""])[0]);
     // The top lines, split where people put separators: "jose ramirez ~ jramirez77@yahoo.com ~ 817.555.0123".
     const top = lines.slice(0, 6).flatMap(l => l.split(/\s+[~|•·]\s+/)).map(clean);
-    const name = top.find(l => /^[A-Za-z][A-Za-z.'-]+(?: [A-Za-z][A-Za-z.'-]+){1,3}$/.test(l) && !HEADING.test(l) && !TITLE_WORD.test(l)) || "";
-    out.name = name === name.toUpperCase() || name === name.toLowerCase() ? tc(name.toLowerCase()) : name;   // "MARCUS DELGADO" -> "Marcus Delgado"
+    // The name: two to four words of letters (accents too: "José Luis Hernández-Treviño"), near the top, not a heading or a job title.
+    // LinkedIn exports put it below the Contact and Top Skills sidebar, so look a little further down.
+    const NAME = /^[\p{L}][\p{L}.'’-]+(?: (?:"[\p{L}]+"|\([\p{L}]+\)|[\p{L}][\p{L}.'’-]*)){1,4}$/u;
+    const nameLines = lines.slice(0, 14).flatMap(l => l.split(/\s+[~|•·]\s+/)).map(clean).map(l => l.replace(/^([\p{L}'’-]+), ([\p{L}'’-]+)(.*)$/u, "$2 $1$3"));   // "NGUYEN, THANH" -> "THANH NGUYEN"
+    let name = nameLines.find(l => NAME.test(l) && !HEADING.test(l) && !TITLE_WORD.test(l) && !/\b(street|st|ave|road|rd|drive|dr|tx|texas|linkedin|resume|curriculum)\b/i.test(l)) || "";
+    name = name.replace(/\s*("[^"]+"|\([^)]+\))\s*/g, " ").trim();   // a nickname in quotes stays off the header
+    out.name = name === name.toUpperCase() || name === name.toLowerCase() ? tc(name.toLowerCase()).replace(/\bJr\b/, "Jr.") : name;   // "MARCUS DELGADO" -> "Marcus Delgado"
     const STATE_NAMES = { texas: "TX", oklahoma: "OK", louisiana: "LA", arkansas: "AR", "new mexico": "NM", arizona: "AZ", colorado: "CO", florida: "FL", georgia: "GA", tennessee: "TN", california: "CA" };
-    const place = top.join(" | ").match(new RegExp(`\\b([A-Z][a-zA-Z.]+(?: [A-Z][a-zA-Z.]+){0,2}),? (${STATE_CODES}|${Object.keys(STATE_NAMES).map(tc).join("|")}|${Object.keys(STATE_NAMES).join("|").toUpperCase()})\\b(?! ?\\d{3}[\\s.-]\\d)`));
+    const place = [...raw0.top, ...top].join(" | ").match(new RegExp(`\\b([A-Z][a-zA-Z.]+(?: [A-Z][a-zA-Z.]+){0,2}),? (${STATE_CODES}|${Object.keys(STATE_NAMES).map(tc).join("|")}|${Object.keys(STATE_NAMES).join("|").toUpperCase()})\\b(?! ?\\d{3}[\\s.-]\\d)`));
     const caps = x => x === x.toUpperCase() ? tc(x.toLowerCase()) : x;
     out.city = place ? `${caps(place[1])}, ${STATE_NAMES[place[2].toLowerCase()] || place[2]}` : "";   // "GRAND PRAIRIE TX", "Fort Worth Texas" -> "Grand Prairie, TX", "Fort Worth, TX"
     const moving = top.join(" ").match(/\((?:relocating|moving|relocation) to [^)]{2,40}\)/i);   // "Shreveport, LA (relocating to Dallas-Fort Worth)"
+    if (!out.city && /\b(dallas[- ]fort worth|dfw)\b/i.test(lines.slice(0, 14).join(" "))) out.city = "Dallas-Fort Worth, TX";
     if (out.city && moving) out.city += " " + moving[0];
 
     // "84 LUMBER - GRAND PRAIRIE TX" -> "84 Lumber": the place isn't part of the name, and all caps reads as shouting.
-    const tidyCompany = c => { c = clean(c).replace(new RegExp(`\\s*[,–—-]\\s*[A-Za-z .]+,? (?:${STATE_CODES})$`, "i"), "").replace(new RegExp(`,? (?:${STATE_CODES})$`), ""); return c === c.toUpperCase() && /[A-Z]{3}/.test(c) ? tc(c.toLowerCase()) : c; };
+    // A state code only comes off when a city sits before it ("SPARKS ELECTRIC CO" keeps its CO); LLC and LP stay capitals.
+    const tidyCompany = c => { c = clean(c).replace(new RegExp(`\\s*[,–—-]\\s*[A-Za-z .]+,? (?:${STATE_CODES})$`, "i"), "").replace(/\s*,\s*$/, ""); return c === c.toUpperCase() && /[A-Z]{3}/.test(c) ? tc(c.toLowerCase()).replace(/\b(Llc|Lp|Llp|Pllc|Usa|Hvac|Abc)\b/g, x => x.toUpperCase()) : c; };
     let section = "", job = null;
     const startJob = (head, next) => {
       const dates = (head.match(RANGE) || (next || "").match(RANGE) || [""])[0];
       let rest = clean(head.replace(RANGE, "").replace(/^[\s,|·•–—-]+|[,|·•–—-]+\s*$/g, ""));
-      let [title, company] = rest.split(/\s+[|•·]\s+|\s+[–—-]\s+|,\s+(?=[A-Z])|\s+at\s+(?=[A-Z])/);
+      let [title, company] = rest.split(/\s+[|•·]\s+|\s+[–—-]\s+|,\s+(?=[A-Z0-9])|\s+at\s+(?=[A-Z0-9])/);
       if (company && !TITLE_WORD.test(title) && TITLE_WORD.test(company)) [title, company] = [company, title];
       title = clean(title);
       if (title === title.toUpperCase() && /[A-Z]{3}/.test(title)) title = tc(title.toLowerCase());   // "PURCHASING AGENT" -> "Purchasing Agent"
@@ -77,20 +118,21 @@
     lines.forEach((raw, i) => {
       const line = clean(raw);
       if (HEADING.test(line)) { section = line.toLowerCase(); job = null; return; }
+      if (out.name && line === out.name) { section = "about"; job = null; return; }   // LinkedIn: the name (and headline under it) ends the sidebar
       const inline = line.match(HEAD_INLINE);
       if (inline) { section = inline[1].toLowerCase(); job = null; if (/cert|licens|education|training/.test(section)) out.education.push(inline[2]); else inline[2].split(/\s*[,;|•·]\s*/).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
-      if (/skill|tool/.test(section) && !/cert|licens/.test(section)) { line.replace(BULLET, "").split(/\s*[,;|•·]\s*/).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
-      if (/education|cert|licens|training/.test(section)) { out.education.push(line.replace(BULLET, "")); return; }
-      if (/summary|profile|objective|references/.test(section)) return;
+      if (/skill|tool|competenc|expertise|qualification|habilidad/.test(section) && !/cert|licens/.test(section)) { line.replace(BULLET, "").split(/\s*[,;|•·]\s*/).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
+      if (/educa|cert|licens|training/.test(section)) { out.education.push(line.replace(BULLET, "")); return; }
+      if (/summary|profile|objective|references|about|contact|accomplish|highlight|achievement|language|idioma/.test(section)) return;
       if (/@|\d{3}[\s.)-]+\d{3}[\s.-]\d{4}/.test(line) && !RANGE.test(line)) return;   // contact lines
       if (!section && i < 5 && !RANGE.test(line)) return;   // the name and address block above the first heading
       const bullet = BULLET.test(raw), text = line.replace(BULLET, "");
       const last = job?.bullets[job.bullets.length - 1];
       if (!bullet && last && !/[.!]$/.test(last) && /^[a-z]/.test(text)) { job.bullets[job.bullets.length - 1] += " " + text; return; }   // a wrapped line
       // A title line: short, or any length when it carries the dates ("Counter Sales / Inside Sales — Red River…, Shreveport, LA  Mar 2019 – Present").
-      const short = !bullet && (line.length < 90 || (RANGE.test(line) && line.length < 180)) && !/[.;!]$/.test(line);
+      const short = !bullet && (line.length < 90 || (RANGE.test(line) && line.length < 180)) && !/[.;!]$/.test(line.replace(/\b(inc|co|corp|ltd|jr|sr|llc|bros)\.$/i, ""));
       if (short) {
-        const bare = clean(line.replace(RANGE, "").replace(/^[,|·•–—-]+\s*|[,|·•–—-]+\s*$/g, ""));
+        const bare = clean(line.replace(new RegExp(RANGE.source, "gi"), "").replace(/\(\s*\)/g, "").replace(/^[,|·•–—()-]+\s*|[,|·•–—()-]+\s*$/g, ""));
         const dates = clean((line.match(RANGE) || [""])[0]);
         if (job && !job.bullets.length) {   // the lines under a title: its company, its dates
           if (!bare) { job.dates ||= dates; return; }
@@ -99,8 +141,8 @@
         // A new job: the line has dates, or dates follow within two lines, or it names a title and isn't about what they did.
         // Unmarked lines under a job ("Quoted doors and windows for builders") stay that job's lines.
         const datesNext = [lines[i + 1], lines[i + 2]].some(l => l && RANGE.test(l) && !BULLET.test(l) && clean(l).length < 90);
-        const titled = (TITLE_WORD.test(line) || datesNext) && !DID.test(bare);
-        if (bare && (dates || titled || (!job && /experience|employment|history/.test(section)))) return startJob(line, lines[i + 1]);
+        const titled = (datesNext || (TITLE_WORD.test(line) && bare.split(" ").length <= 8)) && !DID.test(bare);
+        if (bare && (dates || titled || (!job && /experienc|employment|history/.test(section)))) return startJob(line, lines[i + 1]);
         if (!bare) return;
       }
       if (job && (bullet || line.length > 30 || DID.test(text) || text.split(" ").length > 3)) job.bullets.push(text);
@@ -343,6 +385,6 @@
   // so they don't turn off No Commission Sales Jobs.
   const SOLD_BEFORE = /\b(outside sales|territory|account (manager|executive)|business development|sales (rep|representative|manager|executive|consultant))\b/i;
   const soldBefore = titles => (titles || []).some(t => SOLD_BEFORE.test(t) && !/\b(counter|inside)\b/i.test(t));
-  const api = { mailText, soldBefore, SOLD_BEFORE, readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS, TITLE_WORD, asRole };
+  const api = { prep, mailText, soldBefore, SOLD_BEFORE, readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS, TITLE_WORD, asRole };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else window.Tailor = api;
 })();

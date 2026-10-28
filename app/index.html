@@ -764,9 +764,13 @@ async function readResume(text) {
   if (home && !draft.cities.length) { draft.cities.push(home.trim()); $("#iRemote").checked = false; }
   if (!profile?.data?.wants?.avoid) $("#iNoSales").checked = !Tailor.soldBefore(draft.titles);
   renderSetup();
+  // Say plainly when the layout made reading harder, so they know where to look.
+  const bare = jobs.filter(j => !(j.bullets || []).length).length;
+  const warn = draft.resume.twoColumn ? " It looked like two columns, so check each job's lines in Me."
+    : bare ? ` ${bare === 1 ? "One job has" : `${bare} jobs have`} no lines under it; add a few in Me so its resume isn't bare.` : "";
   const many = (n, one, more = one + "s") => `${n} ${n === 1 ? one : more}`;
   msg.innerHTML = draft.titles.length
-    ? `<span class="ok">Got it.</span> I filled in ${many(draft.titles.length, "past job")}${data.years ? `, ${many(data.years, "year")}` : ""}, ${many(draft.skills.length, "skill")} and ${many(draft.industries.length, "industry", "industries")}. Check them below and fix anything off.`
+    ? `<span class="ok">Got it.</span> I filled in ${many(draft.titles.length, "past job")}${data.years ? `, ${many(data.years, "year")}` : ""}, ${many(draft.skills.length, "skill")} and ${many(draft.industries.length, "industry", "industries")}. Check them below and fix anything off.${warn}`
     : `<span class="err">I couldn't pick out your jobs from that. Type them in below.</span>`;
 }
 async function onResumeFile(file) {
