@@ -114,3 +114,8 @@ test("a big board whose search fails is a failed board, not an empty one", async
   await assert.rejects(S.workday("h.wd1.myworkdayjobs.com/h/S", "H", { search: ONE }));
   await assert.rejects(S.icims("careers-x.icims.com", "X", { search: ONE }));
 });
+
+test("big boards read office roles and Texas postings first", () => {
+  const list = [{ t: "CDL Driver", l: "Dallas, TX" }, { t: "Stocker", l: "Reno, NV" }, { t: "Purchasing Agent", l: "Reno, NV" }, { t: "Estimator", l: "Fort Worth, TX" }];
+  assert.deepEqual(S.firstToRead(list, p => p.t, p => p.l).map(p => p.t), ["Estimator", "Purchasing Agent", "CDL Driver", "Stocker"]);
+});

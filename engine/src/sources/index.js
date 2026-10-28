@@ -133,6 +133,15 @@ export const DEEP_SEARCH = ["purchasing", "procurement", "buyer", "estimator", "
   "quality", "safety coordinator", "document control", "contract administrator"];
 const DETAIL_CAP = 40;   // new postings read in full per board per run; the rest wait for the next run
 
+// Which new postings get read in full first: office-role titles, then Texas. Some boards ignore the search
+// words and list every driver and stocker, so this keeps the per-run budget on the jobs this app is for.
+const OFFICE = new RegExp(DEEP_SEARCH.join("|") + "|coordinator|analyst|sales|account|manager|administrat|engineer", "i");
+const TEXAS = /\b(TX|Texas)\b|Dallas|Fort Worth|Arlington|Plano|Irving|Frisco|McKinney|Denton|Grapevine|Carrollton|Garland|Mesquite|Lewisville/i;
+export function firstToRead(list, title, place = () => "") {
+  const score = p => (OFFICE.test(title(p) || "") ? 2 : 0) + (TEXAS.test(place(p) || "") ? 1 : 0);
+  return list.map((p, i) => [score(p), i, p]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map(x => x[2]).slice(0, DETAIL_CAP);
+}
+
 const decode = s => String(s || "").replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 
 // Runs fn over items, a few at a time, so one company's server isn't hit with a hundred requests at once.
@@ -185,7 +194,7 @@ export async function workday(token, name, { known = new Set(), search = DEEP_SE
   }, true);
   const list = [...seen.values()];
   const id = p => `wd:${tenant}:${p.externalPath.split("_").pop() || p.externalPath}`;
-  const fresh = list.filter(p => !known.has(id(p))).slice(0, DETAIL_CAP);
+  const fresh = firstToRead(list.filter(p => !known.has(id(p))), p => p.title, p => p.locationsText);
   const details = new Map((await pool(fresh, 4, async p => [p.externalPath, (await getJson(api + p.externalPath)).jobPostingInfo])).filter(Boolean));
   const out = [];
   for (const p of list) {
@@ -214,7 +223,7 @@ export async function icims(token, name, { known = new Set(), search = DEEP_SEAR
     }
   }, true);
   const list = [...found.values()], id = p => `icims:${token.split(".")[0]}:${p.jid}`;
-  const fresh = list.filter(p => !known.has(id(p))).slice(0, DETAIL_CAP);
+  const fresh = firstToRead(list.filter(p => !known.has(id(p))), p => p.title);
   const details = new Map((await pool(fresh, 3, async p => [p.jid, jsonLdJob(await getText(p.url + "?in_iframe=1"))])).filter(x => x && x[1]));
   const out = [];
   for (const p of list) {
@@ -241,7 +250,7 @@ export async function ukg(token, name, { known = new Set(), search = DEEP_SEARCH
     for (const o of d.opportunities || []) if (o.Id && !found.has(o.Id)) found.set(o.Id, o);
   }, true);
   const list = [...found.values()], id = o => `ukg:${tenant}:${o.Id}`;
-  const fresh = list.filter(o => !known.has(id(o))).slice(0, DETAIL_CAP);
+  const fresh = firstToRead(list.filter(o => !known.has(id(o))), o => o.Title, o => ((o.Locations || [])[0]?.Address || {}).State?.Code);
   const details = new Map((await pool(fresh, 3, async o => {
     const html = await getText(`${base}/OpportunityDetail?opportunityId=${o.Id}`);
     const m = html.match(/CandidateOpportunityDetail\((\{[\s\S]*?\})\);?\s*\n/);
@@ -267,7 +276,7 @@ export async function smartrecruiters(token, name, { known = new Set(), search =
     for (const p of d.content || []) if (p.id && !found.has(p.id)) found.set(p.id, p);
   }, true);
   const list = [...found.values()], id = p => `sr:${token}:${p.id}`;
-  const fresh = list.filter(p => !known.has(id(p))).slice(0, DETAIL_CAP);
+  const fresh = firstToRead(list.filter(p => !known.has(id(p))), p => p.name, p => p.location?.region);
   const details = new Map((await pool(fresh, 3, async p => [p.id, await getJson(`https://api.smartrecruiters.com/v1/companies/${token}/postings/${p.id}`)])).filter(Boolean));
   return list.filter(p => details.has(p.id) || known.has(id(p))).map(p => {
     const d = details.get(p.id), sec = d?.jobAd?.sections || {};
@@ -291,7 +300,7 @@ export async function oracle(token, name, { known = new Set(), search = DEEP_SEA
     for (const r of d.items?.[0]?.requisitionList || []) if (r.Id && !found.has(r.Id)) found.set(r.Id, r);
   }, true);
   const list = [...found.values()], id = r => `oracle:${host.split(".")[0]}:${r.Id}`;
-  const fresh = list.filter(r => !known.has(id(r))).slice(0, DETAIL_CAP);
+  const fresh = firstToRead(list.filter(r => !known.has(id(r))), r => r.Title, r => r.PrimaryLocation);
   const details = new Map((await pool(fresh, 3, async r => {
     const d = await getJson(`${api}/recruitingCEJobRequisitionDetails?expand=all&onlyData=true&finder=ById;Id=%22${r.Id}%22,siteNumber=${siteNo}`);
     const x = d.items?.[0] || {};
