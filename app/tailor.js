@@ -255,10 +255,10 @@
   // What an email from a company says about an application. Only plain, common phrasing counts.
   // A form letter ("we'll contact you to schedule an interview if you're selected") is an acknowledgement, not an interview,
   // and "unfortunately" alone isn't a no ("unfortunately Friday won't work, could we do Monday?").
-  const NO = /\b(not (to )?(move|moving) forward with your|decided (to )?(pursue|proceed|move forward|go) (with other|in a different direction)|different direction|other (candidates|applicants) (whose|who)|position has been filled|no longer (being )?consider|not (been )?selected|will not be moving forward|regret to inform|won'?t be moving forward|not (a|the right) (fit|match) for this)\b/;
-  const OFFER = /\b(offer letter|pleased to offer|extend (you )?an offer|(attached|here) is your offer|verbal offer)\b/;
+  const NO = /\b(not (to )?(move|moving) forward with your|decided (to )?(pursue|proceed|move forward|go) (with other|in a different direction)|different direction|other (candidates|applicants) (whose|who)|position has been filled|no longer (being )?consider|not (been )?selected|will not be moving forward|regret to inform|won'?t be moving forward|not (a|the right) (fit|match) for this|(another|an internal|a different|other) candidate|(filled|closed) the (role|position|opening)|not (been )?successful|(unable|not able|won'?t be able|will not be able) to offer you)\b/;
+  const OFFER = /\b(offer letter|pleased to offer|extend (you )?an offer|(attached|here) is your offer|verbal offer|(excited|happy|delighted|thrilled|glad) to offer you|make you an offer|offer of employment)\b/;
   const FORM = /\b(if (your|you are|you're|we)[^.]{0,60}(selected|qualifications|experience|background|match)|will (contact|reach out to|be in touch with) (you|candidates|applicants)[^.]{0,40}(if|should|whose)|unable to respond|can'?t respond to (every|each|all)|high volume of (applications|applicants)|only (candidates|applicants) (selected|who))/;
-  const ASK = /\b((schedule|set up|arrange|book) (a |an |some |your |a quick )?(time|call|interview|phone screen|phone interview|video interview|chat|meeting)|(phone|video|in-person|onsite|on-site|zoom|teams) interview|come in for an interview|invite you (to|for)|are you (free|available)|your availability|times that work|calendly|(bring|have) you in|come in (to|for)|meet (with )?(you|our|the|me)\b|phone screen with)\b/;
+  const ASK = /\b((schedule|set up|arrange|book) (a |an |some |your |a quick )?(time|call|interview|phone screen|phone interview|video interview|chat|meeting)|(phone|video|in-person|onsite|on-site|zoom|teams) interview|come in for an interview|invite you (to|for)|are you (free|available)|your availability|times that work|calendly|(bring|have) you in|come in (to|for)|meet (with )?(you|our|the|me)\b|phone screen with|(quick|short|brief) (call|chat)|hop on a call|(swing|stop|come) by)\b/;
   const WHEN = /\b(mon|tues|wednes|thurs|fri|satur|sun)day\b[\s\S]{0,40}?\b\d{1,2}(:\d\d)?\s*(am|pm|a\.m\.|p\.m\.)/;
   const ACK = /\b((received|receipt of) your application|thank(s| you) for (applying|your application|your interest)|application (has been )?(received|submitted))\b/;
   // A reply is read in this order: an offer, a clear no, a day and time, a form letter, a real ask, then a plain thank-you.
@@ -266,7 +266,8 @@
     const t = `${subject || ""} ${snippet || ""}`.toLowerCase();
     if (OFFER.test(t)) return "offer";
     if (NO.test(t)) return "closed";
-    if (WHEN.test(t)) return "interview";   // a day and a time is an invite, whatever else it says
+    // A day and a time is an invite, whatever else it says; office hours ("Monday through Friday, 8 a.m. to 5 p.m.") aren't.
+    if (WHEN.test(t.replace(/\b(mon|tues|wednes|thurs|fri|satur|sun)day\s*(through|thru|to|-|–)\s*(mon|tues|wednes|thurs|fri|satur|sun)day\b/g, "weekdays"))) return "interview";
     if (FORM.test(t)) return "applied";      // "we'll contact you to schedule an interview if..." is a form letter
     if (ASK.test(t)) return "interview";
     if (/\bunfortunately\b/.test(t)) return null;   // something went wrong, but not clearly a no: let them read it

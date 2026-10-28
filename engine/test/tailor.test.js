@@ -92,6 +92,15 @@ test("a reply moves a job forward, a clear no closes it, and nothing moves backw
   assert.equal(T.readReply("Buyer role", "We'd like to meet you Wednesday Nov. 5 at 9 am."), "interview");
   assert.equal(T.readReply("Thanks for applying", "Unfortunately, we have decided to go in a different direction."), "closed");
   assert.equal(T.readReply("Thank you", "Thanks for applying. We'll keep your resume on file in case a job offer opens up."), "applied");
+  assert.equal(T.readReply("Buyer", "We've decided to move ahead with another candidate for this role."), "closed");
+  assert.equal(T.readReply("Update", "After careful review we went with an internal candidate."), "closed");
+  assert.equal(T.readReply("Update", "We filled the position last week. Thanks again for your time."), "closed");
+  assert.equal(T.readReply("Update", "Sadly we won't be able to offer you a position at this time."), "closed");
+  assert.equal(T.readReply("Good news", "We're excited to offer you the Buyer position at BuildCo!"), "offer");
+  assert.equal(T.readReply("Buyer", "We'd like to make you an offer. Can you talk tonight?"), "offer");
+  assert.equal(T.readReply("Hey", "Can you swing by the yard tomorrow at 2?"), "interview");
+  assert.equal(T.readReply("Estimator", "Got time for a quick call tomorrow afternoon?"), "interview");
+  assert.equal(T.readReply("Application received", "Thanks for applying. Our office is open Monday through Friday, 8 a.m. to 5 p.m."), "applied");
   assert.equal(T.readReply("Lunch", "Team lunch on Friday"), null);
   assert.equal(T.nextStatus("applied", "interview"), "interview");
   assert.equal(T.nextStatus("interview", "applied"), null);

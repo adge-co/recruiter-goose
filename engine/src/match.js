@@ -38,6 +38,9 @@ const AVOID_WORDS = {
 // Junior and assistant office titles (Jr Estimator, Assistant Buyer, APM) are the usual first step for people coming
 // in from the field, so they aren't marked down; internships and graduate programs are.
 const ENTRY = /\b(graduate|intern|internship|trainee|apprentice)\b/i;
+// A past title that carried a quota. Counter and inside sales usually didn't, so they don't lift a no to sales.
+const SOLD_BEFORE = /\b(outside sales|territory|account (manager|executive)|business development|sales (rep|representative|manager|executive|consultant))\b/i;
+const COMMISSION_ONLY = /\b(commission[- ]only|100% commission|straight commission|uncapped commission)\b/i;
 const SALESY = /\b(quota|commission|cold call|outbound prospecting|book of business|ote\b|on-target earnings)\b/i;
 
 // What work in each field sounds like. A job's own duties naming these is what makes it fit someone's background,
@@ -280,11 +283,12 @@ export function score(j, p, common) {
   if (stretch) { s -= 15; flags.push("Wants More Years"); }
   const underFloor = floor && j.payMax && j.payMax < floor;
   // A kind of role they ruled out, unless they asked for that very kind of title (Inside Sales under Quoting).
-  // Someone who has held a sales title isn't ruling out sales.
-  const avoid = p.wants.avoid.filter(a => !p.pastTitles.some(t => (AVOID_WORDS[a] || [a]).some(w => has(t, w))));
+  // Someone who has carried a quota before isn't ruling out sales; a counter or inside sales title doesn't count.
+  const avoid = p.wants.avoid.filter(a => !p.pastTitles.some(t => a === "sales" ? SOLD_BEFORE.test(t) && !/\b(counter|inside)\b/i.test(t) : (AVOID_WORDS[a] || [a]).some(w => has(t, w))));
   const asked = p.wants.roles.flatMap(r => ROLE_WORDS[r] || [r]);
   const avoidHit = avoid.find(a => { const ws = AVOID_WORDS[a] || [a];
-    return ws.some(w => has(title, w)) && !asked.some(r => has(title, r) && ws.some(w => has(r, w))); });
+    return ws.some(w => has(title, w)) && !asked.some(r => has(title, r) && ws.some(w => has(r, w)))
+      && !(a === "sales" && /\b(inside sales|counter)\b/i.test(title) && p.pastTitles.some(t => /\b(counter|inside)\b/i.test(t))); });   // counter people can still take inside sales desks
   const entry = ENTRY.test(title) && p.years >= 5;
   if (entry) { s -= 15; flags.push("Entry Level"); }
   const salesy = SALESY.test(j.description);
@@ -308,6 +312,7 @@ export function score(j, p, common) {
   let fit = (salesy && avoid.includes("sales")) ? "sales" : s >= 70 ? "strong" : s >= 50 ? "good" : s >= 35 ? "reach" : null;
   if (!fieldPts && (fit === "strong" || fit === "good")) { fit = "reach"; flags.push("Outside Your Field"); }   // the right title in an unrelated industry is a long shot, not a match
   if ((stretch || underFloor || entry || technical) && (fit === "strong" || fit === "good")) fit = "reach";   // a stretch is never sold as a sure thing
+  if (fit === "strong" && COMMISSION_ONLY.test(j.description)) { fit = "good"; flags.push("Commission Only"); }   // no base pay is never a strong fit
   return { ...j, score: s, raw, fit, reasons, flags, ageDays: age === null ? null : Math.floor(age) };
 }
 

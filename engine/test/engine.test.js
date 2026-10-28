@@ -256,4 +256,7 @@ test("sales titles stay for someone who has sold or asked for quoting work", asy
   assert.equal(checkJob(job, { ...base, pastTitles: ["Store Manager"] }).hiddenBecause, "Sales role", "ruled out sales and never sold");
   assert.equal(checkJob(job, { ...base, pastTitles: ["Counter Sales"] }).hiddenBecause, null, "has sold at the counter");
   assert.equal(checkJob(job, { ...base, pastTitles: ["Store Manager"], wants: { ...base.wants, roles: ["estimating", "quoting"] } }).hiddenBecause, null, "asked for quoting");
+  const outside = { ...job, title: "Outside Sales Representative", description: "Commission only. Call on builders and contractors to sell doors and windows." };
+  assert.equal(checkJob(outside, { ...base, pastTitles: ["Counter Sales"] }).hiddenBecause, "Sales role", "counter sales isn't a yes to outside sales");
+  assert.equal(checkJob(outside, { ...base, pastTitles: ["Outside Sales Rep"] }).hiddenBecause, null, "has carried a quota");
 });

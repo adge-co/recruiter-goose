@@ -532,6 +532,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
 <canvas id="confetti" class="hidden"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
 <script src="tailor.js"></script>
 <script>
 const SUPABASE_URL = "https://aemtkwqrcmeksxvowmzr.supabase.co";
@@ -603,7 +604,7 @@ function setAuthMode(m) {
   $("#aName").classList.toggle("hidden", authMode === "in"); $("#aNameL").classList.toggle("hidden", authMode === "in");
   $("#aPass").autocomplete = authMode === "in" ? "current-password" : "new-password";
   $("#aGo").textContent = authMode === "in" ? "Sign In" : "Make My Account";
-  $("#aForgot").classList.toggle("hidden", authMode !== "in");
+  $("#aForgot").classList.toggle("hidden", authMode !== "in" || !window.RG_RESET_MAIL);
   $("#aErr").classList.add("hidden");
 }
 // Forgot it: Supabase emails a link back to this page, which signs them in and opens this sheet for a new password.
@@ -624,7 +625,7 @@ function newPasswordSheet() {
     const { error } = await sb.auth.updateUser({ password: a });
     $("#npGo").disabled = false;
     if (error) { err.textContent = error.message; err.classList.remove("hidden"); return; }
-    $("#sheet [data-close]")?.click(); toast("New password saved.");
+    recovering = false; $("#sheet [data-close]")?.click(); toast("New password saved.");
   };
 }
 $("#aForgot").onclick = async () => {
@@ -1649,14 +1650,14 @@ async function load() {
     }
     pending = null;
   }
-  closeSheet();
+  if (recovering) newPasswordSheet(); else closeSheet();   // a reset link signs them in; keep the new-password sheet up
   if (!profile?.data?.pastTitles?.length) return startSetup();
   openApp("matches"); renderMine(); recheckSaved();
   if (!result || Date.now() - Date.parse(result.ranAt) > 12 * 3600e3) runSearch(); else renderMatches();
 }
-let loadedFor = null, guestResult = null;
+let loadedFor = null, guestResult = null, recovering = false;
 sb.auth.onAuthStateChange((event, session) => {
-  if (event === "PASSWORD_RECOVERY") setTimeout(newPasswordSheet, 300);
+  if (event === "PASSWORD_RECOVERY") { recovering = true; setTimeout(newPasswordSheet, 300); }
   const was = user;
   user = session?.user || null;
   if (!user) {
