@@ -744,8 +744,9 @@ async function readResume(text) {
   const msg = $("#rMsg");
   if (!text || text.trim().length < 80) { msg.innerHTML = `<span class="err">I couldn't find much text in that. Try pasting it instead.</span>`; return; }
   msg.textContent = "Reading your resume…";
-  const { data, error } = await sb.functions.invoke("match", { body: { resume: text } });
-  if (error || data?.error) { msg.innerHTML = `<span class="err">${esc(data?.error || error.message)}</span>`; return; }
+  // The jobs are read right here, so a pasted resume still fills in when the server can't be reached; the server only adds to it.
+  const res = await sb.functions.invoke("match", { body: { resume: text } }).catch(e => ({ error: e }));
+  const data = res.error || res.data?.error ? {} : res.data || {};
   const merge = (key, vals) => { for (const v of vals || []) if (!draft[key].some(x => x.toLowerCase() === String(v).toLowerCase())) draft[key].push(v); };
   // One reader for the jobs: the same one that builds each tailored resume, so setup, Me and the PDF always agree.
   // The server adds what it reads from the whole text: skills, industries, years and the roles those point to.
@@ -766,8 +767,9 @@ async function readResume(text) {
   renderSetup();
   // Say plainly when the layout made reading harder, so they know where to look.
   const bare = jobs.filter(j => !(j.bullets || []).length).length;
-  const warn = draft.resume.twoColumn ? " It looked like two columns, so check each job's lines in Me."
-    : bare ? ` ${bare === 1 ? "One job has" : `${bare} jobs have`} no lines under it; add a few in Me so its resume isn't bare.` : "";
+  const warn = !jobs.length && draft.titles.length ? " I couldn't find a work history section, so your tailored resumes will have none. Add your jobs in Me."
+    : draft.resume.twoColumn ? " It looked like two columns, so check each job's lines in Me."
+    : bare ? ` ${bare === 1 ? "One job has no lines under it" : `${bare} jobs have no lines under them`}; add a few in Me so the resume isn't bare.` : "";
   const many = (n, one, more = one + "s") => `${n} ${n === 1 ? one : more}`;
   msg.innerHTML = draft.titles.length
     ? `<span class="ok">Got it.</span> I filled in ${many(draft.titles.length, "past job")}${data.years ? `, ${many(data.years, "year")}` : ""}, ${many(draft.skills.length, "skill")} and ${many(draft.industries.length, "industry", "industries")}. Check them below and fix anything off.${warn}`
@@ -1027,7 +1029,7 @@ document.addEventListener("click", async e => {
     if (st.value === "applied" && before.status !== "applied") toast(patch.follow_up ? `Applied. Follow-up set for ${longDay(patch.follow_up)}.` : "Applied. Nice.");
     if (st.value === "interview") celebrate("interview", data);
     if (st.value === "offer") celebrate("offer", data);
-  }
+  } else toast(patch.follow_up ? `Follow-up set for ${longDay(patch.follow_up)}.` : "Follow-up cleared.");   // the new day replaces any older note on screen
   renderMine(); renderMatches();
   if (!$("#sheet").classList.contains("hidden") && $("#sheetBody").dataset.job === data.job_key) openSheet(data.job_key, true);
 });

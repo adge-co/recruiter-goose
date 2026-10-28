@@ -103,7 +103,8 @@ async function open(browser, { width, height, dark, seed }) {
   return { ctx, page, errors };
 }
 const noSideScroll = async page => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "page scrolls sideways");
-const shot = (page, name) => page.screenshot({ path: join(SHOTS, name + ".png"), fullPage: false });
+// A note from an earlier step would cover the screen, so it's hidden before each picture.
+const shot = async (page, name) => { await page.evaluate(() => document.querySelector("#toast")?.classList.add("hidden")); return page.screenshot({ path: join(SHOTS, name + ".png"), fullPage: false }); };
 
 const browser = await chromium.launch();
 let passed = 0;
@@ -330,8 +331,8 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     await shot(page, "phone-light-resume-fit");
     await page.click("#sheetBody details:has(.paper) summary");
     const lines = await page.$$eval("#sheetBody .paper li", els => els.map(e => e.textContent));
-    assert.equal(lines[0], "Ran onboarding for new contractor accounts", "the line that fits this posting comes first");
-    assert.equal(lines[1], "Managed purchase orders and vendor lead times for 40+ active jobs", "then the line with a number in it");
+    assert.equal(lines[0], "Managed purchase orders and vendor lead times for 40+ active jobs", "the line that fits this purchasing-software posting best comes first");
+    assert.equal(lines[1], "Ran onboarding for new contractor accounts", "then the onboarding line");
     const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#sheetBody [data-pdf]")]);
     assert.equal(dl.suggestedFilename(), "Jordan Avery - BuildCo Implementation Specialist.pdf");
     const head = await (await import("node:fs/promises")).readFile(await dl.path());

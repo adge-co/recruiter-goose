@@ -263,3 +263,31 @@ test("nine real-world resume layouts each read into the right jobs", async () =>
   assert.equal(read("r5_two_column").twoColumn, true);
   assert.deepEqual(read("r9_linkedin_export").skills, ["Takeoffs", "PlanSwift", "Bluebeam"]);
 });
+
+// Nine more from a later review: Indeed's export, a table summary, military to civilian, a union electrician, no dates,
+// oldest job first, a Google Docs paste with ✓ and ➢, a superintendent's projects list, and a counter purchaser moving to DFW.
+test("nine more layouts: military, oldest first, projects lists, check-mark skills, a move to DFW", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = f => T.readResume(readFileSync(new URL(`./resumes/${f}.txt`, import.meta.url), "utf8"));
+  const mil = read("b3_military");
+  assert.deepEqual(mil.jobs.map(j => [j.title, j.company]), [["Supply Sergeant (92Y)", "U.S. Army"], ["Unit Supply Specialist", "U.S. Army"]]);
+  assert.equal(mil.city, "Killeen, TX (relocating to Fort Worth, TX)");
+  const old = read("b6_oldestfirst");
+  assert.deepEqual(old.jobs.map(j => j.title), ["Purchasing Lead", "Buyer", "Purchasing Assistant", "Receptionist"]);
+  const gd = read("b7_gdocs");
+  assert.deepEqual(gd.jobs.map(j => j.title), ["Estimator", "Project Coordinator"]);
+  assert.deepEqual(gd.skills, ["PlanSwift", "Bluebeam", "Sage 300", "Procore", "Excel"]);
+  const sup = read("b8_super");
+  assert.deepEqual(sup.jobs.map(j => [j.title, j.dates]), [["Senior Superintendent", "2017–Present"], ["Superintendent", "2008–2017"]]);
+  assert.ok(!sup.jobs.some(j => j.bullets.some(b => /projects/i.test(b))));
+  const luis = read("b9_counter_purch");
+  assert.equal(luis.city, "Shreveport, LA (relocating to Dallas-Fort Worth, TX)");
+  assert.deepEqual(luis.skills, ["Spruce ERP", "Purchasing", "Counter Sales", "Lumber Grading", "Spanish"]);
+  const t = T.tailor(luis, { title: "Purchasing Coordinator", company: "Hilti", description: "Purchasing coordinator to manage purchasing, purchase orders and inventory. Hilti is hiring." });
+  assert.deepEqual(t.missing, []);   // "Purchase lumber… place POs" and "dead stock" show the work; "hiring" is never a skill to add
+  assert.match(t.summary, /^Most recently worked as a Purchaser at Red River Lumber Co\. /);
+  assert.ok(!/\.\./.test(T.email(t, { title: "Purchasing Coordinator", company: "Hilti" }).body));
+  assert.match(T.tailor(mil, { title: "Buyer", company: "X" }).summary, /in the U\.S\. Army\./);
+  assert.deepEqual(read("b1_indeed").education[0], "High school diploma · Arlington High School - Arlington, TX · 2014 to 2018");
+  assert.ok(!read("b4_union").education.includes("APPRENTICESHIP"));
+});
