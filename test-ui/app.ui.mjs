@@ -311,8 +311,11 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     const u = new URL(r.request().url());
     if (u.pathname.endsWith("/drafts")) { drafts.push(JSON.parse(r.request().postData())); return r.fulfill({ json: { id: "d1", message: { id: "m1" } } }); }
     if (u.pathname.endsWith("/messages")) return r.fulfill({ json: u.searchParams.get("q").includes("BuildCo") ? { messages: [{ id: "x1" }] } : {} });
-    return r.fulfill({ json: { snippet: "Thanks for applying. We'd like to schedule a phone screen. What is your availability this week?", internalDate: String(Date.now()),
-      payload: { headers: [{ name: "Subject", value: "Next steps with BuildCo" }, { name: "From", value: "Dana Lee <dana@buildco.com>" }] } } });
+    // The preview only shows the thank-you; the invite is in the second paragraph of the full email, as job sites write them.
+    const body = Buffer.from("Hi,\n\nThanks for applying to BuildCo.\n\nWe'd like to schedule a phone screen. What is your availability this week?\n\nDana\n\nOn Mon, Oct 27, 2026 at 9:00 AM Jordan wrote:\n> We regret to inform you\n").toString("base64url");
+    return r.fulfill({ json: { snippet: "Hi, Thanks for applying to BuildCo.", internalDate: String(Date.now()),
+      payload: { mimeType: "multipart/alternative", headers: [{ name: "Subject", value: "Next steps with BuildCo" }, { name: "From", value: "Dana Lee <dana@buildco.com>" }],
+        parts: [{ mimeType: "text/plain", body: { data: body } }, { mimeType: "text/html", body: { data: "" } }] } } });
   });
   await page.reload();
   await step("[resume] a job's sheet shows how the resume lines up, and the PDF downloads", async () => {

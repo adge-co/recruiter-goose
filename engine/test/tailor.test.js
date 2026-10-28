@@ -224,3 +224,15 @@ test("odd resume formats keep every job, the current one first, with its own lin
   assert.equal(T.readResume(ODD.CAPS).city, "Grand Prairie, TX");
   assert.deepEqual(T.readResume(ODD.NOMARK).education, ["Weatherford High School"]);
 });
+
+test("a Gmail message is read whole, without the quoted thread", () => {
+  global.atob ||= b => Buffer.from(b, "base64").toString("binary");
+  const enc = t => Buffer.from(t).toString("base64url");
+  const plain = { mimeType: "multipart/alternative", parts: [{ mimeType: "text/plain", body: { data: enc("Thanks for applying.\n\nWe have decided to pursue other candidates.\n\nOn Tue, Oct 28, 2026 at 8:00 AM Jordan <j@x.com> wrote:\n> Can we schedule an interview Monday at 9am?") } }] };
+  const text = T.mailText(plain);
+  assert.match(text, /pursue other candidates/);
+  assert.doesNotMatch(text, /schedule an interview/);
+  assert.equal(T.readReply("Your application", text), "closed");
+  const html = { mimeType: "text/html", body: { data: enc("<p>Hi Jos&eacute;,</p><p>We&#39;d like to offer you the Estimator position.</p>") } };
+  assert.equal(T.readReply("Good news", T.mailText(html)), "offer");
+});

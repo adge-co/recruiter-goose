@@ -263,28 +263,74 @@
       `--${B}--`,
     ].join("\r\n");
   }
-  // What an email from a company says about an application. Only plain, common phrasing counts, and it's read a sentence
-  // at a time: a form letter's "if you're selected we'll contact you" or the office hours under a thank-you aren't an invite,
-  // and a rejection that adds "if another position opens we'll reach out" is still a no. Tested against engine/test/reply-cases.js.
+  // What an email from a company says about an application. Rules only, read a sentence at a time, built from families of
+  // wording ("not" near "advance / move forward / proceed") rather than one phrase per sample, so new wordings still land.
+  // Sentences that are store hours, footers or sales copy are set aside first; a form letter's "if you're selected" sentence
+  // can only say "received". When it's unclear the job doesn't move: a wrong move is worse than none.
+  // Tested against engine/test/reply-cases.js; add new wordings there before changing these.
   const DAY = "(?:mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?|sun)(?:day)?";
-  const NO = /\b(not (to )?(move|moving) forward|(won'?t|will not|not) be moving forward|decided (to )?(pursue|proceed|move forward|go) (with )?(other|another|a different)|(pursue|proceed with|move forward with|went with|go with|chosen|chose|decided to hire|hire|hired|offer the (role|position|job) to) (other|another|a different|an internal|someone|someone else)|(another|a different|other) direction|whose (qualifications|experience|background|skills)[^.]{0,30} (match|align|fit)\w*|no longer (being )?(under )?consider\w*|(proceed|move forward|go|move ahead) with (a|another|other|an internal) (candidate|applicant)s?|not (been )?selected|not (be )?proceeding|regret to inform|respectfully decline|decline your|not (a|the right) (fit|match) for (this|the)|(has been|was|is now|have) (filled|closed|cancell?ed)|filled the (role|position|opening|job)|no longer hiring|not (been )?successful|(unable|not able|won'?t be able|will not be able) to offer you|(another|an internal|other) (candidate|applicant)s? (whose|who|for|was)|other (candidates|applicants))\b/;
-  const OFFER = /\b(offer letter|formal offer|extend (you )?an offer|(attached|here) is your( formal)? offer|verbal offer|(pleased|excited|happy|delighted|thrilled|glad|like|love|want|going) to offer you|make you an offer|offer of employment|contingent offer|you got the (job|position)|(the )?(job|position|role) is yours|welcome aboard)\b/;
-  const FORM = /\b(if (you are|you're) (selected|chosen|not selected|a (good |strong )?(fit|match))|if your (qualifications|experience|background|skills|application)|if we (decide|feel|determine|think|need|have|find)|if (another|other) (candidate|applicant)|if there (is|'s) a (fit|match)|only (candidates|applicants|those)|due to (the )?(high )?volume|high volume of|unable to respond|can'?t respond to|reach out if|contact you if|keep your resume on file)\b/;
-  const ASK = /\b((schedule|set up|arrange|book|pick|select|choose) (a |an |some |your |a quick |a time for )?(time|call|interview|phone screen|phone interview|video interview|video call|chat|meeting|conversation)|(phone|video|in-person|onsite|on-site|zoom|teams|second|final|next) (round )?interview|interview you|come in for an interview|invite you (to|for)|are you (free|available)|would you be (free|available)|when are you (free|available)|your availability|times that work|calendly|(bring|have|get) you in|come in (to|for|on)|can you come in|meet (with )?(you|me)\b|meet (with )?(the|our) (hiring|purchasing|branch|operations|team lead|manager)|phone screen|(quick|short|brief) (call|chat)|hop on a call|(swing|stop|come) by (the|our|my|this)|give me a call|call me (back|at)|like to (speak|talk|chat) with you|next step: a|to the next (step|round)|time to (talk|chat|speak))\b/;
-  const WHEN = new RegExp(`\\b${DAY}\\b[^.?!]{0,40}?\\b\\d{1,2}(:\\d\\d)?\\s*(am|pm|a\\.m\\.|p\\.m\\.)|\\b\\d{1,2}/\\d{1,2}\\b[^.?!]{0,12}\\bat \\d{1,2}(:\\d\\d)?`);
-  const ACK = /\b((received|receipt of) your (application|resume)|thank(s| you) for (applying|your application|your interest|submitting)|application (for [^.]{0,40})?(has been |was )?(received|submitted)|reviewing (it|your))\b/;
-  // Store hours, order updates, sales and job alerts mention days, times and "offers" too.
-  const HOURS = new RegExp(`\\b(hours|we'?re open|open ${DAY}|staffed|questions\\?)|\\b${DAY}\\s*(-|–|to|through|thru)\\s*${DAY}\\b`);
-  const NOT_ABOUT_IT = /\b(unsubscribe|% off|free (delivery|shipping|breakfast|lunch)|special offer|this weekend only|webinar|newsletter|order #|has shipped|invoice|payment is due|new jobs|job alert|jobs (you may|for you|matching)|recommended jobs)\b/;
+  const TIME = "\\d{1,2}(?::\\d\\d)?\\s*(?:am|pm|a\\.m\\.|p\\.m\\.)|noon|\\d{1,2}:\\d\\d";
+  const NO = new RegExp([
+    // "not" near a moving-forward word: "will not be advancing your application", "decided not to proceed", "not moving your application forward"
+    "\\b(not|won'?t|unable to|no longer|decided against)\\b[^.?!]{0,30}\\b(invit|advanc|mov(e|ing)\\b[^.?!]{0,30}\\b(ahead|forward)|forward with (you|your)|proceed|continu|select|consider|pursu|fill|available|offer you|extend)",
+    "\\bnot (moving|move) your [^.?!]{0,30}forward",
+    // someone else got it
+    "\\b(went|going|gone|go|move|moving|proceed|proceeding|decided to go|ended up going|pursue|pursuing|interview|interviewing) (ahead |forward )?(with )?(someone|another|other|a different|an internal|candidates|applicants|a candidate whose)",
+    "\\b(another|a different) direction|offer(ed)? the (role|position|job|spot) to (another|someone|a different|an internal)",
+    "\\b(offered|given|filled) (the (role|position|job|spot) )?(to )?(another|someone|internally|from within)|\\b(hire|hired|hiring|selected|chose|chosen|picked|extend|extended|offer|offered|give|gave|given)( the (role|position|job|spot|offer))?( to)? (a |an )?(another|other|someone|somebody|guy|gal|person|internal|different|candidate whose|a candidate whose)\\b|promote from within|hire(d)? (someone|internally)|internal candidate|another (candidate|applicant) (who|whose|was|has)",
+    "\\b(whose|with) (qualifications|experience|background|skills)[^.?!]{0,40}(more closely|better|closer)",
+    // the job went away
+    "\\b(position|role|job|opening|requisition|req|spot)[^.?!]{0,25}(has been|was|is|been) (now )?(filled|closed|cancell?ed|put on hold|on hold|withdrawn|eliminated|no longer (available|open))",
+    "\\b(filled the (role|position|job|opening|spot)|we filled|closing all applications|no longer hiring|decided not to fill)",
+    // the plain no
+    "\\b(not (been )?selected|not (quite )?(a|the right) (fit|match)|regret to inform|respectfully decline|decline your|not (been )?successful|(gonna|going to|will|we'?ll|have to) pass\\b|overqualified|status: (not selected|rejected|declined|closed)|unfortunately[^.?!]{0,40}\\b(not|won'?t|unable)\\b[^.?!]{0,30}\\b(you|your)\\b)",
+  ].join("|"));
+  const OFFER = new RegExp([
+    "\\boffer (letter|of employment|packet)|\\b(formal|conditional|contingent|verbal|written|job|employment) offer|your offer\\b|sign (your|the) offer|accept (the|our|this) offer",
+    // "offer you the position", never "offer you an interview" or "offer you a lunch"
+    "\\b(offer|offering|extend|extending)( to)? you (the |a |an |our )?([\\w$/,-]+ ){0,4}(position|role|job|spot|opportunity to join)|\\b(extend|extending|make|making) (you )?an offer|\\bmake you an offer",
+    "\\b(like|want|love|going|ready|decided) to hire you|hire you (as|for|on)|\\bwe want you\\b|want you (on|as|for|to join)|offer in writing|terms of (this|the|your) offer|you'?re hired|you got the (job|position|spot)|(job|position|role|spot) is yours|want you (as|on|for) (our|the)|bring you on( board)?\\b|welcome (aboard|to the team)",
+  ].join("|"));
+  const FORM = /\b(if (you are|you're) (selected|chosen|not selected|a (good |strong )?(fit|match))|if your (qualifications|experience|background|skills|application)|if we (would|'d|decide|feel|determine|think|need|have|find|wish)|should (your|you|we|there)\b|(candidates|applicants|those) (selected|chosen|we select)|if (another|other) (candidate|applicant|position|opening|role)|if there (is|'s) a (fit|match)|only (candidates|applicants|those)|due to (the )?(high |large )?(volume|number)|unable to respond|can'?t respond to|reach out if|in touch with the candidates|will be in touch with|contact you if|keep your (resume|info|information) on file|kept on file)/;
+  const ASK = new RegExp([
+    "\\b(schedule|set up|arrange|book|pick|grab|select|choose)\\b[^.?!]{0,30}\\b(time|call|interview|phone screen|screen|video|chat|meeting|conversation|slot)",
+    "\\binterview (stage|slot|you|with)|(phone|video|in-person|onsite|on-site|zoom|teams|second|final|on-demand) (round |video )?interview|come in for an interview|invited to (a|an)|invite you|offer you an interview",
+    "\\b(can|could|would|will) (u|you) (talk|chat|meet|come)|(\\d+|few|couple) (min|mins|minutes)\\b[^.?!]{0,30}\\b(chat|talk|call|visit)|(intro|introductory|quick|brief|short) (call|chat|conversation)|(do you have|got|have you got) (\\d+|a few) (min|mins|minutes)|\\b(are|would) you (be )?(free|available)|your availability|availability for|when are you (free|available)|what does your schedule look like|what days work|times? that works?|calendly|would \\S+ work",
+    "\\b(bring|have|get) you (in|back)|like you back|come in\\b|swing by|stop by|come by|meet (with )?(you|me|our|the) |talk to you about|chat (for|about|with)|talk (today|tomorrow|this week)|few minutes to talk|give me a call|call me (back )?(at|when|about|to discuss)|text or call|speak with you|talk with you|like to (meet|talk|chat|speak)|next (step|stage)[^.?!]{0,40}(call|interview|assessment|meet|talk|availability)|move you (forward|to the next)|online assessment|complete (the|your|an) (online )?assessment",
+  ].join("|"));
+  const WHEN = new RegExp(`\\b${DAY}\\b[^.?!]{0,40}?\\b(${TIME}|morning|afternoon|(at|around) \\d{1,2}\\b)|\\b(tomorrow|today|tonight)\\b[^.?!]{0,20}(${TIME}|around \\d|at \\d)|\\b\\d{1,2}/\\d{1,2}\\b[^.?!]{0,12}\\bat \\d`);
+  const ACK = /\b((received|receipt of|got|have) your (application|resume|email and resume)|(acknowledges?|confirms?|confirming) (receipt|we)|(has|have) received your|we have your (application|resume)|thank(s| you) for (applying|your application|your interest|submitting)|application (for [^.]{0,40})?(has been |was )?(successfully )?(received|submitted)|confirms? we (got|received)|reviewing (it|your|applications)|got it, thanks|pass it along)\b/;
+  // Something about a job, so a "can you call me back" from a friend or a "come by Thursday" sale isn't read as an interview.
+  const ABOUT_A_JOB = /\b(appl(y|ied|ying|ication|icant|ications)|app\b|resume|candida|interview|position|opening|role|job|hire|hiring|recruit)/;
+  // Store hours, order notices, sales copy and footers mention days, times and "offers" too.
+  const HOURS = new RegExp(`\\b(office \\d|\\d-\\d+ (m-f|mon)|hours|we'?re open|open ${DAY}|staffed|questions\\?|pickup available)|\\b${DAY}\\s*(-|–|to|through|thru)\\s*${DAY}\\b`);
+  const NOISE = /\b(unsubscribe|% off|free (delivery|shipping)|special (offer|pricing)|exclusive offers|this weekend only|webinar|newsletter|order (#|w?\d)|is ready (for pickup|at)|has shipped|invoice|statement|balance due|payment is due|your quote|new (jobs|openings)|openings near|is hiring near|job alert|jobs (you may|for you|matching)|recommended jobs|talent community|survey|gift card|rewards|points|complete your profile|breakfast|vendor booths|join us|save big|sale\b|customer appreciation|grand opening|open house|trade days|hot dogs|free lunch|lunch is on us|doors open|enter to win|you are invited to the|coffee and donuts|attendance is required)\b/;
+  // The words of a Gmail message (format=full): the plain-text part, else the HTML part without tags, minus the quoted
+  // thread below "On Tue, … wrote:" so the person's own earlier email is never read as the company's answer.
+  function mailText(payload) {
+    const parts = [], walk = p => { if (!p) return; parts.push(p); (p.parts || []).forEach(walk); };
+    walk(payload);
+    const dec = d => { try { const b = atob(String(d).replace(/-/g, "+").replace(/_/g, "/")); return decodeURIComponent(escape(b)); } catch { try { return atob(String(d).replace(/-/g, "+").replace(/_/g, "/")); } catch { return ""; } } };
+    const plain = parts.find(p => p.mimeType === "text/plain" && p.body?.data), html = parts.find(p => p.mimeType === "text/html" && p.body?.data);
+    let text = plain ? dec(plain.body.data) : html ? dec(html.body.data).replace(/<(style|script)[\s\S]*?<\/\1>/gi, " ").replace(/<br\s*\/?>|<\/(p|div|li|tr|h\d)>/gi, "\n").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&#39;|&rsquo;/g, "'") : "";
+    text = text.split(/\n\s*(?:On .{5,120}wrote:|-{2,} ?Original Message ?-{2,}|From: .+\n\s*(?:Sent|Date): )/i)[0];
+    return text.split("\n").filter(l => !/^\s*>/.test(l)).join("\n").replace(/[ \t]+/g, " ").trim().slice(0, 4000);
+  }
+  const ALERT = /\b(new (jobs|openings)|openings near|is hiring near|job alert|jobs (you may|for you|matching)|recommended jobs|apply today)\b/;
   function readReply(subject, snippet) {
-    const t = `${subject || ""}. ${snippet || ""}`.toLowerCase().replace(/\s+/g, " ");
-    if (NOT_ABOUT_IT.test(t)) return null;
-    const sents = t.split(/(?<=[.!?;])\s+/).filter(x => x.trim() && !HOURS.test(x));
+    // Lines stay apart (a signature's "Office 8-5 M-F, Sat 8-noon" isn't part of the sentence above it).
+    const t = `${subject || ""}.\n${snippet || ""}`.toLowerCase().replace(/[’‘]/g, "'").replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n");
+    if (ALERT.test(t) && !/\byour (application|resume|candidacy|interview)/.test(t)) return null;   // a job alert or a "we're hiring" blast
+    const sents = t.split(/(?<=[.!?])\s+|\n/).map(x => x.trim()).filter(x => x.trim() && !HOURS.test(x) && !NOISE.test(x));
     const firm = sents.filter(x => !FORM.test(x)).join(" "), said = sents.join(" ");
-    if (OFFER.test(firm)) return "offer";
-    if (NO.test(firm)) return "closed";
-    if (ASK.test(firm) || WHEN.test(firm)) return "interview";
-    if (FORM.test(said) || ACK.test(t)) return "applied";
+    const about = ABOUT_A_JOB.test(said);
+    if (NO.test(firm)) return "closed";   // first: "we won't be able to offer you the position" is a no
+    if (OFFER.test(firm) && !/\boffer you (an? |the )?(interview|call|lunch|meal|time)/.test(firm)) return "offer";
+    const when = WHEN.test(firm);
+    const plainly = /\b(interview|phone screen|(schedule|set up|arrange|book) (a |an |some )?(time|call|meeting)|your availability|calendly)\b/.test(firm);
+    if (ASK.test(firm) && (about || when || plainly)) return "interview";
+    if (when && about) return "interview";
+    if (FORM.test(said) || ACK.test(said)) return "applied";
     return null;
   }
   const ORDER = ["saved", "applied", "interview", "offer"];
@@ -297,6 +343,6 @@
   // so they don't turn off No Commission Sales Jobs.
   const SOLD_BEFORE = /\b(outside sales|territory|account (manager|executive)|business development|sales (rep|representative|manager|executive|consultant))\b/i;
   const soldBefore = titles => (titles || []).some(t => SOLD_BEFORE.test(t) && !/\b(counter|inside)\b/i.test(t));
-  const api = { soldBefore, SOLD_BEFORE, readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS, TITLE_WORD, asRole };
+  const api = { mailText, soldBefore, SOLD_BEFORE, readResume, postingWords, tailor, email, toPdf, fileName, mime, b64url, readReply, nextStatus, gmailQuery, WORDS, SECTIONS, TITLE_WORD, asRole };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else window.Tailor = api;
 })();

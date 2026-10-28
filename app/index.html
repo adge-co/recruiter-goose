@@ -897,7 +897,7 @@ function jobCard(j, s) {
 const longDay = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 function trackBox(s) {
   const m = s.job?.mail;
-  return `${m ? `<div class="verdict ${m.kind === "closed" ? "" : "real"}" style="margin-bottom:12px"><b>${MAIL_WORD[m.kind]}${String(m.msgId || "").startsWith("paste-") ? "" : " in Gmail"}</b><p>${esc(m.from)}, ${shortDay(m.at)}${m.subject ? `: “${esc(m.subject)}”` : ""}</p></div>` : ""}<div class="track">
+  return `${m ? `<div class="verdict ${m.kind === "closed" ? "" : "real"}" style="margin-bottom:12px"><b>${MAIL_WORD[m.kind]}${String(m.msgId || "").startsWith("paste-") ? "" : " in Gmail"}</b><p>${esc(m.from || "Pasted")}, ${shortDay(m.at)}${m.subject ? `: “${esc(m.subject)}”` : ""}</p></div>` : ""}<div class="track">
     <div><div class="statusseg" role="radiogroup" aria-label="Where It Stands">${STATUS.map(([v, l]) => `<button type="button" role="radio" aria-checked="${s.status === v}" class="${s.status === v ? "on" : ""}" data-status="${s.id}" data-val="${v}">${l}</button>`).join("")}</div></div>
     <div><span class="tl">Follow Up</span><div class="fuline">${s.follow_up ? `<span class="when" data-fuwhen="${s.id}">${longDay(s.follow_up)}</span>` : ""}${[[3, "In 3 Days"], [7, "In a Week"], [14, "In 2 Weeks"]].map(([n, l]) => `<button type="button" class="chip" data-follow="${s.id}" data-days="${n}">${l}</button>`).join("")}${s.follow_up ? `<button type="button" class="chip" data-follow="${s.id}" data-days="">Clear</button>` : ""}</div></div>
   </div>`;
@@ -1355,7 +1355,9 @@ document.addEventListener("click", e => {
     const s = saved.find(x => x.id === pick.dataset.prjob), kind = Tailor.readReply("", text), to = Tailor.nextStatus(s.status, kind);
     if (!to) { toast(kind ? "That doesn't change where this job stands." : "I couldn't tell what that email means. Move it yourself in the job."); return; }
     const subject = (text.match(/^subject:\s*(.+)$/im) || [])[1] || "";   // never quote words the company didn't write
-    mailSuggest = [{ sid: s.id, msgId: "paste-" + Date.now(), to, kind, from: s.job.company, subject, snippet: text.replace(/^subject:.*$/im, "").replace(/\s+/g, " ").trim().slice(0, 160), at: new Date().toISOString() }, ...mailSuggest];
+    // Say who wrote it only when the email itself names the company; otherwise it's just the email they pasted.
+    const named = text.toLowerCase().includes(String(s.job.company).toLowerCase());
+    mailSuggest = [{ sid: s.id, msgId: "paste-" + Date.now(), to, kind, from: named ? s.job.company : "", subject, snippet: text.replace(/^subject:.*$/im, "").replace(/\s+/g, " ").trim().slice(0, 160), at: new Date().toISOString() }, ...mailSuggest];
     closeSheet(); renderMine();
   };
 });
@@ -1410,12 +1412,14 @@ async function checkReplies(quiet) {
     const list = await gmail.call(`messages?maxResults=5&q=${encodeURIComponent(Tailor.gmailQuery(s.job, s.created_at))}`);
     for (const { id } of list.messages || []) {
       if ((s.job.mailSeen || []).includes(id)) continue;
-      const msg = await gmail.call(`messages/${id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`);
+      // The whole email, not Gmail's 200-character preview: job sites put the decision in the second paragraph.
+      const msg = await gmail.call(`messages/${id}?format=full`);
       const h = n => (msg.payload?.headers || []).find(x => x.name === n)?.value || "";
-      const kind = Tailor.readReply(h("Subject"), msg.snippet), to = Tailor.nextStatus(s.status, kind);
+      const body = Tailor.mailText(msg.payload) || msg.snippet || "";
+      const kind = Tailor.readReply(h("Subject"), body), to = Tailor.nextStatus(s.status, kind);
       if (!to) continue;
       found.push({ sid: s.id, msgId: id, to, kind, from: h("From").replace(/\s*<.*>$/, "").replace(/"/g, "") || s.job.company, subject: h("Subject"),
-        snippet: String(msg.snippet || "").slice(0, 160), at: new Date(Number(msg.internalDate) || Date.now()).toISOString() });
+        snippet: body.replace(/\s+/g, " ").trim().slice(0, 220), at: new Date(Number(msg.internalDate) || Date.now()).toISOString() });
       break;   // newest meaningful email wins
     }
   }
@@ -1433,7 +1437,7 @@ const STAGE_WORD = { applied: "Applied", interview: "Interviewing", offer: "Offe
 function mailCards() {
   if (!mailSuggest.length) return "";
   return `<div class="today">${mailSuggest.map((m, i) => { const s = saved.find(x => x.id === m.sid); if (!s) return "";
-    return `<div class="nudge go mailnudge"><div class="ni">${I.send}</div><div><b>${esc(s.job.title)} at ${esc(s.job.company)}</b><span>${esc(m.from)} wrote ${shortDay(m.at)}${m.subject ? `: “${esc(m.subject)}.”` : ":"} ${esc(m.snippet)}</span>
+    return `<div class="nudge go mailnudge"><div class="ni">${I.send}</div><div><b>${esc(s.job.title)} at ${esc(s.job.company)}</b><span>${m.from ? `${esc(m.from)} wrote` : "You pasted"} ${shortDay(m.at)}${m.subject ? `: “${esc(m.subject)}${/[.!?]$/.test(m.subject) ? "" : "."}”` : ":"} ${esc(m.snippet)}</span>
       <div class="btnrow" style="margin-top:8px"><button class="btn small" data-mailyes="${i}">Move to ${STAGE_WORD[m.to]}</button><button class="btn ghost small" data-mailno="${i}">Not Now</button></div></div></div>`; }).join("")}
     ${mailSuggest.length > 1 ? `<button class="btn ghost small" data-mailall style="margin-top:8px">Move All ${mailSuggest.length}</button>` : ""}</div>`;
 }
