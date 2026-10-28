@@ -322,3 +322,42 @@ test("ten more layouts: snapshot tables, licenses, career breaks, page headers, 
   assert.match(one.jobs[0].bullets[0], /^Sell HVAC parts/);
   assert.deepEqual(one.education, ["EPA 608 Type II", "Forklift"]);
 });
+
+// Twelve more from the ninth review: phone-typed, a staffing agency's form, references inline, a foreman's table,
+// a paragraph per job, a dispatcher, a CDL driver, a project engineer, a veteran, company-first lines, dates above titles,
+// and contact info at the bottom.
+test("twelve more layouts: agency forms, credentials, company above title, dates above title, contact at the bottom", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = f => T.readResume(readFileSync(new URL(`./resumes/${f}.txt`, import.meta.url), "utf8"));
+  const jobs = f => read(f).jobs.map(j => [j.title, j.company, j.dates]);
+  const ph = read("e01_phone_typed");
+  assert.equal(ph.city, "Mesquite, TX");
+  assert.deepEqual(ph.jobs.map(j => j.dates), ["2019-now", "2016-2019"]);
+  assert.match(ph.jobs[0].bullets[0], /^Help contractors/);
+  const ag = read("e02_staffing_agency");
+  assert.deepEqual([ag.name, ag.phone, ag.email, ag.city], ["Maria Elena Delgado", "(972) 555-0164", "maria.delgado82@outlook.com", "Grand Prairie, TX"]);
+  assert.deepEqual(jobs("e02_staffing_agency"), [["Inventory Control Clerk", "BMC Building Materials", "03/2021 - 08/2026"], ["Pro Desk Associate", "Lowe's Home Improvement", "06/2017 - 02/2021"]]);
+  assert.equal(read("e03_references_inline").jobs.length, 3);
+  assert.ok(read("e04_foreman_table").jobs[0].bullets.some(b => /lay out walls/.test(b)), "a What I Do list goes with the current job");
+  assert.ok(!read("e06_dispatcher").skills.includes("Calm on the radio"));
+  assert.deepEqual(jobs("e07_cdl_driver").map(j => j.slice(0, 2)), [["Delivery Driver (Class A, flatbed with Moffett)", "84 Lumber"], ["OTR Driver", "Schneider National"], ["Warehouse Selector", "US Foods"]]);
+  assert.equal(read("e08_project_engineer").name, "Priya Nair");
+  assert.equal(read("e09_veteran_mixed").name, "Andre L. Coleman");
+  assert.deepEqual(jobs("e11_table_cells").map(j => j[2]), ["2020 – Present", "2016 – 2020"]);
+  const kt = read("e12_contact_at_bottom");
+  assert.equal(kt.city, "Garland, TX");
+  assert.deepEqual(kt.jobs.map(j => [j.title, j.company]), [["Counter Sales & Purchasing", "Johnstone Supply"], ["Warehouse Associate", "Watsco (Carrier Enterprise)"]]);
+  // Word forms rank lines but never become a claim.
+  const sh = T.tailor(read("e11_table_cells"), { title: "Purchasing Coordinator", company: "X", description: "purchase orders and inventory" });
+  assert.ok(!sh.skills.includes("Purchase Orders") && !/purchase orders/.test(sh.summary), "checked trucks against POs isn't managing purchase orders");
+  const vet = T.tailor(read("e09_veteran_mixed"), { title: "Buyer", company: "X" });
+  assert.match(vet.headline, /^Unit Supply Sergeant · /);
+  assert.match(vet.summary, /as a Unit Supply Sergeant \(92Y\) in the U\.S\. Army/);
+});
+
+test("a forwarded message is read, not cut off", () => {
+  const enc = s => Buffer.from(s, "utf8").toString("base64url");
+  const body = "Hi Tonya, see below from the client. Call me when you get this!\n\n---------- Forwarded message ---------\nFrom: Dale Simmons <dale@client.example>\nDate: Tue, Oct 27, 2026 at 4:10 PM\nSubject: Dispatcher candidate\n\nBecky, we'd like to extend an offer to Tonya at $25/hr, start date 11/16.";
+  globalThis.atob ||= s => Buffer.from(s, "base64").toString("binary");
+  assert.equal(T.readReply("Fwd: Dispatcher candidate", T.mailText({ mimeType: "text/plain", body: { data: enc(body) } })), "offer");
+});

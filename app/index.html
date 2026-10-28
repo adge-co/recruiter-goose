@@ -768,9 +768,10 @@ async function readResume(text) {
   renderSetup();
   // Say plainly when the layout made reading harder, so they know where to look.
   const bare = jobs.filter(j => !(j.bullets || []).length).length;
-  const warn = !jobs.length && draft.titles.length ? " I couldn't find a work history section, so your tailored resumes will have none. Add your jobs in Me."
+  const who = draft.resume.name ? ` Your name came out as <b>${esc(draft.resume.name)}</b>${draft.resume.phone || draft.resume.email ? ` with ${esc([draft.resume.phone, draft.resume.email].filter(Boolean).join(" and "))}` : ""}; fix it in Me if that's off.` : " I couldn't find your name, so add it in Me before sending anything.";
+  const warn = who + (!jobs.length && draft.titles.length ? " I couldn't find a work history section, so your tailored resumes will have none. Add your jobs in Me."
     : draft.resume.twoColumn ? " It looked like two columns, so check each job's lines in Me."
-    : bare ? ` ${bare === 1 ? "One job has no lines under it" : `${bare} jobs have no lines under them`}; add a few in Me so the resume isn't bare.` : "";
+    : bare ? ` ${bare === 1 ? "One job has no lines under it" : `${bare} jobs have no lines under them`}; add a few in Me so the resume isn't bare.` : "");
   const many = (n, one, more = one + "s") => `${n} ${n === 1 ? one : more}`;
   msg.innerHTML = draft.titles.length
     ? `<span class="ok">Got it.</span> I filled in ${many(draft.titles.length, "past job")}${data.years ? `, ${many(data.years, "year")}` : ""}, ${many(draft.skills.length, "skill")} and ${many(draft.industries.length, "industry", "industries")}. Check them below and fix anything off.${warn}`
@@ -1079,11 +1080,12 @@ function todayItems() {
   const today = isoDay(), items = [], keys = savedKeys();
   for (const s of saved) {
     const j = s.job || {};
+    if (mailSuggest.some(m => m.sid === s.id)) continue;   // a reply is waiting on this job: that card says what to do
     if (["saved", "applied", "interview"].includes(s.status) && j.goneAt)
       items.push({ id: s.job_key, s, b: j.title, t: `No longer on ${j.company}'s job board as of ${shortDay(j.goneAt)}.`, act: "closeout" });
     else if (["applied", "interview"].includes(s.status) && s.follow_up && s.follow_up <= today)
       items.push({ id: s.job_key, s, b: j.title, t: `Follow-up day. One short note to the recruiter or hiring manager at ${j.company}.`, act: "follow" });
-    else if (s.status === "applied" && daysAgo(appliedOn(s)) >= 21)
+    else if (s.status === "applied" && daysAgo(appliedOn(s)) >= 21 && !j.mail)
       items.push({ id: s.job_key, s, b: j.title, t: `Applied ${daysAgo(appliedOn(s))} days ago with no word from ${j.company}. Time to close it out.`, act: "closeout" });
     else if (s.status === "saved" && daysAgo(s.created_at) >= 10)
       items.push({ id: s.job_key, s, b: j.title, t: `Saved ${daysAgo(s.created_at)} days ago. Apply or let it go; ${j.company} may be close to picking someone.` });
@@ -1289,20 +1291,22 @@ function madeFor(j) {
   const moved = t.jobs.reduce((n, x) => n + x.bullets.filter((b, i) => (r.jobs.find(o => o.title === x.title && o.company === x.company)?.bullets || []).indexOf(b) > i).length, 0);   // same test as the "up" mark
   const left = t.jobs.reduce((n, x) => n + (x.dropped || 0), 0);
   const g = gmail.ready();
+  // Nothing goes to an employer without the person's own name on it.
+  const noName = !t.name ? `<div class="move"><b>Add Your Name First</b><p style="margin:4px 0 0">I couldn't read your name from your resume, so the PDF and email wait until it's in. Check your phone and email while you're there.</p><div class="btnrow"><button class="btn small" data-resume-edit="${esc(j.id)}">Edit My Resume</button></div></div>` : "";
   return `${t.words ? `<div class="fitline"><span class="big">${t.matched.length} of ${t.words}</span><span>words from this posting are already on your resume</span></div>` : ""}
     ${t.matched.length ? `<div class="pills">${t.matched.map(w => `<button type="button" class="pill strong" data-kw="${esc(w)}">${esc(/^[a-z]/.test(w) ? tc(w) : w)}</button>`).join("")}</div>` : ""}
     ${t.missing.length ? `<div class="lbl">Not on Your Resume Yet, Add Only If You've Done It</div><div class="pills">${t.missing.map(w => `<button type="button" class="pill miss" data-kw="${esc(w)}">${esc(/^[a-z]/.test(w) ? tc(w) : w)}</button>`).join("")}</div>` : ""}
     <div class="kwctx hidden" id="kwCtx"></div>
     <details style="margin-top:6px"><summary class="section-h">Your Lines, Best Fit First <span class="count">${t.jobs.length} ${t.jobs.length === 1 ? "Job" : "Jobs"} · ${lines} Lines · ${t.skills.length} Skills</span></summary>
       <p class="changes">What changed for this job: ${moved ? `${moved} ${moved === 1 ? "line" : "lines"} moved up` : "nothing moved"}${left ? `, ${left} left off` : ""}. Nothing was added.</p>${paperHtml(t, r)}</details>
-    <div class="btnrow"><button class="btn ghost small" data-pdf="${esc(j.id)}">Download PDF</button><button class="btn ghost small" data-print="${esc(j.id)}">Print It</button><button class="btn ghost small" data-mail="${esc(j.id)}">${mailOpen.has(j.id) ? "Hide the Email" : "Write the Email"}</button><div class="spacer"></div><button class="linkbtn" data-resume-edit="${esc(j.id)}">Edit My Resume</button></div>
+    ${noName || `<div class="btnrow"><button class="btn ghost small" data-pdf="${esc(j.id)}">Download PDF</button><button class="btn ghost small" data-print="${esc(j.id)}">Print It</button><button class="btn ghost small" data-mail="${esc(j.id)}">${mailOpen.has(j.id) ? "Hide the Email" : "Write the Email"}</button><div class="spacer"></div><button class="linkbtn" data-resume-edit="${esc(j.id)}">Edit My Resume</button></div>
     ${mailOpen.has(j.id) ? `<div class="mail">
       <label class="label" for="mailTo" style="margin:6px 0 0">To</label><input type="email" id="mailTo" value="${esc(m.to)}" placeholder="${m.to ? "" : "Recruiter's email, if you have it"}">
       <label class="label" for="mailSubj" style="margin:6px 0 0">Subject</label><input type="text" id="mailSubj" value="${esc(m.subject)}">
       <label class="label" for="mailBody" style="margin:6px 0 0">Email</label><textarea id="mailBody">${esc(m.body)}</textarea>
       <div class="btnrow" style="margin-top:4px">${g ? `<button class="btn ghost small" data-gdraft="${esc(j.id)}">Save as Gmail Draft With PDF</button>` : `<button class="btn ghost small" data-compose="${esc(j.id)}">Open in Gmail</button>`}<button class="btn ghost small" data-copymail>Copy Email</button></div>
       ${g ? "" : `<p style="margin:2px 0 0;font-size:14px;color:var(--ink2)">Gmail opens with this email filled in. Attach the PDF you downloaded.${gmail.id() ? ` Or <button class="linkbtn" data-gconnect>connect Gmail</button> and the draft comes with the PDF attached.` : ""}</p>`}
-    </div>` : ""}`;
+    </div>` : ""}`}`;
 }
 function paperHtml(t, r) {
   const was = x => (r?.jobs || []).find(o => o.title === x.title && o.company === x.company)?.bullets || [];
