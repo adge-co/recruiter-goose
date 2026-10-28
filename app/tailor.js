@@ -5,8 +5,11 @@
 (function () {
   const MONTH = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?";
   const RANGE = new RegExp(`(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2}\\s*(?:-|–|—|to)\\s*(?:present|current|now|today|(?:${MONTH}\\s+|\\d{1,2}/)?(?:19|20)\\d{2})`, "i");
-  const HEADING = /^(profile|summary|professional summary|objective|experience|work experience|professional experience|employment|work history|education|skills|core skills|key skills|technical skills|skills and tools|certifications|licenses|certifications and licenses|references|projects|training)\s*:?$/i;
-  const BULLET = /^\s*(?:[-•·*▪●◦‣–]|\d+[.)])\s+/;
+  const HEADING = /^(profile|summary|professional summary|objective|experience|work experience|professional experience|employment|work history|education|skills|core skills|key skills|technical skills|skills and tools|certifications|licenses|certifications and licenses|references|projects|training|certs|skills & tools|skills and certifications|licenses and certifications)\s*:?$/i;
+  // A heading with its list on the same line: "Skills & Tools: Procore; Excel".
+  const HEAD_INLINE = /^(skills|core skills|key skills|technical skills|skills and tools|skills & tools|tools|certs|certifications|licenses)\s*:\s*(.+)$/i;
+  const STATE_CODES = "AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC";
+  const BULLET = /^\s*(?:[-•·*▪●◦‣–o]|\d+[.)])\s+/;   // "o" is what Word turns hollow bullets into when pasted
   const TITLE_WORD = /\b(manager|agent|specialist|coordinator|buyer|estimator|analyst|consultant|supervisor|lead|director|representative|rep|associate|engineer|technician|foreman|superintendent|administrator|assistant|owner|planner|purchaser|salesperson|sales|counter|desk|yard|clerk|dispatcher|scheduler|trainer|advisor|officer|president|founder|operator|installer|designer|developer|accountant|controller|expeditor|merchandiser|driver|server|bartender|carpenter|electrician|plumber|apprentice|journeyman|laborer|warehouse)\b/i;
 
   // Words recruiters and job posts use for this kind of work. A posting word only counts if it's on this list,
@@ -39,37 +42,45 @@
 
   // ---------- Read a pasted or uploaded resume into parts the person can edit ----------
   function readResume(text) {
-    const lines = String(text || "").split(/\r?\n/).map(l => l.replace(/\t/g, " ").replace(/ {2,}/g, " ").trimEnd()).filter(l => l.trim());
+    // Tab columns ("06/2018 - Current<tab>PURCHASING AGENT<tab>ABC Mechanical") become " | " so each column stays its own part.
+    const lines = String(text || "").split(/\r?\n/).map(l => l.replace(/^\t+/, "").replace(/\t+/g, " | ").replace(/^o \| /, "o ").replace(/ {2,}/g, " ").trimEnd()).filter(l => l.trim());
     const all = lines.join("\n");
     const out = { name: "", email: "", phone: "", city: "", jobs: [], skills: [], education: [] };
     out.email = (all.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [""])[0];
     out.phone = clean((all.match(/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/) || [""])[0]);
-    const top = lines.slice(0, 6).map(clean);
-    out.name = top.find(l => /^[A-Za-z][A-Za-z.'-]+(?: [A-Za-z][A-Za-z.'-]+){1,3}$/.test(l) && !HEADING.test(l) && !TITLE_WORD.test(l)) || "";
-    const place = top.join(" | ").match(/\b([A-Z][a-zA-Z.]+(?: [A-Z][a-zA-Z.]+){0,2}, ?[A-Z]{2})\b(?! ?\d{3})/);
-    out.city = place ? place[1].replace(/, ?/, ", ") : "";
+    // The top lines, split where people put separators: "jose ramirez ~ jramirez77@yahoo.com ~ 817.555.0123".
+    const top = lines.slice(0, 6).flatMap(l => l.split(/\s+[~|•·]\s+/)).map(clean);
+    const name = top.find(l => /^[A-Za-z][A-Za-z.'-]+(?: [A-Za-z][A-Za-z.'-]+){1,3}$/.test(l) && !HEADING.test(l) && !TITLE_WORD.test(l)) || "";
+    out.name = name === name.toUpperCase() || name === name.toLowerCase() ? tc(name.toLowerCase()) : name;   // "MARCUS DELGADO" -> "Marcus Delgado"
+    const place = top.join(" | ").match(new RegExp(`\\b([A-Z][a-zA-Z.]+(?: [A-Z][a-zA-Z.]+){0,2}),? (${STATE_CODES})\\b(?! ?\\d{3}[\\s.-]\\d)`));
+    out.city = place ? `${place[1]}, ${place[2]}` : "";
     const moving = top.join(" ").match(/\((?:relocating|moving|relocation) to [^)]{2,40}\)/i);   // "Shreveport, LA (relocating to Dallas-Fort Worth)"
     if (out.city && moving) out.city += " " + moving[0];
 
     let section = "", job = null;
     const startJob = (head, next) => {
       const dates = (head.match(RANGE) || (next || "").match(RANGE) || [""])[0];
-      let rest = clean(head.replace(RANGE, "").replace(/[,|·•–—-]+\s*$/, ""));
+      let rest = clean(head.replace(RANGE, "").replace(/^[\s,|·•–—-]+|[,|·•–—-]+\s*$/g, ""));
       let [title, company] = rest.split(/\s+[|•·]\s+|\s+[–—-]\s+|,\s+(?=[A-Z])|\s+at\s+(?=[A-Z])/);
       if (company && !TITLE_WORD.test(title) && TITLE_WORD.test(company)) [title, company] = [company, title];
-      job = { title: clean(title), company: clean(company || ""), dates: clean(dates), bullets: [] };
+      title = clean(title);
+      if (title === title.toUpperCase() && /[A-Z]{3}/.test(title)) title = tc(title.toLowerCase());   // "PURCHASING AGENT" -> "Purchasing Agent"
+      job = { title, company: clean(company || ""), dates: clean(dates), bullets: [] };
       out.jobs.push(job);
     };
     lines.forEach((raw, i) => {
       const line = clean(raw);
       if (HEADING.test(line)) { section = line.toLowerCase(); job = null; return; }
-      if (/skill|tool/.test(section)) { line.replace(BULLET, "").split(/\s*[,;|•·]\s*/).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
-      if (/education|certif|licens|training/.test(section)) { out.education.push(line.replace(BULLET, "")); return; }
+      const inline = line.match(HEAD_INLINE);
+      if (inline) { section = inline[1].toLowerCase(); job = null; if (/cert|licens/.test(section)) out.education.push(inline[2]); else inline[2].split(/\s*[,;|•·]\s*/).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
+      if (/skill|tool/.test(section) && !/cert|licens/.test(section)) { line.replace(BULLET, "").split(/\s*[,;|•·]\s*/).map(clean).filter(s => s && s.length < 40).forEach(s => out.skills.includes(s) || out.skills.push(s)); return; }
+      if (/education|cert|licens|training/.test(section)) { out.education.push(line.replace(BULLET, "")); return; }
       if (/summary|profile|objective|references/.test(section)) return;
       const bullet = BULLET.test(raw), text = line.replace(BULLET, "");
       const last = job?.bullets[job.bullets.length - 1];
       if (!bullet && last && !/[.!]$/.test(last) && /^[a-z]/.test(text)) { job.bullets[job.bullets.length - 1] += " " + text; return; }   // a wrapped line
-      const short = !bullet && line.length < 90 && !/[.;!]$/.test(line);
+      // A title line: short, or any length when it carries the dates ("Counter Sales / Inside Sales — Red River…, Shreveport, LA  Mar 2019 – Present").
+      const short = !bullet && (line.length < 90 || (RANGE.test(line) && line.length < 180)) && !/[.;!]$/.test(line);
       if (short) {
         const bare = clean(line.replace(RANGE, "").replace(/^[,|·•–—-]+\s*|[,|·•–—-]+\s*$/g, ""));
         const dates = clean((line.match(RANGE) || [""])[0]);
