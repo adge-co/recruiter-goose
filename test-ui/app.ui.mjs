@@ -504,6 +504,7 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     await noSideScroll(page);
     await page.waitForTimeout(450);
     await shot(page, "phone-light-offers-compare");
+    await page.emulateMedia({ colorScheme: "dark" }); await shot(page, "phone-dark-offers-compare"); await page.emulateMedia({ colorScheme: "light" });
     await page.click("#sheet [data-close]");
   });
   await step("[offers] Accepted fires the hired moment, then offers to turn down the other open offer", async () => {
@@ -513,6 +514,7 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     assert.ok((await page.textContent(".takeover")).includes("You're Hired!"));
     assert.ok((await page.textContent(".takeover .tk-story")).includes("Dillard Associates"));
     await shot(page, "phone-light-hired");
+    await page.emulateMedia({ colorScheme: "dark" }); await shot(page, "phone-dark-hired"); await page.emulateMedia({ colorScheme: "light" });
     await page.click(".takeover .tk-done");
     await page.waitForSelector("[data-othersyes]");
     const ask = await page.textContent(".party");
@@ -543,6 +545,19 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "off4").status === "interview");
     assert.equal((await row("off4")).job.outcome, undefined);
     await page.locator(".party button").first().click().catch(() => {});
+  });
+  await step("[offers] the search in numbers counts from My Jobs, with the key moments in order", async () => {
+    await page.click("#sheet [data-close]").catch(() => {});
+    await page.click('.tab[data-tab="mine"]');
+    await page.click("#mineBody [data-stats]");
+    await page.waitForSelector("#sheetBody .funnel");
+    const t = await page.textContent("#sheetBody");
+    assert.match(t, /Applied4/); assert.match(t, /Offers375% of applied/, "the one moved back to Interviewing no longer counts as an offer");
+    const m = await page.$$eval("#sheetBody .moments b", els => els.map(e => e.textContent));
+    assert.deepEqual(m.slice(0, 2), ["First Application", "They Pulled It"], m.join(", "));
+    await page.waitForTimeout(400);
+    await shot(page, "phone-light-search-numbers");
+    await page.click("#sheet [data-close]");
   });
   await step("[offers] no page errors", async () => assert.deepEqual(errors, []));
   await ctx.close();

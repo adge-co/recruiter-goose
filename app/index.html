@@ -386,6 +386,17 @@ canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:41}
 .aev.k-answerby{border-left-color:var(--mark-text)}
 .aev b{font-size:14.5px}.aev span{color:var(--muted);font-size:13.5px}
 input[type=datetime-local]{max-width:240px}
+.funnel{display:grid;gap:12px;margin-top:16px}
+.fun{display:grid;grid-template-columns:100px minmax(0,1fr) 36px;gap:4px 10px;align-items:center;font-weight:600;font-size:14.5px}
+.fun b{font-family:var(--num);font-weight:800;text-align:right;font-size:17px}
+.fun em{grid-column:2/-1;font-style:normal;font-size:13px;color:var(--muted);font-weight:500}
+.ft{height:12px;border-radius:6px;background:var(--raise);overflow:hidden}
+.ft i{display:block;height:100%;background:var(--muted);opacity:.55;border-radius:6px}
+.fun.key .ft i{background:var(--action);opacity:1}
+.moments{list-style:none;margin:8px 0 0;padding:0 0 0 16px;border-left:2px solid var(--line2);display:grid;gap:12px}
+.moments li{display:grid;grid-template-columns:104px minmax(0,1fr);gap:10px;position:relative;font-size:14.5px}
+.moments li::before{content:"";position:absolute;left:-22px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--action)}
+.moments time{font-weight:700}.moments span{display:block;color:var(--muted);font-size:13.5px}
 .people{display:grid}
 .person{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line)}
 .person:first-child{border-top:0}
@@ -990,7 +1001,7 @@ function outcomeBox(s) {
       <label class="tl" for="ocAt">${d.kind === "declined" ? "Day You Turned It Down" : "Day They Pulled It"}</label>
       <input type="date" id="ocAt" value="${esc(d.at)}" max="${isoDay()}">
       <div class="btnrow"><button class="btn small" data-ocsave="${s.id}">Save</button><button class="btn ghost small" data-occancel>Cancel</button></div></div>`;
-  const said = o && !d ? `<p class="hint ocsaid">${OUTCOME[o.kind]}${o.at ? ` ${longDay(o.at)}` : ""}${o.reason ? `. Why: ${esc(o.reason)}` : ""}. <button class="linkbtn" data-occlear="${s.id}">Undo</button></p>` : "";
+  const said = o && !d ? `<p class="hint ocsaid">${OUTCOME[o.kind]}${o.at ? ` ${longDay(o.at)}` : ""}${o.reason ? `. Why: ${esc(o.reason)}` : ""}. ${o.kind === "accepted" ? `<button class="linkbtn" data-relive="${s.id}">Relive It</button> · ` : ""}<button class="linkbtn" data-occlear="${s.id}">Undo</button></p>` : "";
   return `<h3>What Happened With This Offer</h3><div class="statusseg ocseg" role="radiogroup" aria-label="What Happened With This Offer">${Object.entries(OUTCOME).map(([k, l]) =>
     `<button type="button" role="radio" aria-checked="${pick === k}" class="${pick === k ? "on" : ""}" data-outcome="${s.id}" data-val="${k}">${l}</button>`).join("")}</div>${form}${said}`;
 }
@@ -1100,6 +1111,34 @@ document.addEventListener("click", e => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([icsFor(s)], { type: "text/calendar" }));
   a.download = `Interview - ${s.job.company}.ics`; document.body.appendChild(a); a.click(); a.remove();
 });
+
+// ---------- The search in numbers: all of it counted from My Jobs, nothing estimated ----------
+function searchStats() {
+  const all = saved.filter(s => s.status !== "passed");
+  const applied = all.filter(s => s.applied_at || ["applied", "interview", "offer"].includes(s.status) || outcomeOf(s) || (s.status === "closed" && (s.job.mail || !("applied_at" in s))));
+  const heard = applied.filter(s => s.job.mail || ["interview", "offer"].includes(s.status) || outcomeOf(s));
+  const iv = applied.filter(s => ["interview", "offer"].includes(s.status) || s.job.interviewAt || outcomeOf(s) || s.job.mail?.kind === "interview");
+  const off = applied.filter(s => s.status === "offer" || outcomeOf(s) || s.job.mail?.kind === "offer");
+  const first = applied.map(appliedOn).sort()[0];
+  const moments = [
+    first && { at: first.slice(0, 10), t: "First Application", d: (applied.find(s => appliedOn(s) === first) || {}).job?.company },
+    ...iv.filter(s => s.job.interviewAt).map(s => ({ at: s.job.interviewAt.slice(0, 10), t: "Interview", d: s.job.company })),
+    ...off.filter(s => outcomeOf(s)?.at).map(s => ({ at: s.job.outcome.at, t: OUTCOME[s.job.outcome.kind], d: `${s.job.company}${s.job.outcome.reason ? ` · ${s.job.outcome.reason}` : ""}` })),
+  ].filter(Boolean).sort((a, b) => a.at.localeCompare(b.at));
+  return { saved: all.length, applied: applied.length, heard: heard.length, iv: iv.length, off: off.length, first, moments };
+}
+function openStats() {
+  const st = searchStats(), max = Math.max(1, st.saved);
+  const bar = (l, n, sub) => `<div class="fun${l === "Offers" ? " key" : ""}"><span>${l}</span><div class="ft"><i style="width:${Math.max(2, n / max * 100)}%"></i></div><b>${n}</b>${sub ? `<em>${sub}</em>` : ""}</div>`;
+  const pct = (a, b) => b ? `${Math.round(a / b * 100)}% of applied` : "";
+  $("#sheetBody").dataset.job = "";
+  $("#sheetBody").innerHTML = `<div class="grab"><div style="flex:1"></div>${X_BTN}</div><div class="page"><h2 style="margin-top:0">Your Search in Numbers</h2>
+    <p class="hint">${st.first ? `Since your first application on ${longDay(st.first.slice(0, 10))}, ${daysAgo(st.first)} days ago.` : "Counted from My Jobs as you go."}</p>
+    <div class="funnel">${bar("Saved", st.saved)}${bar("Applied", st.applied)}${bar("Heard Back", st.heard, pct(st.heard, st.applied))}${bar("Interviews", st.iv, pct(st.iv, st.applied))}${bar("Offers", st.off, pct(st.off, st.applied))}</div>
+    ${st.moments.length ? `<h3>Key Moments</h3><ol class="moments">${st.moments.map(m => `<li><time>${shortDay(m.at)}</time><div><b>${esc(m.t)}</b>${m.d ? `<span>${esc(m.d)}</span>` : ""}</div></li>`).join("")}</ol>` : ""}</div>`;
+  $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
+}
+document.addEventListener("click", e => { if (e.target.closest("[data-stats]")) openStats(); if (e.target.closest("[data-relive]")) { const s = saved.find(x => x.id === e.target.closest("[data-relive]").dataset.relive); celebrate("hired", s); } });
 
 // ---------- Offer details: what they offered, typed in by the person, so offers sit side by side ----------
 // Kept as job.offerInfo. Blank means not known yet, and shows as something to ask before answering.
@@ -1311,7 +1350,7 @@ function renderMine() {
   const stillOpen = active - (hiredAt ? 1 : 0);
   $("#mineSub").textContent = hiredAt ? [`Hired at ${hiredAt.job.company}`, stillOpen ? `${stillOpen} still open` : ""].filter(Boolean).join(" · ") : [`${active} active`, c("applied") + c("interview") + c("offer") ? `${c("applied") + c("interview") + c("offer")} applied` : "", c("interview") ? `${c("interview")} interviewing` : "", c("offer") ? `${c("offer")} ${c("offer") === 1 ? "offer" : "offers"}` : ""].filter(Boolean).join(" · ");
   const bar = active ? `<div class="facts" aria-hidden="true">${["offer", "interview", "applied", "saved"].filter(c).map(st => `<i class="f-${st}" style="flex:${c(st)}"></i>`).join("")}</div>` : "";
-  $("#mineBody").innerHTML = bar + mailCards() + nextIvCard() + todayCard() + `<div class="btnrow" style="margin-top:14px"><button class="linkbtn" data-pastereply>Got a Reply? Paste It Here</button></div>` + comingUp() +
+  $("#mineBody").innerHTML = bar + mailCards() + nextIvCard() + todayCard() + `<div class="btnrow" style="margin-top:14px"><button class="linkbtn" data-pastereply>Got a Reply? Paste It Here</button>${live.some(x => ["applied", "interview", "offer"].includes(x.status) || outcomeOf(x)) ? `<button class="linkbtn" data-stats>Your Search in Numbers</button>` : ""}</div>` + comingUp() +
     groups.map(([st, label]) => {
       const took = s => outcomeOf(s)?.kind === "accepted";
       const list = live.filter(s => st === "hired" ? took(s) : s.status === st && !took(s)).sort(by);
