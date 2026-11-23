@@ -374,6 +374,37 @@ button.pill{border:0;cursor:pointer;font-family:inherit}
 .party img{width:220px;border-radius:24px}
 .party .big{font-family:var(--num);font-weight:800;letter-spacing:-.04em;font-feature-settings:"lnum","tnum";font-size:54px;color:var(--ink)}
 canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:41}
+/* Offer outcome chips: the one taken in the action color, the other two quiet. */
+.pill.oc-accepted{background:var(--action);color:var(--action-ink,#fff)}
+.pill.oc-declined,.pill.oc-withdrawn{background:var(--raise);color:var(--ink2);box-shadow:inset 0 0 0 1px var(--line2)}
+.ocform{display:grid;gap:10px;margin-top:12px;padding:14px;border-radius:14px;background:var(--raise)}
+.ocform input[type=date]{max-width:220px}
+.ocsaid{margin:10px 0 0}
+.olist{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px;text-align:left}
+.olist li{display:grid;gap:2px;padding:10px 14px;border-radius:12px;background:var(--raise)}
+.olist li span{color:var(--muted);font-size:14px}
+/* Hired: the whole screen belongs to the moment. */
+body.tk-on main,body.tk-on header,body.tk-on #sheet{transform:scale(.94);filter:blur(4px);transition:transform .3s ease,filter .3s ease}
+.takeover{position:fixed;inset:0;z-index:40;background:var(--bg);display:grid;place-items:center;padding:24px 16px;overflow-y:auto;opacity:0;transition:opacity .3s ease}
+.takeover.in,.takeover.calm{opacity:1}
+.tk-flash{position:fixed;inset:0;background:var(--action);opacity:0;pointer-events:none}
+.takeover.hit .tk-flash{animation:tkflash .5s ease-out}
+@keyframes tkflash{0%{opacity:.35}100%{opacity:0}}
+.tk-stage{display:grid;justify-items:center;gap:16px;text-align:center;max-width:440px;width:100%}
+.tk-count{display:grid;gap:2px}
+.tk-count b{font-family:var(--num);font-weight:800;font-size:88px;line-height:1;letter-spacing:-.04em;font-feature-settings:"lnum","tnum";color:var(--ink)}
+.tk-count span{font-weight:700;color:var(--muted)}
+.takeover.hit .tk-count b{animation:tkpop .45s cubic-bezier(.34,1.45,.64,1)}
+@keyframes tkpop{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+.tk-hl{font-size:52px;line-height:1.05;letter-spacing:-.03em;margin:0;opacity:0;transform:translateY(12px);transition:opacity .25s,transform .4s cubic-bezier(.34,1.45,.64,1)}
+.takeover.hit .tk-hl{opacity:1;transform:none}
+.tk-story{display:grid;gap:2px;background:var(--surface);border-radius:18px;padding:16px 20px;width:100%;box-shadow:var(--hl);opacity:0;transform:translateY(24px);transition:opacity .3s,transform .45s cubic-bezier(.34,1.45,.64,1)}
+.tk-story b{font-size:18px} .tk-story span{color:var(--muted);font-weight:600} .tk-story p{margin:8px 0 0}
+.tk-goose{width:180px;border-radius:24px;opacity:0;transform:scale(.6);transition:opacity .2s,transform .5s cubic-bezier(.34,1.45,.64,1)}
+.tk-done{opacity:0;transition:opacity .3s}
+.takeover.told .tk-story,.takeover.told .tk-goose,.takeover.told .tk-done{opacity:1;transform:none}
+.takeover.calm *{transition:none!important;animation:none!important}
+@media (prefers-reduced-motion:reduce){body.tk-on main,body.tk-on header,body.tk-on #sheet{transform:none;filter:none}}
 .mascot{filter:drop-shadow(1.5px 0 0 var(--m-edge)) drop-shadow(-1.5px 0 0 var(--m-edge)) drop-shadow(0 1.5px 0 var(--m-edge)) drop-shadow(0 -1.5px 0 var(--m-edge)) drop-shadow(0 18px 30px var(--m-shadow))}
 footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
 @media (prefers-reduced-motion:reduce){.sheet,.sheet .panel,.loading img,.icon.spin svg{animation:none}.btn,.job,.icon{transition:none}}
@@ -899,7 +930,7 @@ function jobCard(j, s) {
   return `<div class="job ${st === "passed" || st === "closed" ? "faded" : ""}" data-open="${esc(j.id)}" role="button" tabindex="0" aria-label="${esc(j.title)} at ${esc(j.company)}">
     ${logo(j.company)}
     <div style="min-width:0"><div class="co">${esc(j.company)}</div><p class="title">${esc(j.title)}</p><div class="meta">${payText(j)}<span>${placeText(j)}</span></div>
-      <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${commissionPill(j)}${checkPill(j, s)}</div>
+      <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${commissionPill(j)}${checkPill(j, s)}${outcomeChip(s)}</div>
       ${s?.job?.goneAt ? "" : trail(j)}</div>
     <div class="side">${s ? `<span class="icon saved" role="img" aria-label="In My Jobs">${I.marked}</span>` : `<button class="icon" data-save="${esc(j.id)}" aria-label="Save">${I.mark}</button><button class="icon" data-pass="${esc(j.id)}" aria-label="Pass">${I.x}</button>`}</div>
   </div>`;
@@ -912,6 +943,25 @@ function trackBox(s) {
     <div><span class="tl">Follow Up</span><div class="fuline">${s.follow_up ? `<span class="when" data-fuwhen="${s.id}">${longDay(s.follow_up)}</span>` : ""}${[[3, "In 3 Days"], [7, "In a Week"], [14, "In 2 Weeks"]].map(([n, l]) => `<button type="button" class="chip" data-follow="${s.id}" data-days="${n}">${l}</button>`).join("")}${s.follow_up ? `<button type="button" class="chip" data-follow="${s.id}" data-days="">Clear</button>` : ""}</div></div>
   </div>`;
 }
+// ---------- Offer outcome: the one taken, one turned down, one the company pulled ----------
+// Kept on the saved job as job.outcome = { kind, at, reason }. Accepted stays an Offer; the other two move to Closed.
+const OUTCOME = { accepted: "Accepted", declined: "I Turned It Down", withdrawn: "They Pulled It" };
+const DECLINE_WHY = ["Pay", "Location", "Benefits", "The Work", "Took Another Offer"];
+const outcomeOf = s => OUTCOME[s?.job?.outcome?.kind] ? s.job.outcome : null;
+const outcomeChip = s => { const o = outcomeOf(s); return o ? `<span class="pill oc-${o.kind}">${OUTCOME[o.kind]}</span>` : ""; };
+let outcomeDraft = null;   // { id, kind, reason, at } while the turned-down or pulled form is open
+function outcomeBox(s) {
+  const o = outcomeOf(s), d = outcomeDraft?.id === s.id ? outcomeDraft : null, pick = d?.kind || o?.kind || "";
+  const form = !d ? "" : `<div class="ocform">
+      ${d.kind === "declined" ? `<span class="tl">Why, If You Want to Say</span><div class="chips">${DECLINE_WHY.map(w => `<button type="button" class="chip ${d.reason === w ? "on" : ""}" data-ocwhy="${esc(w)}">${w}</button>`).join("")}</div>` : ""}
+      <label class="tl" for="ocAt">${d.kind === "declined" ? "Day You Turned It Down" : "Day They Pulled It"}</label>
+      <input type="date" id="ocAt" value="${esc(d.at)}" max="${isoDay()}">
+      <div class="btnrow"><button class="btn small" data-ocsave="${s.id}">Save</button><button class="btn ghost small" data-occancel>Cancel</button></div></div>`;
+  const said = o && !d ? `<p class="hint ocsaid">${OUTCOME[o.kind]}${o.at ? ` ${longDay(o.at)}` : ""}${o.reason ? `. Why: ${esc(o.reason)}` : ""}. <button class="linkbtn" data-occlear="${s.id}">Undo</button></p>` : "";
+  return `<h3>What Happened With This Offer</h3><div class="statusseg ocseg" role="radiogroup" aria-label="What Happened With This Offer">${Object.entries(OUTCOME).map(([k, l]) =>
+    `<button type="button" role="radio" aria-checked="${pick === k}" class="${pick === k ? "on" : ""}" data-outcome="${s.id}" data-val="${k}">${l}</button>`).join("")}</div>${form}${said}`;
+}
+
 // ---------- Learning from passes: a repeated reason gets one question, and the answer filters future matches ----------
 const SENIOR_TITLE = /\b(senior|sr\.?|lead|principal|staff|director|head of|vp)\b/i;
 function learnQuestion() {
@@ -1025,6 +1075,7 @@ document.addEventListener("click", async e => {
   const st = stb && { value: stb.dataset.val };
   if (st && st.value === before.status) return;
   const patch = st ? { status: st.value } : { follow_up: fu.dataset.days ? isoDay(+fu.dataset.days) : null };
+  if (st && outcomeOf(before)) { patch.job = { ...before.job }; delete patch.job.outcome; }   // moved by hand: the offer's outcome no longer holds
   if (st?.value === "applied" && before.status !== "applied" && !before.follow_up) patch.follow_up = isoDay(7);
   const { data, error } = await sb.from("saved_jobs").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select().single();
   if (error) { toast(error.message); return; }
@@ -1041,6 +1092,8 @@ document.addEventListener("click", async e => {
 // ---------- My jobs ----------
 function statusLine(s) {
   const j = s.job || {};
+  const o = outcomeOf(s);
+  if (o) return `${o.at ? shortDay(o.at) : ""}${o.reason ? ` · ${esc(o.reason)}` : ""}`;   // the chip beside it says what happened
   if (j.goneAt) return `Taken down ${shortDay(j.goneAt)}`;
   if (s.status === "offer") return "Offer in hand";
   if (s.status === "closed") return `Closed ${shortDay(s.updated_at)}`;
@@ -1053,21 +1106,24 @@ function statusLine(s) {
 const payShort = j => !j.payMax && !j.payMin ? "" : (j.payMin && j.payMax && j.payMin !== j.payMax ? `${k(j.payMin)}–${k(j.payMax)}` : k(j.payMax || j.payMin));
 const rowJob = s => `<div class="row-job ${s.status === "closed" ? "faded" : ""}" data-open="${esc(s.job_key)}" role="button" tabindex="0">${logo(s.job.company, true)}
   <div style="min-width:0"><b>${esc(s.job.title)}</b><span>${esc(s.job.company)}</span><span class="st">${statusLine(s)}</span></div>
-  <div class="r">${payShort(s.job)}${s.job.goneAt ? `<div><span class="pill gone">Taken Down</span></div>` : ""}</div></div>`;
+  <div class="r">${payShort(s.job)}${outcomeOf(s) ? `<div>${outcomeChip(s)}</div>` : s.job.goneAt ? `<div><span class="pill gone">Taken Down</span></div>` : ""}</div></div>`;
 function renderMine() {
   const live = saved.filter(s => s.status !== "passed");
   $("#mineSub").textContent = "";
   if (!user) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img class="mascot" src="img/papers.webp" alt=""><h2>Keep the Jobs You Like</h2><p class="hint">With a free account, saved jobs land here, and you can mark each one Applied, Interviewing or Offer and pick a follow-up day.</p><button class="btn" data-account="mine">Make a Free Account</button></div>`; return; }
   if (!live.length) { $("#mineBody").innerHTML = `<div class="card empty" style="margin-top:16px"><img class="mascot" src="img/papers.webp" alt=""><h2>Nothing Saved Yet</h2><p class="hint">Save a match and it lands here. Then mark it Applied, Interviewing or Offer as it moves.</p></div>`; return; }
-  const groups = [["offer", "Offers"], ["interview", "Interviewing"], ["applied", "Applied"], ["saved", "Saved, Not Applied Yet"], ["closed", "Closed"]];
+  const groups = [["hired", "Hired"], ["offer", "Offers"], ["interview", "Interviewing"], ["applied", "Applied"], ["saved", "Saved, Not Applied Yet"], ["closed", "Closed"]];
   const by = (a, b) => (a.follow_up || "9999").localeCompare(b.follow_up || "9999");
   const c = st => live.filter(s => s.status === st).length;
   const active = live.length - c("closed");
-  $("#mineSub").textContent = [`${active} active`, c("applied") + c("interview") + c("offer") ? `${c("applied") + c("interview") + c("offer")} applied` : "", c("interview") ? `${c("interview")} interviewing` : "", c("offer") ? `${c("offer")} ${c("offer") === 1 ? "offer" : "offers"}` : ""].filter(Boolean).join(" · ");
+  const hiredAt = live.find(s => outcomeOf(s)?.kind === "accepted");
+  const stillOpen = active - (hiredAt ? 1 : 0);
+  $("#mineSub").textContent = hiredAt ? [`Hired at ${hiredAt.job.company}`, stillOpen ? `${stillOpen} still open` : ""].filter(Boolean).join(" · ") : [`${active} active`, c("applied") + c("interview") + c("offer") ? `${c("applied") + c("interview") + c("offer")} applied` : "", c("interview") ? `${c("interview")} interviewing` : "", c("offer") ? `${c("offer")} ${c("offer") === 1 ? "offer" : "offers"}` : ""].filter(Boolean).join(" · ");
   const bar = active ? `<div class="facts" aria-hidden="true">${["offer", "interview", "applied", "saved"].filter(c).map(st => `<i class="f-${st}" style="flex:${c(st)}"></i>`).join("")}</div>` : "";
   $("#mineBody").innerHTML = bar + mailCards() + todayCard() + `<div class="btnrow" style="margin-top:14px"><button class="linkbtn" data-pastereply>Got a Reply? Paste It Here</button></div>` +
     groups.map(([st, label]) => {
-      const list = live.filter(s => s.status === st).sort(by);
+      const took = s => outcomeOf(s)?.kind === "accepted";
+      const list = live.filter(s => st === "hired" ? took(s) : s.status === st && !took(s)).sort(by);
       if (!list.length) return "";
       const body = `<div class="rows">${list.map(rowJob).join("")}</div>`;
       return st === "closed" ? `<details><summary class="section-h">${label} <span class="count">${list.length}</span></summary>${body}</details>`
@@ -1129,8 +1185,75 @@ document.addEventListener("click", async e => {
   if (!$("#sheet").classList.contains("hidden")) closeSheet();
 });
 
+// Saving an outcome: Accepted stays an Offer, the other two close it out. null clears it back to an open Offer.
+async function setOutcome(s, outcome) {
+  const job = { ...s.job }; if (outcome) job.outcome = outcome; else delete job.outcome;
+  const { data, error } = await sb.from("saved_jobs").update({ job, status: outcome && outcome.kind !== "accepted" ? "closed" : "offer", updated_at: new Date().toISOString() }).eq("id", s.id).select().single();
+  if (error) { toast(error.message); return null; }
+  saved = saved.map(x => x.id === s.id ? data : x);
+  return data;
+}
+const reSheet = s => { if (!$("#sheet").classList.contains("hidden") && $("#sheetBody").dataset.job === s.job_key) openSheet(s.job_key, true); };
+async function acceptOffer(s) {
+  // Only one offer can be the one they took: an earlier pick goes back to an open offer.
+  const was = saved.find(x => x.id !== s.id && outcomeOf(x)?.kind === "accepted");
+  if (was) await setOutcome(was, null);
+  const data = await setOutcome(s, { kind: "accepted", at: isoDay() });
+  if (!data) return;
+  renderMine(); renderMatches(); reSheet(data);
+  if (was) toast(`${was.job.company} is back to an open offer.`);
+  celebrate("hired", data, () => askOthers(data));
+}
+// After the big moment: the other open offers, turned down in one tap or left as they are.
+function askOthers(s) {
+  const others = saved.filter(x => x.id !== s.id && x.status === "offer" && !outcomeOf(x));
+  if (!others.length) return;
+  const div = document.createElement("div"); div.className = "party";
+  div.innerHTML = `<div class="card" role="dialog" aria-modal="true" aria-labelledby="othersH"><h2 id="othersH">Turn Down the ${others.length === 1 ? "Other Offer" : `Other ${others.length} Offers`}?</h2>
+    <ul class="olist">${others.map(x => `<li><b>${esc(x.job.company)}</b><span>${esc(x.job.title)}</span></li>`).join("")}</ul>
+    <p class="hint">${others.length === 1 ? "It moves" : "They move"} to Closed as I Turned It Down, dated today, with Took Another Offer as the reason. You still tell them yourself.</p>
+    <div class="btnrow" style="justify-content:center"><button class="btn" data-othersyes>Yes, Mark ${others.length === 1 ? "It" : "Them"}</button><button class="btn ghost" data-othersno>Leave ${others.length === 1 ? "It" : "Them"} Open</button></div></div>`;
+  document.body.appendChild(div);
+  div.querySelector("[data-othersno]").onclick = () => div.remove();
+  div.querySelector("[data-othersyes]").onclick = async e => {
+    e.target.disabled = true;
+    for (const x of others) await setOutcome(x, { kind: "declined", at: isoDay(), reason: "Took Another Offer" });
+    div.remove(); renderMine(); renderMatches(); reSheet(s);
+    toast(`Marked ${others.length === 1 ? "1 offer" : others.length + " offers"} I Turned It Down.`);
+  };
+  div.querySelector("[data-othersyes]").focus();
+}
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-outcome],[data-ocwhy],[data-occancel],[data-ocsave],[data-occlear]"); if (!t) return;
+  const sheetJob = () => saved.find(x => x.job_key === $("#sheetBody").dataset.job);
+  if (t.dataset.outcome) {
+    const s = saved.find(x => x.id === t.dataset.outcome), kind = t.dataset.val, o = outcomeOf(s);
+    if (kind === "accepted") { outcomeDraft = null; if (o?.kind !== "accepted") await acceptOffer(s); return; }
+    outcomeDraft = { id: s.id, kind, reason: o?.kind === kind ? o.reason || "" : "", at: o?.kind === kind && o.at ? o.at : isoDay() };
+    reSheet(s); $("#ocAt")?.focus(); return;
+  }
+  if (t.dataset.ocwhy !== undefined && outcomeDraft) { outcomeDraft.reason = outcomeDraft.reason === t.dataset.ocwhy ? "" : t.dataset.ocwhy; outcomeDraft.at = $("#ocAt")?.value || outcomeDraft.at; reSheet(sheetJob()); return; }
+  if (t.dataset.occancel !== undefined) { outcomeDraft = null; reSheet(sheetJob()); return; }
+  if (t.dataset.ocsave) {
+    const s = saved.find(x => x.id === t.dataset.ocsave), d = outcomeDraft; if (!d) return;
+    t.disabled = true;
+    const at = $("#ocAt")?.value || isoDay();
+    const data = await setOutcome(s, { kind: d.kind, at: at > isoDay() ? isoDay() : at, ...(d.reason ? { reason: d.reason } : {}) });
+    if (!data) { t.disabled = false; return; }
+    outcomeDraft = null; renderMine(); renderMatches(); reSheet(data);
+    toast(d.kind === "declined" ? "Marked I Turned It Down. It's in Closed." : "Marked They Pulled It. It's in Closed.");
+    return;
+  }
+  if (t.dataset.occlear) {
+    const s = saved.find(x => x.id === t.dataset.occlear);
+    const data = await setOutcome(s, null); if (!data) return;
+    renderMine(); renderMatches(); reSheet(data); toast("Back to an open offer.");
+  }
+});
+
 // ---------- Big moments ----------
-function celebrate(kind, s) {
+function celebrate(kind, s, done) {
+  if (kind === "hired") return hired(s, done);
   // Once saved jobs carry applied_at, a job closed before applying doesn't count; until then every closed job does.
   const applied = saved.filter(x => x.applied_at || ["applied", "interview", "offer"].includes(x.status) || (x.status === "closed" && !("applied_at" in x))).length;
   const div = document.createElement("div"); div.className = "party";
@@ -1140,6 +1263,39 @@ function celebrate(kind, s) {
   div.querySelector("button").onclick = () => { div.remove(); $("#confetti").classList.add("hidden"); };
   document.body.appendChild(div);
   if (kind === "offer") { let n = 0; const el = div.querySelector("#countUp"); const t = setInterval(() => { el.textContent = ++n; if (n >= Math.max(1, applied)) clearInterval(t); }, Math.max(30, 900 / Math.max(1, applied))); confetti(); }
+}
+// The tier-4 moment: a full-screen takeover. The count climbs, then flash, confetti and buzz land together,
+// then the headline, then the record of what it took. It waits for them; one button ends it.
+function hired(s, done) {
+  const applied = saved.filter(x => x.applied_at || ["applied", "interview", "offer"].includes(x.status) || (x.status === "closed" && !("applied_at" in x))).length || 1;
+  const firstDay = saved.filter(x => x.applied_at || ["applied", "interview", "offer"].includes(x.status)).map(appliedOn).sort()[0];
+  const days = firstDay ? Math.max(1, daysAgo(firstDay)) : 0;
+  const offers = saved.filter(x => x.status === "offer" || outcomeOf(x)).length;
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const div = document.createElement("div"); div.className = "takeover" + (calm ? " calm" : "");
+  div.setAttribute("role", "dialog"); div.setAttribute("aria-modal", "true"); div.setAttribute("aria-label", "You're Hired");
+  div.innerHTML = `<div class="tk-flash"></div><div class="tk-stage">
+    <div class="tk-count"><b id="tkN">${calm ? applied : 0}</b><span>${applied === 1 ? "Application" : "Applications"} Sent</span></div>
+    <h1 class="tk-hl">You're Hired!</h1>
+    <div class="tk-story"><b>${esc(s.job.title)}</b><span>${esc(s.job.company)}</span>
+      <p>${[offers > 1 ? `${offers} offers` : "", days ? `${days} ${days === 1 ? "day" : "days"} from your first application` : ""].filter(Boolean).join(" · ")}</p></div>
+    <img class="tk-goose" src="img/cheer.webp" alt="The goose, cheering">
+    <button class="btn wide tk-done">Back to My Jobs</button></div>`;
+  document.body.appendChild(div);
+  document.body.classList.add("tk-on");
+  const end = () => { div.remove(); document.body.classList.remove("tk-on"); $("#confetti").classList.add("hidden"); done?.(); };
+  div.querySelector(".tk-done").onclick = end;
+  if (calm) { div.classList.add("hit", "told"); div.querySelector(".tk-done").focus(); return; }
+  requestAnimationFrame(() => div.classList.add("in"));
+  const el = div.querySelector("#tkN"), steps = Math.min(applied, 40); let n = 0;
+  const tick = setInterval(() => {
+    n++; el.textContent = Math.round(applied * n / steps);
+    if (n < steps) return;
+    clearInterval(tick);
+    div.classList.add("hit"); confetti();
+    try { navigator.vibrate?.([40, 60, 40, 60, 220, 80, 30, 40, 30]); } catch {}
+    setTimeout(() => { div.classList.add("told"); div.querySelector(".tk-done").focus(); }, 700);
+  }, Math.max(35, 1400 / steps));
 }
 function confetti() {
   const c = $("#confetti"), x = c.getContext("2d"); c.classList.remove("hidden"); c.width = innerWidth; c.height = innerHeight;
@@ -1538,6 +1694,7 @@ function openSheet(id, keep) {
     <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${commissionPill(j)}${s && s.status !== "passed" ? `<span class="pill">In My Jobs</span>` : ""}</div>
     ${askApplied(j, s)}
     ${s && s.status !== "passed" ? `<h3>Where It Stands</h3>${trackBox(s)}` : ""}
+    ${s && (s.status === "offer" || outcomeOf(s)) ? outcomeBox(s) : ""}
     <h3>Paper Trail</h3>
     ${gone ? `<div class="verdict gone"><b>Taken Down</b><p>${esc(j.company)} took it off their job board. Close it out and move on.</p></div>` : c.label && c.label !== "Looks Real" ? `<div class="verdict ${CHECK[c.label]}"><b>${esc(c.label)}</b><p>${VERDICT[c.label]}</p></div>` : ""}
     <ul class="ev">${gone ? `<li><span class="dot miss"></span>No longer on ${esc(j.company)}'s job board as of ${shortDay(gone)}.</li>` : ""}${c.good.map(g => `<li><span class="dot ok"></span>${esc(niceDates(g))}</li>`).join("")}${c.warn.map(w => `<li><span class="dot check"></span>${esc(niceDates(w))}</li>`).join("")}</ul>

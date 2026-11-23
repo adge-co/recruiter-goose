@@ -416,5 +416,79 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
   await step("[resume] no page errors", async () => assert.deepEqual(errors, []));
   await ctx.close();
 }
+// 4. Three offers at once: take one, turn the rest down, and mark one the company pulled.
+{
+  const mk = (n, company, title, status, extra = {}) => ({ id: "off" + n, user_id: "u1", job_key: `gh:${company.toLowerCase().replace(/\W+/g, "")}:${n}`, status, follow_up: null, note: null, created_at: old, updated_at: old, applied_at: old,
+    job: { ...BOARD[0], id: `gh:${company.toLowerCase().replace(/\W+/g, "")}:${n}`, company, title, checkedAt: old, ...extra } });
+  const seed4 = structuredClone(seed);
+  seed4.db.saved_jobs = [mk(1, "Dillard Associates", "Project Manager", "offer"), mk(2, "Hugh M. Cunningham", "Estimator", "offer"), mk(3, "Southwest Sales", "Inside Sales Lead", "offer"), mk(4, "BuildCo", "Purchasing Agent", "offer")];
+  const { ctx, page, errors } = await open(browser, { width: 390, height: 844, dark: false, seed: seed4 });
+  const row = id => page.evaluate(i => window.__db.saved_jobs.find(r => r.id === i), id);
+  await step("[offers] They Pulled It closes the offer with the day it happened", async () => {
+    await page.waitForSelector("#mBody .summary");
+    await page.click('.tab[data-tab="mine"]');
+    await page.locator('#mineBody [data-open="gh:southwestsales:3"]').click();
+    await page.waitForSelector('#sheetBody [data-outcome="off3"][data-val="withdrawn"]');
+    await page.click('#sheetBody [data-outcome="off3"][data-val="withdrawn"]');
+    await page.fill("#ocAt", "2026-11-17");
+    await page.click('#sheetBody [data-ocsave="off3"]');
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "off3").status === "closed");
+    assert.deepEqual((await row("off3")).job.outcome, { kind: "withdrawn", at: "2026-11-17" });
+    assert.ok((await page.textContent("#sheetBody")).includes("They Pulled It Tue, Nov 17, 2026"));
+    await page.click("#sheet [data-close]");
+  });
+  await step("[offers] I Turned It Down keeps a reason, and the chip shows on the job's card", async () => {
+    await page.locator('#mineBody [data-open="gh:hughmcunningham:2"]').click();
+    await page.click('#sheetBody [data-outcome="off2"][data-val="declined"]');
+    await page.click('#sheetBody [data-ocwhy="Pay"]');
+    await page.click('#sheetBody [data-ocsave="off2"]');
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "off2").job.outcome?.reason === "Pay");
+    await page.click("#sheet [data-close]");
+    await page.click('#mineBody details summary');
+    const closed = await page.textContent("#mineBody details");
+    assert.ok(closed.includes("I Turned It Down") && closed.includes("They Pulled It") && closed.includes("Pay"), closed);
+    await shot(page, "phone-light-offers-closed");
+  });
+  await step("[offers] Accepted fires the hired moment, then offers to turn down the other open offer", async () => {
+    await page.locator('#mineBody [data-open="gh:dillardassociates:1"]').click();
+    await page.click('#sheetBody [data-outcome="off1"][data-val="accepted"]');
+    await page.waitForSelector(".takeover.told .tk-done");
+    assert.ok((await page.textContent(".takeover")).includes("You're Hired!"));
+    assert.ok((await page.textContent(".takeover .tk-story")).includes("Dillard Associates"));
+    await shot(page, "phone-light-hired");
+    await page.click(".takeover .tk-done");
+    await page.waitForSelector("[data-othersyes]");
+    const ask = await page.textContent(".party");
+    assert.ok(ask.includes("BuildCo") && !ask.includes("Southwest") && !ask.includes("Cunningham"), "only open offers are asked about: " + ask);
+    await shot(page, "phone-light-offers-others");
+    await page.click("[data-othersyes]");
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "off4").status === "closed");
+    assert.deepEqual((await row("off4")).job.outcome.reason, "Took Another Offer");
+    assert.equal((await row("off1")).job.outcome.kind, "accepted");
+    assert.equal((await row("off1")).status, "offer");
+    await page.click("#sheet [data-close]");
+    assert.ok((await page.textContent("#mineBody .rows")).includes("Accepted"));
+    await shot(page, "phone-light-offers-mine");
+  });
+  await step("[offers] only one offer can be Accepted", async () => {
+    await page.click('#mineBody details summary').catch(() => {});
+    await page.locator('#mineBody [data-open="gh:buildco:4"]').click();
+    await page.click('#sheetBody [data-occlear="off4"]');
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "off4").status === "offer");
+    await page.click('#sheetBody [data-outcome="off4"][data-val="accepted"]');
+    await page.waitForSelector(".takeover.told .tk-done"); await page.click(".takeover .tk-done");
+    assert.equal((await row("off4")).job.outcome.kind, "accepted");
+    assert.equal((await row("off1")).job.outcome, undefined, "the earlier pick goes back to an open offer");
+    await page.click("[data-othersno]");
+  });
+  await step("[offers] moving an offer back by hand clears its outcome", async () => {
+    await page.click('#sheetBody [data-status="off4"][data-val="interview"]');
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "off4").status === "interview");
+    assert.equal((await row("off4")).job.outcome, undefined);
+    await page.locator(".party button").first().click().catch(() => {});
+  });
+  await step("[offers] no page errors", async () => assert.deepEqual(errors, []));
+  await ctx.close();
+}
 await browser.close();
 console.log(`\n${passed} checks passed`);
