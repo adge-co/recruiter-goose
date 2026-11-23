@@ -394,6 +394,23 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     await page.locator('#mineBody .rows [data-open="gh:buildco:2"]').click();
     await page.waitForSelector("#sheet:not(.hidden)");
     assert.ok((await page.textContent("#sheetBody")).includes("Interview Request in Gmail"), "the sheet says why it moved");
+    // The person who wrote is one tap from the People list, and writing them back sets the next follow-up.
+    await page.click('#sheetBody [data-padd="row2"][data-frommail]');
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "row2").job.people?.[0]?.email === "dana@buildco.com");
+    await page.click('#sheetBody [data-wrote="row2"]');
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "row2").job.people[0].last);
+    const r2 = await page.evaluate(() => window.__db.saved_jobs.find(r => r.id === "row2"));
+    assert.equal(r2.job.people[0].name, "Dana Lee");
+    assert.ok(r2.follow_up > new Date().toISOString().slice(0, 10), "the next follow-up moves out");
+    await page.click('#sheetBody [data-padd="row2"]:not([data-frommail])');
+    await page.fill("#pName", "Sam Ortiz");
+    await page.click('#sheetBody [data-prole="Hiring Manager"]');
+    await page.click('#sheetBody [data-personform] [type=submit]');
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "row2").job.people.length === 2);
+    assert.equal(await page.evaluate(() => window.__db.saved_jobs.find(r => r.id === "row2").job.people[1].role), "Hiring Manager");
+    await page.locator("#sheetBody .people").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await shot(page, "phone-light-people");
     await page.click("#sheet [data-close]");
   });
   await step("[resume] Me shows the resume and Gmail, and edits save", async () => {

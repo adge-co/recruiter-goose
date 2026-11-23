@@ -374,6 +374,13 @@ button.pill{border:0;cursor:pointer;font-family:inherit}
 .party img{width:220px;border-radius:24px}
 .party .big{font-family:var(--num);font-weight:800;letter-spacing:-.04em;font-feature-settings:"lnum","tnum";font-size:54px;color:var(--ink)}
 canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:41}
+.people{display:grid}
+.person{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line)}
+.person:first-child{border-top:0}
+.person>div:first-child{display:grid;gap:2px}
+.person span{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.person a{color:inherit}
+.pact{display:flex;gap:6px;align-items:center;flex:none}
 .offerform{gap:6px}.offerform .tl{margin-top:6px}.offerform input,.offerform textarea{width:100%}
 .offerkv .kv:first-child{border-top:0}
 .sh-act{margin-left:auto;font-size:15px}
@@ -975,6 +982,61 @@ function outcomeBox(s) {
     `<button type="button" role="radio" aria-checked="${pick === k}" class="${pick === k ? "on" : ""}" data-outcome="${s.id}" data-val="${k}">${l}</button>`).join("")}</div>${form}${said}`;
 }
 
+// ---------- People: who they've talked to about this job, and when they last wrote ----------
+// Kept as job.people = [{ id, name, role, email, last }]. Writing someone sets the job's follow-up a week out.
+const PERSON_ROLES = ["Recruiter", "Hiring Manager", "Referral", "Other"];
+let personAdd = null;   // { id: saved job id, role, name, email } while the add form is open
+const fromMail = m => m?.email ? { name: m.from && m.from !== m.email ? m.from : "", email: m.email } : null;   // the person who wrote, when Gmail gave an address
+function peopleBox(s) {
+  const people = s.job.people || [], f = personAdd?.id === s.id ? personAdd : null;
+  const m = fromMail(s.job.mail), known = m && people.some(p => p.email && p.email.toLowerCase() === m.email.toLowerCase());
+  const rows = people.map(p => `<div class="person"><div style="min-width:0"><b>${esc(p.name || p.email)}</b><span>${[p.role, p.email && p.name ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>` : ""].filter(Boolean).join(" · ")}</span>
+      <span class="hint">${p.last === isoDay() ? "You wrote them today" : p.last ? `Last wrote ${shortDay(p.last)}` : "Haven't written yet"}</span></div>
+      <div class="pact">${p.last === isoDay() ? "" : `<button class="btn ghost small" data-wrote="${s.id}" data-pid="${p.id}">I Wrote Them</button>`}<button class="icon" data-pdel="${s.id}" data-pid="${p.id}" aria-label="Remove ${esc(p.name || p.email)}">${I.x}</button></div></div>`).join("");
+  const form = f ? `<form class="ocform" data-personform="${s.id}">
+      <label class="tl" for="pName">Name</label><input id="pName" name="name" maxlength="60" value="${esc(f.name || "")}" placeholder="Dana Lee" required>
+      <span class="tl">Who They Are</span><div class="chips">${PERSON_ROLES.map(r => `<button type="button" class="chip ${f.role === r ? "on" : ""}" data-prole="${r}">${r}</button>`).join("")}</div>
+      <label class="tl" for="pEmail">Email, If You Have It</label><input id="pEmail" name="email" type="email" maxlength="120" value="${esc(f.email || "")}" placeholder="dana@company.com">
+      <div class="btnrow"><button class="btn small" type="submit">Add Them</button><button class="btn ghost small" type="button" data-pcancel>Cancel</button></div></form>` : "";
+  return `<h3>People</h3>${rows ? `<div class="people">${rows}</div>` : f ? "" : `<p class="hint">Add the recruiter or hiring manager you're talking to, so follow-ups go to a name.</p>`}${form}
+    ${f ? "" : `<div class="btnrow">${m && !known ? `<button class="btn ghost small" data-padd="${s.id}" data-fromMail="1">Add ${esc(m.name || m.email)} From Their Email</button>` : ""}<button class="btn ghost small" data-padd="${s.id}">Add a Person</button></div>`}`;
+}
+async function savePeople(s, people, extra = {}) {
+  const { data, error } = await sb.from("saved_jobs").update({ job: { ...s.job, people }, ...extra, updated_at: new Date().toISOString() }).eq("id", s.id).select().single();
+  if (error) { toast(error.message); return null; }
+  saved = saved.map(x => x.id === s.id ? data : x); renderMine(); reSheet(data); return data;
+}
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-padd],[data-pcancel],[data-prole],[data-wrote],[data-pdel]"); if (!t) return;
+  const cur = () => saved.find(x => x.job_key === $("#sheetBody").dataset.job);
+  if (t.dataset.padd) {
+    const s = saved.find(x => x.id === t.dataset.padd), m = t.dataset.frommail ? fromMail(s.job.mail) : null;
+    if (m) { await savePeople(s, [...(s.job.people || []), { id: "p" + Date.now().toString(36), name: m.name, email: m.email, role: "Recruiter", last: "" }]); toast(`Added ${m.name || m.email}.`); return; }
+    personAdd = { id: s.id, role: "Recruiter" }; reSheet(s); $("#pName")?.focus(); return;
+  }
+  if (t.dataset.pcancel !== undefined) { personAdd = null; reSheet(cur()); return; }
+  if (t.dataset.prole && personAdd) { personAdd = { ...personAdd, role: t.dataset.prole, name: $("#pName")?.value, email: $("#pEmail")?.value }; reSheet(cur()); return; }
+  if (t.dataset.wrote) {
+    const s = saved.find(x => x.id === t.dataset.wrote);
+    const people = s.job.people.map(p => p.id === t.dataset.pid ? { ...p, last: isoDay() } : p);
+    // Writing someone is the follow-up done: the next one is a week out.
+    const extra = ["applied", "interview"].includes(s.status) ? { follow_up: isoDay(7) } : {};
+    if (await savePeople(s, people, extra)) toast(extra.follow_up ? `Noted. Next follow-up ${longDay(extra.follow_up)}.` : "Noted.");
+    return;
+  }
+  if (t.dataset.pdel) { const s = saved.find(x => x.id === t.dataset.pdel); await savePeople(s, s.job.people.filter(p => p.id !== t.dataset.pid)); }
+});
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("[data-personform]"); if (!f) return;
+  e.preventDefault();
+  const s = saved.find(x => x.id === f.dataset.personform), fd = new FormData(f);
+  const name = String(fd.get("name") || "").trim(), email = String(fd.get("email") || "").trim();
+  if (!name) return;
+  const role = personAdd?.role || "Recruiter"; personAdd = null;
+  await savePeople(s, [...(s.job.people || []), { id: "p" + Date.now().toString(36), name, role, email, last: "" }]);
+  toast(`Added ${name}.`);
+});
+
 // ---------- Offer details: what they offered, typed in by the person, so offers sit side by side ----------
 // Kept as job.offerInfo. Blank means not known yet, and shows as something to ask before answering.
 const OFFER_FIELDS = [["base", "Base Pay", "$75,000 a year"], ["bonus", "Bonus or Commission", "10% yearly bonus"], ["start", "Start Date", "date"], ["answerBy", "Answer By", "date"],
@@ -1215,7 +1277,7 @@ function todayItems() {
     else if (["applied", "interview"].includes(s.status) && j.goneAt && !j.mail && !(s.follow_up > today))
       items.push({ id: s.job_key, s, b: j.title, t: `Came down from ${j.company}'s job board ${shortDay(j.goneAt)}. They may be interviewing; a short check-in is fair.`, act: "follow" });
     else if (["applied", "interview"].includes(s.status) && s.follow_up && s.follow_up <= today)
-      items.push({ id: s.job_key, s, b: j.title, t: `Follow-up day. One short note to the recruiter or hiring manager at ${j.company}.`, act: "follow" });
+      items.push({ id: s.job_key, s, b: j.title, t: `Follow-up day. One short note to ${(() => { const p = (j.people || []).find(p => p.role === "Recruiter" || p.role === "Hiring Manager"); return p ? `${p.name} (${p.role.toLowerCase()})` : "the recruiter or hiring manager"; })()} at ${j.company}.`, act: "follow" });
     else if (s.status === "applied" && daysAgo(appliedOn(s)) >= 21 && !j.mail)
       items.push({ id: s.job_key, s, b: j.title, t: `Applied ${daysAgo(appliedOn(s))} days ago with no word from ${j.company}. Time to close it out.`, act: "closeout" });
     else if (s.status === "saved" && daysAgo(s.created_at) >= 10)
@@ -1237,7 +1299,8 @@ function todayCard() {
 document.addEventListener("click", async e => {
   const b = e.target.closest("[data-copyfu]"); if (!b) return;
   const s = saved.find(x => x.id === b.dataset.copyfu), j = s?.job || {};
-  const note = `Hi, I applied for the ${j.title} role at ${j.company} on ${shortDay(appliedOn(s))} and wanted to check in. I'm still very interested and happy to share anything that helps. Thanks for your time.`;
+  const to = (j.people || []).find(p => p.role === "Recruiter" || p.role === "Hiring Manager")?.name?.split(" ")[0];
+  const note = `Hi${to ? " " + to : ""}, I applied for the ${j.title} role at ${j.company} on ${shortDay(appliedOn(s))} and wanted to check in. I'm still very interested and happy to share anything that helps. Thanks for your time.`;
   let copied = true;
   try { await navigator.clipboard.writeText(note); } catch { copied = false; }
   // The check-in is done for now: the next one is a week out, so this nudge doesn't sit on My Jobs.
@@ -1666,7 +1729,7 @@ async function checkReplies(quiet) {
       const body = Tailor.mailText(msg.payload) || msg.snippet || "";
       const kind = Tailor.readReply(h("Subject"), body), to = Tailor.nextStatus(s.status, kind);
       if (!to) continue;
-      found.push({ sid: s.id, msgId: id, to, kind, from: h("From").replace(/\s*<.*>$/, "").replace(/"/g, "") || s.job.company, subject: h("Subject"),
+      found.push({ sid: s.id, msgId: id, to, kind, from: h("From").replace(/\s*<.*>$/, "").replace(/"/g, "") || s.job.company, email: (h("From").match(/<([^>]+)>/) || [])[1] || (/^[^\s<]+@[^\s>]+$/.test(h("From").trim()) ? h("From").trim() : ""), subject: h("Subject"),
         snippet: body.replace(/\s+/g, " ").trim().slice(0, 220), at: new Date(Number(msg.internalDate) || Date.now()).toISOString() });
       break;   // newest meaningful email wins
     }
@@ -1693,7 +1756,7 @@ function mailCards() {
 }
 async function acceptMail(m) {
   const s = saved.find(x => x.id === m.sid); if (!s) return null;
-  const job = { ...s.job, mail: { kind: m.kind, from: m.from, subject: m.subject, at: m.at, msgId: m.msgId }, mailSeen: [...(s.job.mailSeen || []), m.msgId].slice(-20) };
+  const job = { ...s.job, mail: { kind: m.kind, from: m.from, ...(m.email ? { email: m.email } : {}), subject: m.subject, at: m.at, msgId: m.msgId }, mailSeen: [...(s.job.mailSeen || []), m.msgId].slice(-20) };
   const patch = { status: m.to, job, updated_at: new Date().toISOString(), ...(m.to === "applied" && !s.follow_up ? { follow_up: isoDay(7) } : {}) };
   const { data, error } = await sb.from("saved_jobs").update(patch).eq("id", s.id).select().single();
   if (error) { toast(error.message); return null; }
@@ -1763,7 +1826,7 @@ function openSheet(id, keep) {
     ${j.payMax || j.payMin ? `<div class="paysrc">Pay as listed by ${esc(j.company)}</div>` : ""}
     <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${commissionPill(j)}${s && s.status !== "passed" ? `<span class="pill">In My Jobs</span>` : ""}</div>
     ${askApplied(j, s)}
-    ${s && s.status !== "passed" ? `<h3>Where It Stands</h3>${trackBox(s)}` : ""}
+    ${s && s.status !== "passed" ? `<h3>Where It Stands</h3>${trackBox(s)}${s.status !== "saved" || s.job.people?.length ? peopleBox(s) : ""}` : ""}
     ${s && (s.status === "offer" || outcomeOf(s)) ? outcomeBox(s) + offerInfoBox(s) : ""}
     <h3>Paper Trail</h3>
     ${gone ? `<div class="verdict gone"><b>Taken Down</b><p>${esc(j.company)} took it off their job board. Close it out and move on.</p></div>` : c.label && c.label !== "Looks Real" ? `<div class="verdict ${CHECK[c.label]}"><b>${esc(c.label)}</b><p>${VERDICT[c.label]}</p></div>` : ""}
