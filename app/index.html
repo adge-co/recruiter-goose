@@ -374,6 +374,19 @@ button.pill{border:0;cursor:pointer;font-family:inherit}
 .party img{width:220px;border-radius:24px}
 .party .big{font-family:var(--num);font-weight:800;letter-spacing:-.04em;font-feature-settings:"lnum","tnum";font-size:54px;color:var(--ink)}
 canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:41}
+.offerform{gap:6px}.offerform .tl{margin-top:6px}.offerform input,.offerform textarea{width:100%}
+.offerkv .kv:first-child{border-top:0}
+.sh-act{margin-left:auto;font-size:15px}
+.section-h:has(.sh-act){display:flex;align-items:baseline;gap:8px}
+.cmpwrap{overflow-x:auto;margin:14px -4px 0;border-radius:14px;background:var(--surface);box-shadow:var(--hl)}
+table.cmp{border-collapse:separate;border-spacing:0;font-size:14.5px;min-width:100%}
+.cmp th,.cmp td{padding:10px 12px;border-top:1px solid var(--line);text-align:left;vertical-align:top;min-width:150px}
+.cmp thead th{border-top:0;vertical-align:bottom}
+.cmp thead .co{font-weight:700;color:var(--ink);font-size:15px}.cmp thead .ct{color:var(--muted);font-size:13.5px;margin-bottom:6px}
+.cmp tbody th{position:sticky;left:0;background:var(--surface);font-weight:700;min-width:108px;max-width:120px;font-size:14px;box-shadow:1px 0 0 var(--line)}
+.cmp thead th:first-child{position:sticky;left:0;background:var(--surface);z-index:1}
+.cmp .ask{font-size:12.5px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--mark-soft);color:var(--mark-text)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 /* Offer outcome chips: the one taken in the action color, the other two quiet. */
 .pill.oc-accepted{background:var(--action);color:var(--action-ink,#fff)}
 .pill.oc-declined,.pill.oc-withdrawn{background:var(--raise);color:var(--ink2);box-shadow:inset 0 0 0 1px var(--line2)}
@@ -962,6 +975,58 @@ function outcomeBox(s) {
     `<button type="button" role="radio" aria-checked="${pick === k}" class="${pick === k ? "on" : ""}" data-outcome="${s.id}" data-val="${k}">${l}</button>`).join("")}</div>${form}${said}`;
 }
 
+// ---------- Offer details: what they offered, typed in by the person, so offers sit side by side ----------
+// Kept as job.offerInfo. Blank means not known yet, and shows as something to ask before answering.
+const OFFER_FIELDS = [["base", "Base Pay", "$75,000 a year"], ["bonus", "Bonus or Commission", "10% yearly bonus"], ["start", "Start Date", "date"], ["answerBy", "Answer By", "date"],
+  ["where", "Where You Work", "On site, hybrid or remote"], ["hours", "Hours", "7 to 4, Monday to Friday"], ["pto", "Paid Time Off", "2 weeks plus 8 holidays"],
+  ["health", "Health Insurance, Your Cost", "$180 a month"], ["retire", "401k Match", "4% match"], ["notes", "Anything Else", "Truck allowance, phone"]];
+let offerEdit = null;   // the saved job id whose details form is open
+const offerVal = (k, v) => !v ? "" : OFFER_FIELDS.find(f => f[0] === k)[2] === "date" ? longDay(v) : v;
+const basePay = o => { const m = String(o?.base || "").replace(/,/g, "").match(/\$?\s*(\d+(?:\.\d+)?)\s*(k)?/i); if (!m) return 0; let n = +m[1] * (m[2] ? 1000 : 1); if (/hour|hr/i.test(o.base) || n < 300) n *= 2080; return n; };
+function offerInfoBox(s) {
+  const o = s.job.offerInfo || {};
+  if (offerEdit === s.id) return `<h3>The Offer</h3><form class="ocform offerform" data-offerform="${s.id}">${OFFER_FIELDS.map(([k, l, hint]) =>
+      `<label class="tl" for="of-${k}">${l}</label>${hint === "date" ? `<input type="date" id="of-${k}" name="${k}" value="${esc(o[k] || "")}">`
+        : k === "notes" ? `<textarea id="of-${k}" name="${k}" rows="2" maxlength="300" placeholder="${esc(hint)}">${esc(o[k] || "")}</textarea>`
+        : `<input id="of-${k}" name="${k}" maxlength="80" value="${esc(o[k] || "")}" placeholder="${esc(hint)}">`}`).join("")}
+    <div class="btnrow"><button class="btn small" type="submit">Save the Offer</button><button class="btn ghost small" type="button" data-offercancel>Cancel</button></div></form>`;
+  const have = OFFER_FIELDS.filter(([k]) => o[k]), missing = OFFER_FIELDS.filter(([k]) => !o[k] && k !== "notes");
+  return `<h3>The Offer</h3>${have.length ? `<div class="offerkv">${have.map(([k, l]) => `<div class="kv"><div class="k">${l}</div><div class="v">${esc(offerVal(k, o[k]))}</div></div>`).join("")}</div>` : `<p class="hint">Type in what they offered, and it lines up beside your other offers.</p>`}
+    ${have.length && missing.length ? `<p class="hint">Still to ask: ${missing.map(f => f[1]).join(", ")}.</p>` : ""}
+    <div class="btnrow"><button class="btn ghost small" data-offeredit="${s.id}">${have.length ? "Edit the Offer" : "Add What They Offered"}</button>${offersAll().length > 1 ? `<button class="btn ghost small" data-compare>Compare Offers</button>` : ""}</div>`;
+}
+const offersAll = () => saved.filter(x => x.status === "offer" || outcomeOf(x));
+function compareOffers() {
+  const list = offersAll().sort((a, b) => (outcomeOf(a)?.kind === "accepted" ? -1 : 0) - (outcomeOf(b)?.kind === "accepted" ? -1 : 0) || !!outcomeOf(a) - !!outcomeOf(b));
+  const pays = list.map(x => basePay(x.job.offerInfo)), top = Math.max(...pays);
+  const head = list.map((x, i) => `<th scope="col"><div class="co">${esc(x.job.company)}</div><div class="ct">${esc(x.job.title)}</div>${outcomeChip(x) || `<span class="pill">Open</span>`}${top && pays[i] === top && pays.filter(p => p).length > 1 ? ` <span class="pill strong">Highest Base</span>` : ""}</th>`).join("");
+  const rows = OFFER_FIELDS.map(([k, l]) => `<tr><th scope="row">${l}</th>${list.map(x => { const v = x.job.offerInfo?.[k]; return v ? `<td>${esc(offerVal(k, v))}</td>` : k === "notes" ? `<td></td>` : `<td><span class="ask">Ask</span></td>`; }).join("")}</tr>`).join("");
+  $("#sheetBody").dataset.job = "";
+  $("#sheetBody").innerHTML = `<div class="grab"><div style="flex:1"></div>${X_BTN}</div><div class="page"><h2 style="margin-top:0">Your Offers, Side by Side</h2>
+    <p class="hint">What you typed in for each one. <b>Ask</b> means it isn't known yet, so it's worth asking before you answer.</p>
+    <div class="cmpwrap"><table class="cmp"><thead><tr><th scope="col"><span class="sr">Detail</span></th>${head}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  $("#sheet").classList.remove("hidden"); document.body.style.overflow = "hidden";
+}
+document.addEventListener("click", e => {
+  const ed = e.target.closest("[data-offeredit]"), cn = e.target.closest("[data-offercancel]"), cmp = e.target.closest("[data-compare]");
+  if (cmp) { compareOffers(); return; }
+  if (!ed && !cn) return;
+  const s = saved.find(x => x.job_key === $("#sheetBody").dataset.job);
+  offerEdit = ed ? ed.dataset.offeredit : null; reSheet(s);
+  if (ed) $("#of-base")?.focus();
+});
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("[data-offerform]"); if (!f) return;
+  e.preventDefault();
+  const s = saved.find(x => x.id === f.dataset.offerform), info = {};
+  for (const [k] of OFFER_FIELDS) { const v = String(new FormData(f).get(k) || "").trim(); if (v) info[k] = v; }
+  f.querySelector("[type=submit]").disabled = true;
+  const { data, error } = await sb.from("saved_jobs").update({ job: { ...s.job, offerInfo: info }, updated_at: new Date().toISOString() }).eq("id", s.id).select().single();
+  if (error) { toast(error.message); f.querySelector("[type=submit]").disabled = false; return; }
+  saved = saved.map(x => x.id === s.id ? data : x); offerEdit = null;
+  renderMine(); reSheet(data); toast("Saved the offer.");
+});
+
 // ---------- Learning from passes: a repeated reason gets one question, and the answer filters future matches ----------
 const SENIOR_TITLE = /\b(senior|sr\.?|lead|principal|staff|director|head of|vp)\b/i;
 function learnQuestion() {
@@ -1126,8 +1191,9 @@ function renderMine() {
       const list = live.filter(s => st === "hired" ? took(s) : s.status === st && !took(s)).sort(by);
       if (!list.length) return "";
       const body = `<div class="rows">${list.map(rowJob).join("")}</div>`;
+      const cmp = (st === "hired" || (st === "offer" && !live.some(took))) && offersAll().length > 1 ? `<button class="linkbtn sh-act" data-compare>Compare Offers</button>` : "";
       return st === "closed" ? `<details><summary class="section-h">${label} <span class="count">${list.length}</span></summary>${body}</details>`
-        : `<div class="section-h">${label} <span class="count">${list.length}</span></div>${body}`;
+        : `<div class="section-h">${label} <span class="count">${list.length}</span>${cmp}</div>${body}`;
     }).join("");
 }
 
@@ -1139,6 +1205,10 @@ function todayItems() {
   for (const s of saved) {
     const j = s.job || {};
     if (mailSuggest.some(m => m.sid === s.id)) continue;   // a reply is waiting on this job: that card says what to do
+    const by = s.job.offerInfo?.answerBy;
+    if (s.status === "offer" && !outcomeOf(s) && by && daysAgo(by + "T12:00:00") > -4) {
+      items.push({ id: s.job_key, s, b: j.title, t: `${j.company} wants an answer by ${longDay(by)}.` }); continue;
+    }
     // A saved job that came down is over; one they applied to may still be moving (postings often come down once interviews start).
     if (s.status === "saved" && j.goneAt)
       items.push({ id: s.job_key, s, b: j.title, t: `No longer on ${j.company}'s job board as of ${shortDay(j.goneAt)}.`, act: "closeout" });
@@ -1694,7 +1764,7 @@ function openSheet(id, keep) {
     <div class="pills">${j.fit ? `<span class="pill ${j.fit}">${FIT[j.fit]}</span>` : ""}${commissionPill(j)}${s && s.status !== "passed" ? `<span class="pill">In My Jobs</span>` : ""}</div>
     ${askApplied(j, s)}
     ${s && s.status !== "passed" ? `<h3>Where It Stands</h3>${trackBox(s)}` : ""}
-    ${s && (s.status === "offer" || outcomeOf(s)) ? outcomeBox(s) : ""}
+    ${s && (s.status === "offer" || outcomeOf(s)) ? outcomeBox(s) + offerInfoBox(s) : ""}
     <h3>Paper Trail</h3>
     ${gone ? `<div class="verdict gone"><b>Taken Down</b><p>${esc(j.company)} took it off their job board. Close it out and move on.</p></div>` : c.label && c.label !== "Looks Real" ? `<div class="verdict ${CHECK[c.label]}"><b>${esc(c.label)}</b><p>${VERDICT[c.label]}</p></div>` : ""}
     <ul class="ev">${gone ? `<li><span class="dot miss"></span>No longer on ${esc(j.company)}'s job board as of ${shortDay(gone)}.</li>` : ""}${c.good.map(g => `<li><span class="dot ok"></span>${esc(niceDates(g))}</li>`).join("")}${c.warn.map(w => `<li><span class="dot check"></span>${esc(niceDates(w))}</li>`).join("")}</ul>

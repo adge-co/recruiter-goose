@@ -427,7 +427,7 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
   await step("[offers] They Pulled It closes the offer with the day it happened", async () => {
     await page.waitForSelector("#mBody .summary");
     await page.click('.tab[data-tab="mine"]');
-    await page.locator('#mineBody [data-open="gh:southwestsales:3"]').click();
+    await page.locator('#mineBody .rows [data-open="gh:southwestsales:3"]').click();
     await page.waitForSelector('#sheetBody [data-outcome="off3"][data-val="withdrawn"]');
     await page.click('#sheetBody [data-outcome="off3"][data-val="withdrawn"]');
     await page.fill("#ocAt", "2026-11-17");
@@ -438,7 +438,7 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     await page.click("#sheet [data-close]");
   });
   await step("[offers] I Turned It Down keeps a reason, and the chip shows on the job's card", async () => {
-    await page.locator('#mineBody [data-open="gh:hughmcunningham:2"]').click();
+    await page.locator('#mineBody .rows [data-open="gh:hughmcunningham:2"]').click();
     await page.click('#sheetBody [data-outcome="off2"][data-val="declined"]');
     await page.click('#sheetBody [data-ocwhy="Pay"]');
     await page.click('#sheetBody [data-ocsave="off2"]');
@@ -449,8 +449,36 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     assert.ok(closed.includes("I Turned It Down") && closed.includes("They Pulled It") && closed.includes("Pay"), closed);
     await shot(page, "phone-light-offers-closed");
   });
+  await step("[offers] what each offer pays lines up side by side, and Answer By lands on Today", async () => {
+    await page.locator('#mineBody .rows [data-open="gh:dillardassociates:1"]').click();
+    await page.click('#sheetBody [data-offeredit="off1"]');
+    await page.fill("#of-base", "$80,000 a year");
+    await page.fill("#of-answerBy", new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10));
+    await page.fill("#of-pto", "3 weeks");
+    await page.click('#sheetBody [data-offerform] [type=submit]');
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "off1").job.offerInfo?.base === "$80,000 a year");
+    const sheet = await page.textContent("#sheetBody");
+    assert.ok(sheet.includes("Still to ask: Bonus or Commission"), "blank details read as things to ask");
+    await page.click("#sheet [data-close]");
+    assert.ok((await page.textContent("#mineBody .today")).includes("Dillard Associates wants an answer by"));
+    await page.locator('#mineBody .rows [data-open="gh:buildco:4"]').click();
+    await page.click('#sheetBody [data-offeredit="off4"]');
+    await page.fill("#of-base", "$72k");
+    await page.click('#sheetBody [data-offerform] [type=submit]');
+    await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "off4").job.offerInfo?.base === "$72k");
+    await page.click("#sheet [data-close]");
+    await page.click("#mineBody [data-compare]");
+    await page.waitForSelector("#sheetBody table.cmp");
+    const t = await page.textContent("#sheetBody table.cmp");
+    assert.ok(t.includes("$80,000 a year") && t.includes("$72k") && t.includes("Ask") && t.includes("I Turned It Down"), t);
+    assert.equal(await page.locator("#sheetBody thead .pill.strong").count(), 1, "one Highest Base");
+    await noSideScroll(page);
+    await page.waitForTimeout(450);
+    await shot(page, "phone-light-offers-compare");
+    await page.click("#sheet [data-close]");
+  });
   await step("[offers] Accepted fires the hired moment, then offers to turn down the other open offer", async () => {
-    await page.locator('#mineBody [data-open="gh:dillardassociates:1"]').click();
+    await page.locator('#mineBody .rows [data-open="gh:dillardassociates:1"]').click();
     await page.click('#sheetBody [data-outcome="off1"][data-val="accepted"]');
     await page.waitForSelector(".takeover.told .tk-done");
     assert.ok((await page.textContent(".takeover")).includes("You're Hired!"));
@@ -472,7 +500,7 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
   });
   await step("[offers] only one offer can be Accepted", async () => {
     await page.click('#mineBody details summary').catch(() => {});
-    await page.locator('#mineBody [data-open="gh:buildco:4"]').click();
+    await page.locator('#mineBody .rows [data-open="gh:buildco:4"]').click();
     await page.click('#sheetBody [data-occlear="off4"]');
     await page.waitForFunction(() => window.__db.saved_jobs.find(r => r.id === "off4").status === "offer");
     await page.click('#sheetBody [data-outcome="off4"][data-val="accepted"]');
