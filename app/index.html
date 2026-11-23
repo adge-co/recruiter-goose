@@ -374,6 +374,18 @@ button.pill{border:0;cursor:pointer;font-family:inherit}
 .party img{width:220px;border-radius:24px}
 .party .big{font-family:var(--num);font-weight:800;letter-spacing:-.04em;font-feature-settings:"lnum","tnum";font-size:54px;color:var(--ink)}
 canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:41}
+.nextiv{display:flex;gap:14px;align-items:center;justify-content:space-between;margin-top:16px;padding:14px 16px;border-radius:16px;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--action);box-shadow:var(--hl);cursor:pointer}
+.nextiv>div{display:grid;gap:2px;min-width:0}
+.nextiv b{font-size:18px;line-height:1.25}
+.nextiv span:not(.tl){color:var(--muted);font-size:14px}
+.nextiv .left{flex:none;font-weight:800;font-size:14px;color:var(--action-text);background:var(--action-soft);border-radius:999px;padding:4px 12px}
+.agenda{display:grid;gap:14px}
+.aday{display:grid;gap:6px}
+.aev{display:grid;gap:2px;padding:10px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line2);cursor:pointer}
+.aev.k-interview{border-left-color:var(--action)}
+.aev.k-answerby{border-left-color:var(--mark-text)}
+.aev b{font-size:14.5px}.aev span{color:var(--muted);font-size:13.5px}
+input[type=datetime-local]{max-width:240px}
 .people{display:grid}
 .person{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line)}
 .person:first-child{border-top:0}
@@ -960,6 +972,7 @@ function trackBox(s) {
   const m = s.job?.mail;
   return `${m ? `<div class="verdict ${m.kind === "closed" ? "" : "real"}" style="margin-bottom:12px"><b>${MAIL_WORD[m.kind]}${String(m.msgId || "").startsWith("paste-") ? "" : " in Gmail"}</b><p>${esc(m.from || "Pasted")}, ${shortDay(m.at)}${m.subject ? `: “${esc(m.subject)}”` : ""}</p></div>` : ""}<div class="track">
     <div><div class="statusseg" role="radiogroup" aria-label="Where It Stands">${STATUS.map(([v, l]) => `<button type="button" role="radio" aria-checked="${s.status === v}" class="${s.status === v ? "on" : ""}" data-status="${s.id}" data-val="${v}">${l}</button>`).join("")}</div></div>
+    ${["interview", "offer"].includes(s.status) || s.job.interviewAt ? `<div><label class="tl" for="iv-${s.id}">Interview</label><div class="fuline"><input type="datetime-local" id="iv-${s.id}" data-ivat="${s.id}" value="${esc(s.job.interviewAt || "")}">${s.job.interviewAt ? `<button type="button" class="chip" data-ics="${s.id}">Add to Calendar</button>` : ""}</div></div>` : ""}
     <div><span class="tl">Follow Up</span><div class="fuline">${s.follow_up ? `<span class="when" data-fuwhen="${s.id}">${longDay(s.follow_up)}</span>` : ""}${[[3, "In 3 Days"], [7, "In a Week"], [14, "In 2 Weeks"]].map(([n, l]) => `<button type="button" class="chip" data-follow="${s.id}" data-days="${n}">${l}</button>`).join("")}${s.follow_up ? `<button type="button" class="chip" data-follow="${s.id}" data-days="">Clear</button>` : ""}</div></div>
   </div>`;
 }
@@ -1035,6 +1048,57 @@ document.addEventListener("submit", async e => {
   const role = personAdd?.role || "Recruiter"; personAdd = null;
   await savePeople(s, [...(s.job.people || []), { id: "p" + Date.now().toString(36), name, role, email, last: "" }]);
   toast(`Added ${name}.`);
+});
+
+// ---------- Coming up: the next interview, and what's due in the next two weeks ----------
+// Interviews are kept as job.interviewAt, the local "YYYY-MM-DDTHH:MM" they typed.
+const ivTime = v => new Date(v).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+const openJob = s => !["passed", "closed"].includes(s.status);
+function nextInterview() {
+  return saved.filter(s => openJob(s) && s.job.interviewAt && Date.parse(s.job.interviewAt) > Date.now() - 36e5)
+    .sort((a, b) => a.job.interviewAt.localeCompare(b.job.interviewAt))[0];
+}
+function nextIvCard() {
+  const s = nextInterview(); if (!s) return "";
+  const day = s.job.interviewAt.slice(0, 10), n = Math.round((Date.parse(day + "T12:00:00") - Date.parse(isoDay() + "T12:00:00")) / 864e5);
+  return `<div class="nextiv" data-open="${esc(s.job_key)}" role="button" tabindex="0"><div><span class="tl">Next Interview</span><b>${longDay(day)}, ${ivTime(s.job.interviewAt)}</b><span>${esc(s.job.title)} at ${esc(s.job.company)}</span></div>
+    <span class="left">${n <= 0 ? "Today" : n === 1 ? "Tomorrow" : `In ${n} Days`}</span></div>`;
+}
+function comingUp() {
+  const t = isoDay(), end = isoDay(14), ev = [], lead = nextInterview();   // the next interview already has its own card up top
+  for (const s of saved.filter(openJob)) {
+    const j = s.job;
+    if (j.interviewAt && s !== lead && j.interviewAt.slice(0, 10) > t && j.interviewAt.slice(0, 10) <= end) ev.push({ day: j.interviewAt.slice(0, 10), kind: "Interview", s, at: ivTime(j.interviewAt) });
+    if (s.follow_up > t && s.follow_up <= end && ["applied", "interview"].includes(s.status)) ev.push({ day: s.follow_up, kind: "Follow Up", s });
+    if (j.offerInfo?.answerBy > t && j.offerInfo.answerBy <= end && !outcomeOf(s)) ev.push({ day: j.offerInfo.answerBy, kind: "Answer By", s });
+  }
+  if (!ev.length) return "";
+  ev.sort((a, b) => a.day.localeCompare(b.day) || (a.at || "").localeCompare(b.at || ""));
+  const days = [...new Set(ev.map(e => e.day))];
+  return `<div class="section-h">Coming Up <span class="count">Next 2 Weeks</span></div><div class="agenda">${days.map(d => `<div class="aday"><span class="tl">${longDay(d)}</span>${ev.filter(e => e.day === d).map(e =>
+    `<div class="aev k-${e.kind.replace(/\W/g, "").toLowerCase()}" data-open="${esc(e.s.job_key)}" role="button" tabindex="0"><b>${e.kind}${e.at ? `, ${e.at}` : ""}</b><span>${esc(e.s.job.title)} at ${esc(e.s.job.company)}</span></div>`).join("")}</div>`).join("")}</div>`;
+}
+// One interview as a calendar file, so it lands in whatever calendar they use.
+function icsFor(s) {
+  const st = new Date(s.job.interviewAt), en = new Date(st.getTime() + 36e5), f = d => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const x = t => String(t).replace(/[\\;,]/g, m => "\\" + m).replace(/\n/g, "\\n");
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Recruiter Goose//EN", "BEGIN:VEVENT", `UID:${s.id}-${f(st)}@recruitergoose`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(st)}`, `DTEND:${f(en)}`,
+    `SUMMARY:${x(`Interview: ${s.job.title} at ${s.job.company}`)}`, ...(s.job.applyUrl ? [`URL:${s.job.applyUrl}`] : []), "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+}
+document.addEventListener("change", async e => {
+  const i = e.target.closest("[data-ivat]"); if (!i) return;
+  const s = saved.find(x => x.id === i.dataset.ivat), job = { ...s.job };
+  if (i.value) job.interviewAt = i.value; else delete job.interviewAt;
+  const { data, error } = await sb.from("saved_jobs").update({ job, updated_at: new Date().toISOString() }).eq("id", s.id).select().single();
+  if (error) { toast(error.message); return; }
+  saved = saved.map(x => x.id === s.id ? data : x); renderMine(); reSheet(data);
+  toast(i.value ? `Interview set for ${longDay(i.value.slice(0, 10))}, ${ivTime(i.value)}.` : "Interview time cleared.");
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-ics]"); if (!b) return;
+  const s = saved.find(x => x.id === b.dataset.ics);
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([icsFor(s)], { type: "text/calendar" }));
+  a.download = `Interview - ${s.job.company}.ics`; document.body.appendChild(a); a.click(); a.remove();
 });
 
 // ---------- Offer details: what they offered, typed in by the person, so offers sit side by side ----------
@@ -1247,7 +1311,7 @@ function renderMine() {
   const stillOpen = active - (hiredAt ? 1 : 0);
   $("#mineSub").textContent = hiredAt ? [`Hired at ${hiredAt.job.company}`, stillOpen ? `${stillOpen} still open` : ""].filter(Boolean).join(" · ") : [`${active} active`, c("applied") + c("interview") + c("offer") ? `${c("applied") + c("interview") + c("offer")} applied` : "", c("interview") ? `${c("interview")} interviewing` : "", c("offer") ? `${c("offer")} ${c("offer") === 1 ? "offer" : "offers"}` : ""].filter(Boolean).join(" · ");
   const bar = active ? `<div class="facts" aria-hidden="true">${["offer", "interview", "applied", "saved"].filter(c).map(st => `<i class="f-${st}" style="flex:${c(st)}"></i>`).join("")}</div>` : "";
-  $("#mineBody").innerHTML = bar + mailCards() + todayCard() + `<div class="btnrow" style="margin-top:14px"><button class="linkbtn" data-pastereply>Got a Reply? Paste It Here</button></div>` +
+  $("#mineBody").innerHTML = bar + mailCards() + nextIvCard() + todayCard() + `<div class="btnrow" style="margin-top:14px"><button class="linkbtn" data-pastereply>Got a Reply? Paste It Here</button></div>` + comingUp() +
     groups.map(([st, label]) => {
       const took = s => outcomeOf(s)?.kind === "accepted";
       const list = live.filter(s => st === "hired" ? took(s) : s.status === st && !took(s)).sort(by);
@@ -1267,6 +1331,7 @@ function todayItems() {
   for (const s of saved) {
     const j = s.job || {};
     if (mailSuggest.some(m => m.sid === s.id)) continue;   // a reply is waiting on this job: that card says what to do
+    if (s.job.interviewAt?.slice(0, 10) === today && openJob(s) && Date.parse(s.job.interviewAt) > Date.now() - 36e5) items.push({ id: s.job_key, s, b: j.title, t: `Interview today at ${ivTime(s.job.interviewAt)} with ${j.company}.` });
     const by = s.job.offerInfo?.answerBy;
     if (s.status === "offer" && !outcomeOf(s) && by && daysAgo(by + "T12:00:00") > -4) {
       items.push({ id: s.job_key, s, b: j.title, t: `${j.company} wants an answer by ${longDay(by)}.` }); continue;

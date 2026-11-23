@@ -411,7 +411,19 @@ const RESUME = { name: "Jordan Avery", email: "jordan@example.com", phone: "(817
     await page.locator("#sheetBody .people").scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
     await shot(page, "phone-light-people");
+    // The interview time: it leads My Jobs, shows under Coming Up, and downloads as a calendar file.
+    const tmr = new Date(Date.now() + 864e5 - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+    await page.fill('#sheetBody [data-ivat="row2"]', tmr + "T10:30");
+    await page.waitForFunction(t => window.__db.saved_jobs.find(r => r.id === "row2").job.interviewAt === t + "T10:30", tmr);
+    const [ics] = await Promise.all([page.waitForEvent("download"), page.click('#sheetBody [data-ics="row2"]')]);
+    const cal = await (await import("node:fs/promises")).readFile(await ics.path(), "utf8");
+    assert.match(cal, /BEGIN:VEVENT[\s\S]*SUMMARY:Interview: Implementation Specialist at BuildCo/);
     await page.click("#sheet [data-close]");
+    await page.waitForSelector("#mineBody .nextiv");
+    assert.ok((await page.textContent("#mineBody .nextiv")).includes("Tomorrow"));
+    assert.ok(!(await page.textContent("#mineBody")).includes("Interview, 10:30 AM"), "the next interview shows once, in its own card");
+    assert.ok((await page.textContent("#mineBody .agenda")).includes("Follow Up"));
+    await shot(page, "phone-light-coming-up");
   });
   await step("[resume] Me shows the resume and Gmail, and edits save", async () => {
     await page.click('.tab[data-tab="me"]');
