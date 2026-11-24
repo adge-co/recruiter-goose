@@ -729,7 +729,7 @@ $("#deleteMe").onclick = async () => {
   if (!confirm("Delete your account, your answers and every saved job? This can't be undone.")) return;
   const { error } = await sb.rpc("delete_me");
   if (error) { toast(error.message); return; }
-  guest = false; clearGuest(); await sb.auth.signOut(); toast("Your account and everything in it is deleted.");
+  guest = false; clearGuest(); await sb.auth.signOut({ scope: "local" }); toast("Your account and everything in it is deleted.");
 };
 $("#tryIt").onclick = () => { guest = true; startSetup(); };
 $("#showSignIn").onclick = () => { setAuthMode("in"); $("#authCard").classList.remove("hidden"); $("#aEmail").focus(); };
@@ -1236,6 +1236,7 @@ const guestPass = new Set((() => { try { return JSON.parse(localStorage.getItem(
 function renderMatches() {
   const r = result, keys = savedKeys();
   if (!r) return;
+  for (const j of r.jobs) if (j.title) j.title = j.title.replace(/\b(i{1,3}|iv|v)\b(?=\s*$|\s*[-(/,])/g, m => m.toUpperCase());   // "Estimator i" -> "Estimator I"
   const prefs = profile.data.prefs || {};
   const gone = new Set([...guestPass, ...saved.filter(s => s.status === "passed" && s.job).map(s => sameJob(s.job))]);
   const jobs = r.jobs.filter(j => (!keys.get(j.id) || keys.get(j.id).status !== "passed") && !gone.has(sameJob(j))
