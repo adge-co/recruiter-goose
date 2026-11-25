@@ -119,6 +119,8 @@ for (const dark of [false, true]) {
     const body = await page.textContent("body");
     for (const gone of ["Hey, I'm your recruiter", "Built by", "with Claude", "No resume upload"]) assert.ok(!body.includes(gone), "still says: " + gone);
     assert.ok(await page.isHidden("#authCard"), "sign-up form waits behind Sign In");
+    assert.ok(await page.evaluate(() => document.querySelector("#aGoogleWrap").classList.contains("hidden") === !window.RG_GOOGLE_SIGNIN), "Continue With Google shows only when the flag is on");
+    assert.ok(await page.evaluate(() => /Continue With Google/.test(document.querySelector("#aGoogle").textContent)), "Google button is labeled");
     await page.click('footer [data-page="privacy"]');
     assert.ok((await page.textContent("#sheetBody")).includes("Delete My Account"));
     await page.click("#sheet [data-close]");
