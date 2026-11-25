@@ -497,6 +497,10 @@ footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
           <button class="btn wide" style="margin-top:16px" id="aGo">Make My Account</button>
           <button type="button" class="linkbtn hidden" id="aForgot" style="margin-top:10px">Forgot Your Password?</button>
         </form>
+        <div class="hidden" id="aGoogleWrap">
+          <p class="hint" style="text-align:center;margin:14px 0 10px">or</p>
+          <button type="button" class="btn ghost wide" id="aGoogle"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Continue With Google</button>
+        </div>
       </div></div>
     </div>
   </section>
@@ -679,6 +683,7 @@ function setAuthMode(m) {
   $("#aPass").autocomplete = authMode === "in" ? "current-password" : "new-password";
   $("#aGo").textContent = authMode === "in" ? "Sign In" : "Make My Account";
   $("#aForgot").classList.toggle("hidden", authMode !== "in" || !window.RG_RESET_MAIL);
+  $("#aGoogleWrap").classList.toggle("hidden", !window.RG_GOOGLE_SIGNIN);
   $("#aErr").classList.add("hidden");
 }
 // Forgot it: Supabase emails a link back to this page, which signs them in and opens this sheet for a new password.
@@ -708,6 +713,13 @@ $("#aForgot").onclick = async () => {
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
   if (error) { err.textContent = error.message; err.classList.remove("hidden"); return; }
   err.classList.add("hidden"); toast("Check your email for a link to set a new password.");
+};
+// Google sign-in: Supabase sends them to Google and back to this page signed in. A guest's answers ride along in this device's storage.
+$("#aGoogleWrap").classList.toggle("hidden", !window.RG_GOOGLE_SIGNIN);
+$("#aGoogle").onclick = async () => {
+  if (guest) writeGuest();
+  const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
+  if (error) { $("#aErr").textContent = error.message; $("#aErr").classList.remove("hidden"); }
 };
 $("#authForm").onsubmit = async e => {
   e.preventDefault();
@@ -887,7 +899,7 @@ $("#next2").onclick = async () => {
   const data = {
     prefs: profile?.data?.prefs || {},
     resume: draft.resume || profile?.data?.resume || null,
-    name: user?.user_metadata?.name || profile?.data?.name || "", pastTitles: draft.titles, pastCompanies: draft.companies || [], years: Number($("#iYears").value) || 0, skills: draft.skills, industries: draft.industries,
+    name: user?.user_metadata?.name || user?.user_metadata?.given_name || profile?.data?.name || "", pastTitles: draft.titles, pastCompanies: draft.companies || [], years: Number($("#iYears").value) || 0, skills: draft.skills, industries: draft.industries,
     wants: { roles: draft.roles, remote, cities: draft.cities, payFloor: Number($("#iFloor").value) || 0, avoid: $("#iNoSales").checked ? ["sales"] : [] },
   };
   $("#next2").disabled = true;
@@ -2091,7 +2103,7 @@ async function load() {
   const g = guest ? { data: profile?.data, result: guestResult } : readGuest();
   profile = p; saved = s || []; result = p?.last_result || null;
   if (!p?.data?.pastTitles?.length && g?.data?.pastTitles?.length) {
-    const data = { ...g.data, name: g.data.name || user.user_metadata?.name || "" };
+    const data = { ...g.data, name: g.data.name || user.user_metadata?.name || user.user_metadata?.given_name || (user.user_metadata?.full_name || "").split(" ")[0] || "" };
     const row = { user_id: user.id, data, last_result: g.result || null, last_run_at: g.result?.ranAt || null, updated_at: new Date().toISOString() };
     const { error } = await sb.from("profiles").upsert(row);
     if (!error) { profile = row; result = g.result || null; }
